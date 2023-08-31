@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import List
 
 from transformer.exceptions.s_exception import ClauseError
@@ -49,7 +51,7 @@ class ReturnClause(Clause):
 class MatchClause(ReadingClause):
     internalID = 0
 
-    def __init__(self, patterns: List[Pattern], is_optional: bool = False, where_clause: WhereClause = None,
+    def __init__(self, patterns: List[Pattern] = None, is_optional: bool = False, where_clause: WhereClause = None,
                  time_window: TimePoint | Interval = None):
         self.patterns = patterns
         self.is_optional = is_optional
@@ -151,7 +153,7 @@ class WithQueryClause(Clause):
 
 # 多个查询（用WITH子句连接）
 class MultiQueryClause(Clause):
-    def __init__(self, single_query_clause: SingleQueryClause, with_query_clauses: List[WithQueryClause] = None):
+    def __init__(self, single_query_clause: SingleQueryClause = None, with_query_clauses: List[WithQueryClause] = None):
         # 最后的子句为return或update的查询模块
         self.single_query_clause = single_query_clause
         # 最后的子句为with的查询模块
