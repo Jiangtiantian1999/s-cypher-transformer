@@ -28,11 +28,11 @@ class ValueNode(SNode):
 
 class ObjectNode(SNode):
 
-    def __init__(self, content: str = None, variable: str = None, interval: Interval = None,
+    def __init__(self, labels: List[str] = None, variable: str = None, interval: Interval = None,
                  properties: dict[PropertyNode, ValueNode] = None):
-        labels = ['Object']
-        if content:
-            labels.append(content)
+        if labels is None:
+            labels = []
+        labels.append('Object')
         super().__init__(labels, None, variable, interval)
         if properties is None:
             properties = {}
