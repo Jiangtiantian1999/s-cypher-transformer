@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from typing import List
 
 from transformer.exceptions.s_exception import ClauseError
@@ -51,7 +49,7 @@ class ReturnClause(Clause):
 class MatchClause(ReadingClause):
     internalID = 0
 
-    def __init__(self, patterns: List[Pattern] = None, is_optional: bool = False, where_clause: WhereClause = None,
+    def __init__(self, patterns: List[Pattern], is_optional: bool = False, where_clause: WhereClause = None,
                  time_window: TimePoint | Interval = None):
         self.patterns = patterns
         self.is_optional = is_optional
@@ -87,8 +85,30 @@ class UnwindClause(ReadingClause):
         return []
 
 
-class InnerCallClause(ReadingClause):
+class YieldClause(Clause):
+    def __init__(self, yield_items: dict[str, str], where_clause: WhereClause = None):
+        self.yield_items = yield_items
+        self.where_clause = where_clause
+
     def get_variables(self):
+        variables = []
+        for key, value in self.yield_items:
+            if value:
+                variables.append(value)
+            else:
+                variables.append(key)
+
+
+class CallClause(ReadingClause):
+
+    def __init__(self, procedure_name: str, input_items: List[Expression] = None, yield_clause: YieldClause = None):
+        self.procedure_name = procedure_name
+        self.input_items = input_items
+        self.yield_clause = yield_clause
+
+    def get_variables(self):
+        if self.yield_clause:
+            return self.yield_clause.get_variables()
         return []
 
 
@@ -102,6 +122,8 @@ class UpdatingClause(Clause):
 class SingleQueryClause(Clause):
     def __init__(self, reading_clauses: List[ReadingClause] = None, updating_clauses: List[UpdatingClause] = None,
                  return_clause: ReadingClause = None):
+        if updating_clauses is None and return_clause is None:
+            raise ClauseError("The updating_clauses and the return_clause can't be None at the same time.")
         if reading_clauses is None:
             reading_clauses = []
         self.reading_clauses = reading_clauses
@@ -153,7 +175,7 @@ class WithQueryClause(Clause):
 
 # 多个查询（用WITH子句连接）
 class MultiQueryClause(Clause):
-    def __init__(self, single_query_clause: SingleQueryClause = None, with_query_clauses: List[WithQueryClause] = None):
+    def __init__(self, single_query_clause: SingleQueryClause, with_query_clauses: List[WithQueryClause] = None):
         # 最后的子句为return或update的查询模块
         self.single_query_clause = single_query_clause
         # 最后的子句为with的查询模块
@@ -186,21 +208,16 @@ class UnionQueryClause(Clause):
         return variables
 
 
-# 独立的Call查询
-class StandaloneCallClause(Clause):
-    pass
-
-
 # 时间窗口限定
 class TimeWindowLimitClause(Clause):
     pass
 
 
 class SCypherClause(Clause):
-    def __init__(self, query_clause: UnionQueryClause | StandaloneCallClause | TimeWindowLimitClause):
+    def __init__(self, query_clause: UnionQueryClause | CallClause | TimeWindowLimitClause):
         self.query_clause = query_clause
 
     def get_variables(self):
-        if self.query_clause.__class__ == UnionQueryClause.__class__:
+        if self.query_clause.__class__ in [UnionQueryClause.__class__, CallClause.__class__]:
             return self.query_clause.get_variables()
         return []
