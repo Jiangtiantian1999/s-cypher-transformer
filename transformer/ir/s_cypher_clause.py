@@ -1,8 +1,9 @@
 from typing import List
 
 from transformer.exceptions.s_exception import ClauseError
-from transformer.ir.s_clause_component import Pattern, Expression, ProjectionItem
+from transformer.ir.s_clause_component import Pattern, ProjectionItem
 from transformer.ir.s_datetime import TimePoint, Interval
+from transformer.ir.s_expression import Expression
 
 
 class Clause:
@@ -11,8 +12,8 @@ class Clause:
 
 # 读查询，包括Match子句，Unwind子句和Call子句
 class ReadingClause(Clause):
-    def get_variables(self):
-        return []
+    def get_variables_dict(self):
+        return {}
 
 
 class WhereClause(Clause):
@@ -56,11 +57,11 @@ class MatchClause(ReadingClause):
         self.where_clause = where_clause
         self.time_window = time_window
 
-    def get_variables(self):
-        variables = []
+    def get_variables_dict(self):
+        variables_dict = {}
         for pattern in self.patterns:
-            variables.extend(pattern.get_variables())
-        return variables
+            variables_dict.update(pattern.get_variables_dict())
+        return variables_dict
 
     def getInternalID(self):
         self.internalID += 1
@@ -81,8 +82,10 @@ class MatchClause(ReadingClause):
 
 
 class UnwindClause(ReadingClause):
-    def get_variables(self):
-        return []
+    def get_variables_dict(self):
+        return {}
+
+    pass
 
 
 class YieldClause(Clause):
@@ -90,13 +93,13 @@ class YieldClause(Clause):
         self.yield_items = yield_items
         self.where_clause = where_clause
 
-    def get_variables(self):
-        variables = []
+    def get_variables_dict(self):
+        variables_dict = {}
         for key, value in self.yield_items:
             if value:
-                variables.append(value)
+                variables_dict[value] = YieldClause
             else:
-                variables.append(key)
+                variables_dict[key] = YieldClause
 
 
 class CallClause(ReadingClause):
@@ -106,16 +109,18 @@ class CallClause(ReadingClause):
         self.input_items = input_items
         self.yield_clause = yield_clause
 
-    def get_variables(self):
+    def get_variables_dict(self):
         if self.yield_clause:
-            return self.yield_clause.get_variables()
-        return []
+            return self.yield_clause.get_variables_dict()
+        return {}
 
 
 # 更新查询
 class UpdatingClause(Clause):
-    def get_variables(self):
-        return []
+    def get_variables_dict(self):
+        return {}
+
+    pass
 
 
 # 最后的子句为return或update的查询模块，单一查询
@@ -132,13 +137,13 @@ class SingleQueryClause(Clause):
         self.updating_clauses = updating_clauses
         self.return_clause = return_clause
 
-    def get_variables(self):
-        variables = []
+    def get_variables_dict(self):
+        variables_dict = []
         for reading_clause in self.reading_clauses:
-            variables.extend(reading_clause.get_variables())
+            variables_dict.extend(reading_clause.get_variables_dict())
         for updating_clause in self.updating_clauses:
-            variables.extend(updating_clause.get_variables())
-        return variables
+            variables_dict.extend(updating_clause.get_variables_dict())
+        return variables_dict
 
 
 class WithClause(Clause):
@@ -164,13 +169,13 @@ class WithQueryClause(Clause):
             updating_clauses = []
         self.updating_clauses = updating_clauses
 
-    def get_variables(self):
-        variables = []
+    def get_variables_dict(self):
+        variables_dict = {}
         for reading_clause in self.reading_clauses:
-            variables.extend(reading_clause.get_variables())
+            variables_dict.update(reading_clause.get_variables_dict())
         for updating_clause in self.updating_clauses:
-            variables.extend(updating_clause.get_variables())
-        return variables
+            variables_dict.update(updating_clause.get_variables_dict())
+        return variables_dict
 
 
 # 多个查询（用WITH子句连接）
@@ -183,11 +188,11 @@ class MultiQueryClause(Clause):
             with_query_clauses = []
         self.with_query_clauses = with_query_clauses
 
-    def get_variables(self):
-        variables = []
+    def get_variables_dict(self):
+        variables = {}
         for with_query_clause in self.with_query_clauses:
-            variables.extend(with_query_clause.get_variables())
-        variables.extend(self.single_query_clause.get_variables())
+            variables.update(with_query_clause.get_variables_dict())
+        variables.update(self.single_query_clause.get_variables_dict())
         return variables
 
 
@@ -201,11 +206,11 @@ class UnionQueryClause(Clause):
         self.multi_query_clauses = multi_query_clauses
         self.is_all = is_all
 
-    def get_variables(self):
-        variables = []
+    def get_variables_dict(self):
+        variables_dict = {}
         for multi_query_clause in self.multi_query_clauses:
-            variables.extend(multi_query_clause.get_variables())
-        return variables
+            variables_dict.update(multi_query_clause.get_variables_dict())
+        return variables_dict
 
 
 # 时间窗口限定
@@ -217,7 +222,7 @@ class SCypherClause(Clause):
     def __init__(self, query_clause: UnionQueryClause | CallClause | TimeWindowLimitClause):
         self.query_clause = query_clause
 
-    def get_variables(self):
+    def get_variables_dict(self):
         if self.query_clause.__class__ in [UnionQueryClause.__class__, CallClause.__class__]:
-            return self.query_clause.get_variables()
-        return []
+            return self.query_clause.get_variables_dict()
+        return {}

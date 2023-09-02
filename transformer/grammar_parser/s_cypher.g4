@@ -55,38 +55,31 @@ s_PropertiesPattern : '{' SP? ( oC_PropertyKeyName SP? ( s_AtTElement SP? )? ':'
 
 oC_RelationshipDetail : '[' SP? ( oC_Variable SP? )? ( oC_RelationshipTypes SP? )? oC_RangeLiteral? ( s_AtTElement SP? )? ( oC_Properties SP? )? ']' ;
 
-oC_StringListNullPredicateExpression : oC_AddOrSubtractExpression ( s_TimePredicateExpression | oC_StringPredicateExpression | oC_ListPredicateExpression | oC_NullPredicateExpression )* ;
+oC_StringListNullPredicateExpression : oC_AddOrSubtractExpression ( s_TimePredicateExpression | oC_StringPredicateExpression | oC_ListPredicateExpression | oC_NullPredicateExpression )? ;
+
+oC_ListOperatorExpression : ( oC_PropertyOrLabelsExpression | s_AtTExpression ) ( ( SP? '[' oC_Expression ']' ) | ( SP? '[' oC_Expression? '..' oC_Expression? ']' ) )* ;
+
+s_AtTExpression : oC_Atom ( ( SP? oC_PropertyLookup )+ ( SP? PoundValue )? )? SP? AtT ( SP? oC_PropertyLookup )*;
 
 s_TimePredicateExpression : SP ( DURING | OVERLAPS ) SP oC_AddOrSubtractExpression ;
-
-oC_Atom : oC_Literal
-        | oC_Parameter
-        | oC_CaseExpression
-        | ( COUNT SP? '(' SP? '*' SP? ')' )
-        | oC_ListComprehension
-        | oC_PatternComprehension
-        | oC_Quantifier
-        | oC_PatternPredicate
-        | oC_ParenthesizedExpression
-        | oC_FunctionInvocation
-        | oC_ExistentialSubquery
-        | oC_Variable ( '.' oC_Variable ( SP? PoundValue )? )? ( SP? AtT )?
-        ;
-
-oC_Literal : oC_BooleanLiteral
-           | NULL
-           | oC_NumberLiteral
-           | StringLiteral
-           | oC_ListLiteral
-           | oC_MapLiteral
-           | NOW
-           ;
 
 s_AtTElement : AtT SP? '(' SP? s_TimePointLiteral SP? ',' SP? ( s_TimePointLiteral | NOW ) SP? ')';
 
 s_TimePointLiteral : StringLiteral
                    | oC_MapLiteral
                    ;
+
+oC_SymbolicName : UnescapedSymbolicName
+                | EscapedSymbolicName
+                | HexLetter
+                | COUNT
+                | FILTER
+                | EXTRACT
+                | ANY
+                | NONE
+                | SINGLE
+                | NOW
+                ;
 
 AtT : '@T' | '@t' ;
 

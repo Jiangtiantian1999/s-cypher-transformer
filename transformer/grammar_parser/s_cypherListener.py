@@ -179,30 +179,30 @@ class s_cypherListener(ParseTreeListener):
         pass
 
 
+    # Enter a parse tree produced by s_cypherParser#oC_ListOperatorExpression.
+    def enterOC_ListOperatorExpression(self, ctx:s_cypherParser.OC_ListOperatorExpressionContext):
+        pass
+
+    # Exit a parse tree produced by s_cypherParser#oC_ListOperatorExpression.
+    def exitOC_ListOperatorExpression(self, ctx:s_cypherParser.OC_ListOperatorExpressionContext):
+        pass
+
+
+    # Enter a parse tree produced by s_cypherParser#s_AtTExpression.
+    def enterS_AtTExpression(self, ctx:s_cypherParser.S_AtTExpressionContext):
+        pass
+
+    # Exit a parse tree produced by s_cypherParser#s_AtTExpression.
+    def exitS_AtTExpression(self, ctx:s_cypherParser.S_AtTExpressionContext):
+        pass
+
+
     # Enter a parse tree produced by s_cypherParser#s_TimePredicateExpression.
     def enterS_TimePredicateExpression(self, ctx:s_cypherParser.S_TimePredicateExpressionContext):
         pass
 
     # Exit a parse tree produced by s_cypherParser#s_TimePredicateExpression.
     def exitS_TimePredicateExpression(self, ctx:s_cypherParser.S_TimePredicateExpressionContext):
-        pass
-
-
-    # Enter a parse tree produced by s_cypherParser#oC_Atom.
-    def enterOC_Atom(self, ctx:s_cypherParser.OC_AtomContext):
-        pass
-
-    # Exit a parse tree produced by s_cypherParser#oC_Atom.
-    def exitOC_Atom(self, ctx:s_cypherParser.OC_AtomContext):
-        pass
-
-
-    # Enter a parse tree produced by s_cypherParser#oC_Literal.
-    def enterOC_Literal(self, ctx:s_cypherParser.OC_LiteralContext):
-        pass
-
-    # Exit a parse tree produced by s_cypherParser#oC_Literal.
-    def exitOC_Literal(self, ctx:s_cypherParser.OC_LiteralContext):
         pass
 
 
@@ -221,6 +221,15 @@ class s_cypherListener(ParseTreeListener):
 
     # Exit a parse tree produced by s_cypherParser#s_TimePointLiteral.
     def exitS_TimePointLiteral(self, ctx:s_cypherParser.S_TimePointLiteralContext):
+        pass
+
+
+    # Enter a parse tree produced by s_cypherParser#oC_SymbolicName.
+    def enterOC_SymbolicName(self, ctx:s_cypherParser.OC_SymbolicNameContext):
+        pass
+
+    # Exit a parse tree produced by s_cypherParser#oC_SymbolicName.
+    def exitOC_SymbolicName(self, ctx:s_cypherParser.OC_SymbolicNameContext):
         pass
 
 
@@ -746,15 +755,6 @@ class s_cypherListener(ParseTreeListener):
         pass
 
 
-    # Enter a parse tree produced by s_cypherParser#oC_ListOperatorExpression.
-    def enterOC_ListOperatorExpression(self, ctx:s_cypherParser.OC_ListOperatorExpressionContext):
-        pass
-
-    # Exit a parse tree produced by s_cypherParser#oC_ListOperatorExpression.
-    def exitOC_ListOperatorExpression(self, ctx:s_cypherParser.OC_ListOperatorExpressionContext):
-        pass
-
-
     # Enter a parse tree produced by s_cypherParser#oC_PropertyOrLabelsExpression.
     def enterOC_PropertyOrLabelsExpression(self, ctx:s_cypherParser.OC_PropertyOrLabelsExpressionContext):
         pass
@@ -770,6 +770,15 @@ class s_cypherListener(ParseTreeListener):
 
     # Exit a parse tree produced by s_cypherParser#oC_PropertyLookup.
     def exitOC_PropertyLookup(self, ctx:s_cypherParser.OC_PropertyLookupContext):
+        pass
+
+
+    # Enter a parse tree produced by s_cypherParser#oC_Atom.
+    def enterOC_Atom(self, ctx:s_cypherParser.OC_AtomContext):
+        pass
+
+    # Exit a parse tree produced by s_cypherParser#oC_Atom.
+    def exitOC_Atom(self, ctx:s_cypherParser.OC_AtomContext):
         pass
 
 
@@ -935,6 +944,15 @@ class s_cypherListener(ParseTreeListener):
         pass
 
 
+    # Enter a parse tree produced by s_cypherParser#oC_Literal.
+    def enterOC_Literal(self, ctx:s_cypherParser.OC_LiteralContext):
+        pass
+
+    # Exit a parse tree produced by s_cypherParser#oC_Literal.
+    def exitOC_Literal(self, ctx:s_cypherParser.OC_LiteralContext):
+        pass
+
+
     # Enter a parse tree produced by s_cypherParser#oC_BooleanLiteral.
     def enterOC_BooleanLiteral(self, ctx:s_cypherParser.OC_BooleanLiteralContext):
         pass
@@ -1013,15 +1031,6 @@ class s_cypherListener(ParseTreeListener):
 
     # Exit a parse tree produced by s_cypherParser#oC_SchemaName.
     def exitOC_SchemaName(self, ctx:s_cypherParser.OC_SchemaNameContext):
-        pass
-
-
-    # Enter a parse tree produced by s_cypherParser#oC_SymbolicName.
-    def enterOC_SymbolicName(self, ctx:s_cypherParser.OC_SymbolicNameContext):
-        pass
-
-    # Exit a parse tree produced by s_cypherParser#oC_SymbolicName.
-    def exitOC_SymbolicName(self, ctx:s_cypherParser.OC_SymbolicNameContext):
         pass
 
 

@@ -38,16 +38,16 @@ class ObjectNode(SNode):
             properties = {}
         self.properties = properties
 
-    def get_variables(self):
-        variables = []
+    def get_variables_dict(self) -> dict:
+        variables_dict = {}
         if self.variable:
-            variables.append(self.variable)
+            variables_dict[self.variable] = self
         for key, value in self.properties.items():
             if key.variable:
-                variables.append(key.variable)
+                variables_dict[key.variable] = key
             if value.variable:
-                variables.append(value.variable)
-        return variables
+                variables_dict[value.variable] = value
+        return variables_dict
 
 
 class SEdge:
@@ -72,19 +72,22 @@ class SEdge:
 
 
 class SPath:
-    def __init__(self, nodes: List[ObjectNode], edges: List[SEdge] = None):
+    def __init__(self, nodes: List[ObjectNode], edges: List[SEdge] = None, variable: str = None):
         if edges is None:
             edges = []
         if len(nodes) != len(edges) + 1:
             raise GraphError("The numbers of the nodes and edges are not matched.")
         self.nodes = nodes
         self.edges = edges
+        self.variable = variable
 
-    def get_variables(self):
-        variables = []
+    def get_variables_dict(self) -> dict:
+        variables_dict = {}
+        if self.variable:
+            variables_dict = {self.variable: self}
         for node in self.nodes:
-            variables.extend(node.get_variables())
+            variables_dict.update(node.get_variables_dict())
         for edge in self.edges:
             if edge.variable:
-                variables.append(edge.variable)
-        return variables
+                variables_dict[edge.variable] = edge
+        return variables_dict
