@@ -22,9 +22,9 @@ class CypherConverter:
         if s_cypher_clause.query_clause.__class__ == UnionQueryClause.__class__:
             return self.convert_union_query_clause(s_cypher_clause.query_clause)
         elif s_cypher_clause.query_clause.__class__ == CallClause.__class__:
-            pass
-        else:
-            pass
+            return self.convert_call_clause(s_cypher_clause.query_clause)
+        elif s_cypher_clause.query_clause.__class__ == UnwindClause.__class__:
+            return self.convert_unwind_clause(s_cypher_clause.query_clause)
 
     def convert_union_query_clause(self, s_cypher_clause: UnionQueryClause) -> str:
         union_query_string = self.convert_multi_query_clause(s_cypher_clause.multi_query_clauses[0])
@@ -37,6 +37,12 @@ class CypherConverter:
                 s_cypher_clause.multi_query_clauses[index])
             index = index + 1
         return union_query_string
+
+    def convert_call_clause(self, call_clause: CallClause):
+        pass
+
+    def convert_unwind_clause(self, unwind_clause: UnwindClause):
+        pass
 
     def convert_multi_query_clause(self, multi_query_clause: MultiQueryClause) -> str:
         multi_query_string = ""
@@ -76,18 +82,42 @@ class CypherConverter:
                                                                                               match_clause.time_window)
                 if match_string not in ["MATCH ", "OPTIONAL MATCH "]:
                     match_string = match_string + ', '
+                if pattern.path.variable:
+                    match_string = match_string + pattern.path.variable + ' = ' + path_pattern
+                else:
+                    match_string = match_string + path_pattern
                 # 添加节点属性模式的匹配
                 for property_pattern in property_patterns:
                     path_pattern = path_pattern + ', ' + property_pattern
-                if pattern.path.variable:
-                    match_string = pattern.path.variable + ' = ' + path_pattern
-                else:
-                    match_string = match_string + path_pattern
                 interval_conditions.extend(path_interval_conditions)
             elif pattern.temporal_path_call:
+                start_variable = pattern.temporal_path_call.path.nodes[0].variable
+                edge_variable = pattern.temporal_path_call.path.edges[0].variable
+                end_variable = pattern.temporal_path_call.path.nodes[1].variable
+                if start_variable is None:
+                    pattern.temporal_path_call.path.nodes[0].variable = self.get_random_variable()
+                if edge_variable is None:
+                    pattern.temporal_path_call.path.edges[0].variable = self.get_random_variable()
+                if end_variable is None:
+                    pattern.temporal_path_call.path.nodes[1].variable = self.get_random_variable()
+                path_pattern, property_patterns, path_interval_conditions = self.convert_path(
+                    pattern.temporal_path_call.path, match_clause.time_window)
                 if call_string != "":
                     call_string = call_string + '\n'
-                pass
+                call_string = call_string + 'MATCH ' + + path_pattern
+                # 添加节点属性模式的匹配
+                for property_pattern in property_patterns:
+                    call_string = call_string + ', ' + property_pattern
+                # 添加时态路径的时态条件限制
+                if len(path_interval_conditions) != 0:
+                    call_string = call_string + '\nWHERE '
+                    for index, interval_condition in enumerate(path_interval_conditions):
+                        if index == 0:
+                            call_string = call_string + interval_condition
+                        else:
+                            call_string = call_string + ' and ' + interval_condition
+                call_string = call_string + '\nCALL ' + pattern.temporal_path_call.function_name + '( start: ' + start_variable + ', edge: ' + \
+                              edge_variable + ', end: ' + end_variable + ' )\nYIELD ' + pattern.temporal_path_call.path.variable
         if call_string != "":
             match_string = call_string + '\n' + match_string
         if match_clause.where_clause:
@@ -99,7 +129,8 @@ class CypherConverter:
         if interval_conditions is None:
             interval_conditions = []
         where_string = "WHERE "
-        pass
+        expression_string = self.convert_expression(where_clause.expression)
+        where_string = where_string + expression_string
         for interval_condition in interval_conditions:
             where_string = where_string + ' and ' + interval_condition
         return where_string
@@ -111,6 +142,13 @@ class CypherConverter:
         pass
 
     def convert_single_query_clause(self, single_query_clause: SingleQueryClause):
+        single_query_string = ""
+        for index, reading_clause in enumerate(single_query_clause.reading_clauses):
+            if index != 0:
+                single_query_string = single_query_string + '\n'
+            single_query_string = single_query_string + self.convert_reading_clause(reading_clause)
+        # update_clause和return_clause待实现
+        return single_query_string
         pass
 
     def convert_edge(self, edge: SEdge, time_window: TimePoint | Interval = None) -> (str, List[str]):
@@ -365,4 +403,62 @@ class CypherConverter:
         return at_t_string
 
     def convert_atom(self, atom: Atom):
+        if atom.__class__ == LiteralString.__class__:
+            return self.convert_literal_string(atom)
+        elif atom.__class__ == ListLiteral.__class__:
+            return self.convert_list_literal(atom)
+        elif atom.__class__ == MapLiteral.__class__:
+            return self.convert_map_literal(atom)
+        elif atom.__class__ == ParenthesizedExpression.__class__:
+            return self.convert_parenthesized_expression(atom)
+        elif atom.__class__ == FunctionInvocation.__class__:
+            return self.convert_function_invocation(atom)
+        else:
+            pass
+
+    def convert_literal_string(self, literal_string: LiteralString):
+        return '\'' + str(literal_string) + '\''
+
+    def convert_list_literal(self, list_literal: ListLiteral):
+        list_string = ""
+        for index, expression in enumerate(list_literal.expressions):
+            if index != 0:
+                list_string = list_string + ', '
+            list_string = list_string + self.convert_expression(expression)
+        list_string = '[' + list_string + ']'
+        return list_string
+
+    def convert_map_literal(self, map_literal: MapLiteral):
+        map_string = ""
+        for index, (key, value) in enumerate(map_literal.keys_values.items()):
+            if index != 0:
+                map_string = map_string + ', '
+            map_string = map_string + key + ' : ' + self.convert_expression(value)
+        map_string = '[' + map_string + ']'
+        return map_string
+
+    def convert_case_expression(self, case_expression: CaseExpression):
+        pass
+
+    def convert_list_comprehension(self, list_comprehension: ListComprehension):
+        pass
+
+    def convert_pattern_comprehension(self, pattern_comprehension: PatternComprehension):
+        pass
+
+    def convert_parenthesized_expression(self, parenthesized_expression: ParenthesizedExpression):
+        return '( ' + self.convert_expression(parenthesized_expression.expression) + ' )'
+
+    def convert_function_invocation(self, function_invocation: FunctionInvocation):
+        function_invocation_string = ""
+        if function_invocation.is_distinct:
+            function_invocation_string = function_invocation_string + 'DISTINCT '
+        for index, expression in function_invocation.expressions:
+            if index != 0:
+                function_invocation_string = function_invocation_string + ','
+            function_invocation_string = function_invocation_string + self.convert_expression(expression)
+        function_invocation_string = function_invocation.function_name + '( ' + function_invocation_string + ' )'
+        return function_invocation_string
+
+    def convert_existential_subquery(self, existential_subquery: ExistentialSubquery):
         pass
