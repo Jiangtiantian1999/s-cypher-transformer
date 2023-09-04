@@ -417,7 +417,7 @@ class CypherConverter:
             pass
 
     def convert_literal_string(self, literal_string: LiteralString):
-        return '\'' + str(literal_string) + '\''
+        return str(literal_string)
 
     def convert_list_literal(self, list_literal: ListLiteral):
         list_string = ""
