@@ -49,8 +49,6 @@ class ReturnClause(Clause):
 
 
 class MatchClause(ReadingClause):
-    internalID = 0
-
     def __init__(self, patterns: List[Pattern] = None, is_optional: bool = False, where_clause: WhereClause = None,
                  time_window: TimePoint | Interval = None):
         self.patterns = patterns
@@ -63,23 +61,6 @@ class MatchClause(ReadingClause):
         for pattern in self.patterns:
             variables.extend(pattern.get_variables())
         return variables
-
-    def getInternalID(self):
-        self.internalID += 1
-        return self.internalID
-
-    def resetInternalID(self):
-        self.internalID = 0
-
-    # Prints out information about the nodes and edges in the MATCH clause.
-    # def __str__(self):
-    #     str_ = "NODES IN MATCH CLAUSE:\n"
-    #     for i in range(len(self.nodes)):
-    #         str_ += str(self.nodes[i]) + "\n"
-    #     str_ += "RELATIONSHIPS IN MATCH CLAUSE:\n"
-    #     for i in range(len(self.edges)):
-    #         str_ += str(self.edges[i]) + "\n"
-    #     return str_
 
 
 class UnwindClause(ReadingClause):

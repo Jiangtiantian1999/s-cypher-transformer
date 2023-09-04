@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from transformer.ir.s_graph import SNode, SPath
 
 

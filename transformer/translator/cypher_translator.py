@@ -1,61 +1,52 @@
 from s_cypher_walker import SCypherWalker
 from transformer.ir.s_cypher_clause import *
-from transformer.ir.s_graph import *
-from transformer.exceptions.s_exception import ClauseError
-import json
+from transformer.grammar_parser.s_cypherParser import s_cypherParser
+from transformer.grammar_parser.s_cypherLexer import s_cypherLexer
+from antlr4 import *
 
 
 # translate the S-Cypher input to its internal representation
 class CypherTranslator:
     @staticmethod
-    def translate_s_cypher_query(tokenList: list, s_cypher_walker: SCypherWalker):
+    def set_parser(self, s_cypher_input) -> s_cypherParser:
+        lexer = s_cypherLexer(s_cypher_input)
+        tokens = CommonTokenStream(lexer)
+        parser = s_cypherParser(tokens)
+        return parser
+
+    def translate_match_clause(self, match_input) -> MatchClause:
+        parser = self.set_parser(match_input)
+        tree = parser.oC_Match()
+        walker = ParseTreeWalker()
+        extractor = SCypherWalker(parser)
+        walker.walk(extractor, tree)
+        patterns = extractor.match_patterns
+        is_optional = extractor.match_is_optional
+        where_clause = extractor.match_where_clause
+        time_window = extractor.match_time_window
+        return MatchClause(patterns, is_optional, where_clause, time_window)
+
+    def translate_single_query_clause(self, single_query_clause: list[str]) -> SingleQueryClause:
         pass
 
-    def translate_single_query_tokens(self, single_query_tokens: list[str]) -> SingleQueryClause:
+    def translate_union_query_clause(self, union_query_clause: list[str]) -> UnionQueryClause:
         pass
 
-    def translate_union_query_clause(self, union_query_tokens: list[str]) -> UnionQueryClause:
-        union_query_clause = UnionQueryClause()
-        index = 0
-        multi_query_clause = MultiQueryClause()
-        single_query_tokens = []
-        while index < len(union_query_tokens):
-            if union_query_tokens[index] == "UNION":
-                multi_query_clause.single_query_clause = self.translate_single_query_tokens(single_query_tokens)
-                union_query_clause.multi_query_clauses.append(multi_query_clause)
-                single_query_tokens.clear()
-                if union_query_tokens[index + 1] == "ALL" and union_query_tokens[index + 2] == "SP":
-                    union_query_clause.is_all.append(True)
-                    index = index + 2
-                else:
-                    union_query_clause.is_all.append(False)
-            elif union_query_tokens[index] == "SP":
-                continue
-            else:
-                single_query_tokens.append(union_query_tokens[index])
-            index = index + 1
-        return union_query_clause
-
-    def translate_multi_query_clause(self, multi_query_tokens: list[str]) -> MultiQueryClause:
-        multi_query_tokens = MultiQueryClause()
-
-    def translate_with_query_clause(self, with_query_tokens: list[str]) -> WithQueryClause:
-        with_query_clause = WithQueryClause()
-
-    def translate_reading_clause(self, reading_tokens: list[str]) -> ReadingClause:
+    def translate_multi_query_clause(self, multi_query_clause: list[str]) -> MultiQueryClause:
         pass
 
-    def translate_match_clause(self, match_tokens: list[str]) -> MatchClause:
+    def translate_with_query_clause(self, with_query_clause: list[str]) -> WithQueryClause:
         pass
 
-    def translate_where_tokens(self, where_tokens: list[str]) -> WhereClause:
+    def translate_reading_clause(self, reading_clause: list[str]) -> ReadingClause:
+        pass
+
+    def translate_where_clause(self, where_clause: list[str]) -> WhereClause:
         # interval_conditions = []
         pass
 
-    def translate_updating_tokens(self, updating_tokens: list[str]) -> UpdatingClause:
+    def translate_updating_clause(self, updating_clause: list[str]) -> UpdatingClause:
         pass
 
-    def translate_with_tokens(self, with_tokens: list[str]) -> WithClause:
+    def translate_with_clause(self, with_clause: list[str]) -> WithClause:
         pass
-
-
