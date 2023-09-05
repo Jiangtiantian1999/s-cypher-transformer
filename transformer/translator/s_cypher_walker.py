@@ -14,33 +14,59 @@ class SCypherWalker(s_cypherListener):
         self.properties_pattern = []
         # time
         self.at_t_element = None
-        # match
+        self.at_time = TimePoint()
+        self.interval = None
+        # pattern
+        self.pattern_variable = ""
         self.match_patterns = []
-        self.match_is_optional = False
-        self.match_where_clause = None
-        self.match_time_window = None
+        # path
+        self.path_function_name = ""
+        # clauses
+        self.match_clause = MatchClause()
+        self.where_clause = None
+        self.reading_clause = None
+        self.unwind_clause = None
+        self.inner_call_clause = None
+        self.order_by_clause = None
+        self.skip_clause = None
+        self.limit_clause = None
+        self.return_clause = None
+        self.updating_clause = None
+        self.single_query_clause = None
+        self.with_clause = None
+        self.with_query_clause = None
+        self.multi_query_clause = []
+        self.union_query_clause = None
+        self.stand_alone_call_clause = None
+        self.time_window_limit_clause = None
 
     def enterOC_Match(self, ctx: s_cypherParser.OC_MatchContext):
         if ctx.OPTIONAL() is not None:
-            self.match_is_optional = True
+            self.match_clause.is_optional = True
         if ctx.oC_Pattern() is not None:
-            pass
-        if ctx.s_AtTime():
-            pass
-        elif ctx.s_Between():
-            pass
-        if ctx.oC_Where():
-            pass
+            self.match_clause.patterns = self.match_patterns
+        if ctx.s_AtTime() is not None:
+            self.match_clause.time_window = self.at_time
+        elif ctx.s_Between() is not None:
+            self.match_clause.time_window = self.interval
+        if ctx.oC_Where() is not None:
+            self.match_clause.where_clause = self.where_clause
 
     def enterOC_Where(self, ctx: s_cypherParser.OC_WhereContext):
         expression = ctx.oC_Expression().getText()
-        self.match_where_clause = WhereClause(expression)
+        self.where_clause = WhereClause(expression)
+
+    def enterS_Between(self, ctx:s_cypherParser.S_BetweenContext):
+        # 时间区间左右节点的获取待添加
+        self.interval = ctx.oC_Expression().getText()
+
+    def enterS_AtTime(self, ctx: s_cypherParser.S_AtTimeContext):
+        self.at_time = ctx.oC_Expression().getText()
 
     def enterOC_PatternPart(self, ctx: s_cypherParser.OC_PatternPartContext):
-        variable = ""
         pattern = None
         if ctx.oC_Variable():
-            variable = ctx.oC_Variable().getText()
+            self.pattern_variable = ctx.oC_Variable().getText()
             if ctx.s_PathFunctionPattern():
                 pattern = ctx.s_PathFunctionPattern().getText()
             elif ctx.oC_AnonymousPatternPart():
@@ -96,9 +122,6 @@ class SCypherWalker(s_cypherListener):
         variable = ctx.oC_Variable().getText
 
     def enterOC_AnonymousPatternPart(self, ctx: s_cypherParser.OC_AnonymousPatternPartContext):
-        pass
-
-    def enterS_AtTime(self, ctx:s_cypherParser.S_AtTimeContext):
         pass
 
     def enterOC_Return(self, ctx):

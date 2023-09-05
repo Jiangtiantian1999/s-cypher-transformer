@@ -1,6 +1,7 @@
 from __future__ import annotations
 from transformer.ir.s_datetime import *
 from transformer.ir.s_clause_component import *
+from transformer.ir.s_graph import *
 
 
 class TimePointLiteral:
@@ -28,9 +29,26 @@ class NodePattern:
         self.properties = properties
 
 
+class RelationshipPattern:
+    def __init__(self, relationship_detail: SEdge):
+        self.relationship_detail = relationship_detail
+
+
+class PatternElementChain:
+    def __init__(self, rel_pattern: RelationshipPattern, node_pattern: NodePattern):
+        self.rel_pattern = rel_pattern
+        self.node_pattern = node_pattern
+
+
 class PathFunctionPattern:
-    pass
+    def __init__(self, function_name: str, single_path_pattern: SinglePathPattern):
+        self.function_name = function_name
+        self.single_path_pattern = single_path_pattern
 
 
 class SinglePathPattern:
-    pass
+    def __init__(self, node_pattern_left: NodePattern, rel_pattern: RelationshipPattern, node_pattern_right: NodePattern):
+        self.node_pattern_left = node_pattern_left
+        self.rel_pattern = rel_pattern
+        self.node_pattern_right = node_pattern_right
+
