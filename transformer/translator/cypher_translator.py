@@ -15,6 +15,21 @@ class CypherTranslator:
         parser = s_cypherParser(tokens)
         return parser
 
+    def translate_s_cypher_query(self, query_input: InputStream) -> SCypherClause:
+        clause = None
+        parser = self.set_parser(query_input)
+        if parser.oC_SingleQuery() is not None:
+            clause = self.translate_single_query_clause(query_input)
+        elif parser.oC_Union() is not None:
+            clause = self.translate_union_query_clause(query_input)
+        elif parser.oC_StandaloneCall() is not None:
+            pass
+        elif parser.s_TimeWindowLimit() is not None:
+            pass
+        else:
+            pass
+        return SCypherClause(clause)
+
     def translate_match_clause(self, match_input) -> MatchClause:
         match_parser = self.set_parser(match_input)
         match_tree = match_parser.oC_Match()
@@ -33,9 +48,18 @@ class CypherTranslator:
         return where_extractor.where_clause
 
     def translate_single_query_clause(self, single_query_input) -> SingleQueryClause:
-        pass
+        # reading_clauses: List[ReadingClause] = None,
+        # updating_clauses: List[UpdatingClause] = None,
+        # return_clause: ReadingClause
+        single_parser = self.set_parser(single_query_input)
+        single_tree = single_parser.oC_SinglePartQuery()
+        single_walker = ParseTreeWalker()
+        single_extractor = SCypherWalker(single_parser)
+        single_walker.walk(single_extractor, single_tree)
 
     def translate_union_query_clause(self, union_query_input) -> UnionQueryClause:
+        # multi_query_clauses: List[MultiQueryClause],
+        # is_all: List[bool]
         union_parser = self.set_parser(union_query_input)
         union_tree = union_parser.oC_Union()
         union_walker = ParseTreeWalker()
@@ -47,8 +71,26 @@ class CypherTranslator:
             is_all_list.append(multi_query_clause.is_all)
         return UnionQueryClause(multi_query_clauses, is_all_list)
 
-    def translate_multi_query_clause(self, multi_query_clause: list[str]) -> MultiQueryClause:
-        pass
+#((oC_ReadingClause SP?)* (oC_UpdatingClause SP?)* oC_With SP?)+oC_SinglePartQuery
+# WITH查询
+# 	oC_With
+# 		WITH oC_ProjectionBody ( SP? oC_Where )?
+# 			oC_ProjectionBody
+# 				( SP? DISTINCT )? SP oC_ProjectionItems ( SP oC_Order )? ( SP oC_Skip )? ( SP oC_Limit )?
+# 					oC_ProjectionItems
+# 						'*' ( SP? ',' SP? oC_ProjectionItem )*
+# 						oC_ProjectionItem ( SP? ',' SP? oC_ProjectionItem )*
+    def translate_multi_query_clause(self, multi_query_input) -> MultiQueryClause:
+        # single_query_clause: SingleQueryClause = None,
+        # with_query_clauses: List[WithQueryClause] = None
+        multi_parser = self.set_parser(multi_query_input)
+        multi_tree = multi_parser.oC_MultiPartQuery()
+        multi_walker = ParseTreeWalker()
+        multi_extractor = SCypherWalker(multi_parser)
+        multi_walker.walk(multi_extractor, multi_tree)
+        single_query_clause = self.translate_single_query_clause(multi_query_input)
+
+
 
     def translate_with_query_clause(self, with_query_clause: list[str]) -> WithQueryClause:
         pass

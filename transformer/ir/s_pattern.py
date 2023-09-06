@@ -4,13 +4,10 @@ from transformer.ir.s_clause_component import *
 from transformer.ir.s_graph import *
 
 
-class TimePointLiteral:
-    pass
-
-
 class AtTElement:
-    def __init__(self, at_time: TimePointLiteral | NOW = None):
-        self.at_time = at_time
+    def __init__(self, time_from: Time, time_to: Time | NOW):
+        self.time_from = time_from
+        self.time_to = time_to
 
 
 class PropertiesPattern:

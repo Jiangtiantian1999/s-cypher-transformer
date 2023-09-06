@@ -13,6 +13,11 @@ class Clause:
 
 # 读查询，包括Match子句，Unwind子句和Call子句
 class ReadingClause(Clause):
+    def __init__(self, match_clause: MatchClause = None, unwind_clause: UnwindClause = None, call_clause: InnerCallClause = None):
+        self.match_clause = match_clause
+        self.unwind_clause = unwind_clause
+        self.call_clause = call_clause
+
     def get_variables(self):
         return []
 
