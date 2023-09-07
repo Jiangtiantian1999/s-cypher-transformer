@@ -10,7 +10,7 @@ class Clause:
     time_granularity = TimePoint.LOCALDATETIME
 
 
-# 读查询，包括Match子句，Unwind子句和Call子句
+# 读查询，为Match子句，Unwind子句和Call子句的父函数
 class ReadingClause(Clause):
     def get_variables_dict(self):
         return {}
@@ -48,7 +48,6 @@ class ReturnClause(Clause):
 
 
 class MatchClause(ReadingClause):
-    internalID = 0
 
     def __init__(self, patterns: List[Pattern], is_optional: bool = False, where_clause: WhereClause = None,
                  time_window: TimePoint | Interval = None):
@@ -62,23 +61,6 @@ class MatchClause(ReadingClause):
         for pattern in self.patterns:
             variables_dict.update(pattern.get_variables_dict())
         return variables_dict
-
-    def getInternalID(self):
-        self.internalID += 1
-        return self.internalID
-
-    def resetInternalID(self):
-        self.internalID = 0
-
-    # Prints out information about the nodes and edges in the MATCH clause.
-    # def __str__(self):
-    #     str_ = "NODES IN MATCH CLAUSE:\n"
-    #     for i in range(len(self.nodes)):
-    #         str_ += str(self.nodes[i]) + "\n"
-    #     str_ += "RELATIONSHIPS IN MATCH CLAUSE:\n"
-    #     for i in range(len(self.edges)):
-    #         str_ += str(self.edges[i]) + "\n"
-    #     return str_
 
 
 class UnwindClause(ReadingClause):
