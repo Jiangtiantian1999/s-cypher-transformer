@@ -10,12 +10,6 @@ class Clause:
     time_granularity = TimePoint.LOCALDATETIME
 
 
-# 读查询，为Match子句，Unwind子句和Call子句的父函数
-class ReadingClause(Clause):
-    def get_variables_dict(self):
-        return {}
-
-
 class WhereClause(Clause):
     def __init__(self, expression: Expression):
         self.expression = expression
@@ -47,7 +41,7 @@ class ReturnClause(Clause):
         self.limit_clause = limit_clause
 
 
-class MatchClause(ReadingClause):
+class MatchClause():
 
     def __init__(self, patterns: List[Pattern], is_optional: bool = False, where_clause: WhereClause = None,
                  time_window: TimePoint | Interval = None):
@@ -63,7 +57,7 @@ class MatchClause(ReadingClause):
         return variables_dict
 
 
-class UnwindClause(ReadingClause):
+class UnwindClause(Clause):
     def get_variables_dict(self):
         return {}
 
@@ -84,7 +78,7 @@ class YieldClause(Clause):
                 variables_dict[key] = YieldClause
 
 
-class CallClause(ReadingClause):
+class CallClause(Clause):
 
     def __init__(self, procedure_name: str, input_items: List[Expression] = None, yield_clause: YieldClause = None):
         self.procedure_name = procedure_name
@@ -95,6 +89,15 @@ class CallClause(ReadingClause):
         if self.yield_clause:
             return self.yield_clause.get_variables_dict()
         return {}
+
+
+# 读查询
+class ReadingClause(Clause):
+    def __init__(self, reading_clause: MatchClause | UnwindClause | CallClause):
+        self.reading_clause = reading_clause
+
+    def get_variables_dict(self):
+        return self.reading_clause.get_variables_dict()
 
 
 # 更新查询
