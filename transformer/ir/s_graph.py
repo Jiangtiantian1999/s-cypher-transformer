@@ -2,10 +2,11 @@ from typing import List, Tuple
 
 from transformer.exceptions.s_exception import GraphError
 from transformer.ir.s_datetime import Interval
+from transformer.ir.s_expression import Expression
 
 
 class SNode:
-    def __init__(self, labels: List[str], content: str | Exception = None, variable: str = None,
+    def __init__(self, labels: List[str], content: str | Expression = None, variable: str = None,
                  interval: Interval = None):
         # 节点标签，至少有一个区别节点类型的标签（Object, Property或Value），对象节点的内容以标签形式存储
         self.labels = labels
@@ -23,7 +24,7 @@ class PropertyNode(SNode):
 
 
 class ValueNode(SNode):
-    def __init__(self, content: Exception, variable: str = None, interval: Interval = None):
+    def __init__(self, content: Expression, variable: str = None, interval: Interval = None):
         super().__init__(['Value'], content, variable, interval)
 
 
