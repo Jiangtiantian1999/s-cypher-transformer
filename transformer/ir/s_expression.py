@@ -1,6 +1,7 @@
 from typing import List
 
 
+# 基础原子对象
 class Atom:
     pass
 
