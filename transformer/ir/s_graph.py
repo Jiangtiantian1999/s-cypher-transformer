@@ -5,10 +5,11 @@ from transformer.ir.s_datetime import Interval
 
 
 class SNode:
-    def __init__(self, labels: List[str], content: str = None, variable: str = None, interval: Interval = None):
+    def __init__(self, labels: List[str], content: str | Exception = None, variable: str = None,
+                 interval: Interval = None):
         # 节点标签，至少有一个区别节点类型的标签（Object, Property或Value），对象节点的内容以标签形式存储
         self.labels = labels
-        # 节点内容，对象节点的内容以标签形式存储，即对象节点的content属性为null
+        # 节点内容, 对象节点的内容以标签形式存储，即对象节点的content属性为null; 属性节点的内容为属性名，为str类型; 值节点的内容为属性值，为Expression类型
         self.content = content
         # 表示节点的变量名
         self.variable = variable
@@ -22,7 +23,7 @@ class PropertyNode(SNode):
 
 
 class ValueNode(SNode):
-    def __init__(self, content: str, variable: str = None, interval: Interval = None):
+    def __init__(self, content: Exception, variable: str = None, interval: Interval = None):
         super().__init__(['Value'], content, variable, interval)
 
 
