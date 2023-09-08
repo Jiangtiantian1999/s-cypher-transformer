@@ -1,4 +1,4 @@
-from s_cypher_walker import SCypherWalker
+from transformer.translator.s_cypher_walker import *
 from transformer.ir.s_cypher_clause import *
 from transformer.grammar_parser.s_cypherParser import s_cypherParser
 from transformer.grammar_parser.s_cypherLexer import s_cypherLexer
@@ -8,6 +8,9 @@ from transformer.ir.s_graph import *
 
 # translate the S-Cypher input to its internal representation
 class CypherTranslator:
+    def __init__(self, query_input: FileStream):
+        self.s_cypher_query = query_input
+
     @staticmethod
     def set_parser(s_cypher_input) -> s_cypherParser:
         lexer = s_cypherLexer(s_cypher_input)
@@ -15,22 +18,26 @@ class CypherTranslator:
         parser = s_cypherParser(tokens)
         return parser
 
-    def translate_s_cypher_query(self, query_input: InputStream) -> SCypherClause:
+    def translate_s_cypher_query(self) -> SCypherClause:
         clause = None
-        parser = self.set_parser(query_input)
-        if parser.oC_SingleQuery() is not None:
-            clause = self.translate_single_query_clause(query_input)
-        elif parser.oC_Union() is not None:
-            clause = self.translate_union_query_clause(query_input)
-        elif parser.oC_StandaloneCall() is not None:
-            pass
-        elif parser.s_TimeWindowLimit() is not None:
-            pass
-        else:
-            pass
+        parser = self.set_parser(self.s_cypher_query)
+        # if parser.oC_SingleQuery() is not None:
+        #     clause = self.translate_single_query_clause(self.s_cypher_query)
+        # elif parser.oC_Union() is not None:
+        #     clause = self.translate_union_query_clause(self.s_cypher_query)
+        # elif parser.oC_StandaloneCall() is not None:
+        #     pass
+        # elif parser.s_TimeWindowLimit() is not None:
+        #     pass
+        # else:
+        #     pass
+        # return SCypherClause(clause)
+        # test match
+        clause = self.translate_match_clause(self.s_cypher_query)
         return SCypherClause(clause)
 
     def translate_match_clause(self, match_input) -> MatchClause:
+        print("translate match clause")
         match_parser = self.set_parser(match_input)
         match_tree = match_parser.oC_Match()
         match_walker = ParseTreeWalker()
@@ -89,7 +96,7 @@ class CypherTranslator:
         multi_extractor = SCypherWalker(multi_parser)
         multi_walker.walk(multi_extractor, multi_tree)
         single_query_clause = self.translate_single_query_clause(multi_query_input)
-
+        with_query_clause = self.translate_with_query_clause(multi_query_input)
 
 
     def translate_with_query_clause(self, with_query_clause: list[str]) -> WithQueryClause:
