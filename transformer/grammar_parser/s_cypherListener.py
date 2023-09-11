@@ -1,4 +1,4 @@
-# Generated from s_cypher.g4 by ANTLR 4.13.0
+# Generated from .\s_cypher.g4 by ANTLR 4.13.0
 from antlr4 import *
 if "." in __name__:
     from .s_cypherParser import s_cypherParser
@@ -158,6 +158,24 @@ class s_cypherListener(ParseTreeListener):
 
     # Exit a parse tree produced by s_cypherParser#s_PropertiesPattern.
     def exitS_PropertiesPattern(self, ctx:s_cypherParser.S_PropertiesPatternContext):
+        pass
+
+
+    # Enter a parse tree produced by s_cypherParser#s_PropertyNode.
+    def enterS_PropertyNode(self, ctx:s_cypherParser.S_PropertyNodeContext):
+        pass
+
+    # Exit a parse tree produced by s_cypherParser#s_PropertyNode.
+    def exitS_PropertyNode(self, ctx:s_cypherParser.S_PropertyNodeContext):
+        pass
+
+
+    # Enter a parse tree produced by s_cypherParser#s_ValueNode.
+    def enterS_ValueNode(self, ctx:s_cypherParser.S_ValueNodeContext):
+        pass
+
+    # Exit a parse tree produced by s_cypherParser#s_ValueNode.
+    def exitS_ValueNode(self, ctx:s_cypherParser.S_ValueNodeContext):
         pass
 
 

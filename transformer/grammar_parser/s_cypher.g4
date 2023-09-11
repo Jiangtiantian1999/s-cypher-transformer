@@ -51,7 +51,11 @@ s_Properties : s_PropertiesPattern
               | oC_Parameter
               ;
 
-s_PropertiesPattern : '{' SP? ( oC_PropertyKeyName SP? ( s_AtTElement SP? )? ':' SP? oC_Expression SP? ( s_AtTElement SP? )? ( ',' SP? oC_PropertyKeyName SP? ( s_AtTElement SP? )? ':' SP? oC_Expression SP? ( s_AtTElement SP? )? )* )? '}' ;
+s_PropertiesPattern : '{' SP? ( s_PropertyNode ':' s_ValueNode ( ',' SP? s_PropertyNode ':' s_ValueNode )* )? '}' ;
+
+s_PropertyNode : oC_PropertyKeyName SP? ( s_AtTElement SP? )? ;
+
+s_ValueNode : SP? oC_Expression SP? ( s_AtTElement SP? )? ;
 
 oC_RelationshipDetail : '[' SP? ( oC_Variable SP? )? ( oC_RelationshipTypes SP? )? oC_RangeLiteral? ( s_AtTElement SP? )? ( oC_Properties SP? )? ']' ;
 

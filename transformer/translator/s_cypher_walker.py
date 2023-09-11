@@ -11,6 +11,8 @@ class SCypherWalker(s_cypherListener):
         self.parser = parser
         # node
         self.properties = dict()  # 对象节点的属性 dict[PropertyNode, ValueNode]
+        self.property_node_list = []  # 属性节点列表
+        self.value_node_list = []  # 值节点列表
         # time
         self.at_time = None
         self.interval = None
@@ -21,6 +23,8 @@ class SCypherWalker(s_cypherListener):
         # path
         self.path_function_name = ""
         # clauses
+        self.multi_query_clauses = []
+
         self.match_clause = None
         self.where_clause = None
         self.reading_clause = None
@@ -34,7 +38,7 @@ class SCypherWalker(s_cypherListener):
         self.single_query_clause = None
         self.with_clause = None
         self.with_query_clause = None
-        self.multi_query_clause = []
+
         self.union_query_clause = None
         self.stand_alone_call_clause = None
         self.time_window_limit_clause = None
@@ -87,19 +91,8 @@ class SCypherWalker(s_cypherListener):
         else:
             pass
 
-    # def enterOC_PatternPart(self, ctx: s_cypherParser.OC_PatternPartContext):
-    #     print("enter pattern part")
-    #     pattern = None
-    #     if ctx.oC_Variable() is not None:
-    #         self.pattern_variable = ctx.oC_Variable().getText()
-    #         if ctx.s_PathFunctionPattern() is not None:
-    #             pattern = ctx.s_PathFunctionPattern().getText()
-    #         elif ctx.oC_AnonymousPatternPart() is not None:
-    #             pattern = ctx.oC_AnonymousPatternPart().getText()
-    #     else:
-    #         pattern = ctx.oC_AnonymousPatternPart()
-
-    def getInterval(self, interval_str) -> Interval:
+    @staticmethod
+    def getInterval(interval_str) -> Interval:
         index = 0
         interval_from = interval_to = ""
         find_from = find_to = False
@@ -147,48 +140,62 @@ class SCypherWalker(s_cypherListener):
         self.node_pattern = ObjectNode(node_label_list, None, interval, properties)
         self.node_pattern.content = node_content
 
-    # 获取对象节点的属性
     def exitS_PropertiesPattern(self, ctx: s_cypherParser.S_PropertiesPatternContext):
         print("enter properties pattern")
+        # 将属性节点和值节点组合成对象节点的属性
+        for prop_node, val_node in zip(self.property_node_list, self.value_node_list):
+            self.properties[prop_node] = val_node
+
+    # 获取属性节点
+    def enterS_PropertyNode(self, ctx: s_cypherParser.S_PropertyNodeContext):
+        print("enter property node")
         property_contents = []  # 属性节点内容
         property_intervals = []  # 属性节点时间
-        value_contents = []  # 值节点内容
-        value_intervals = []  # 值节点时间
-        property_node_list = []
-        value_node_list = []
         # 获取属性节点内容
         if ctx.oC_PropertyKeyName() is not None:
             prop_contents = ctx.oC_PropertyKeyName()
-            for prop_content in prop_contents:
-                property_contents.append(prop_content.getText())
+            if isinstance(prop_contents, list):
+                for prop_content in prop_contents:
+                    property_contents.append(prop_content.getText())
+            else:
+                property_contents = [prop_contents.getText()]
         # 获取属性节点的时间
         if ctx.s_AtTElement() is not None:
             prop_intervals = ctx.s_AtTElement()
-            # for prop_interval in prop_intervals:
-            #     property_intervals.append(prop_interval.getText())
-            for prop_interval in prop_intervals:
-                interval_str = prop_interval.getText()
-                property_intervals.append(self.getInterval(interval_str))
+            if isinstance(prop_intervals, list):
+                for prop_interval in prop_intervals:
+                    interval_str = prop_interval.getText()
+                    property_intervals.append(self.getInterval(interval_str))
+            else:
+                property_intervals = [self.getInterval(prop_intervals.getText())]
         # 构造属性节点列表
         for prop_content, prop_interval in zip(property_contents, property_intervals):
-            property_node_list.append(PropertyNode(prop_content, None, prop_interval))
+            self.property_node_list.append(PropertyNode(prop_content, None, prop_interval))
+
+    # 获取值节点
+    def enterS_ValueNode(self, ctx: s_cypherParser.S_ValueNodeContext):
+        value_contents = []  # 值节点内容
+        value_intervals = []  # 值节点时间
         # 获取值节点内容
         if ctx.oC_Expression() is not None:
             val_contents = ctx.oC_Expression()
-            for val_content in val_contents:
-                value_contents.append(val_content.getText())
+            if isinstance(val_contents, list):
+                for val_content in val_contents:
+                    value_contents.append(val_content.getText())
+            else:
+                value_contents = [val_contents.getText()]
         # 获取值节点的时间
         if ctx.s_AtTElement() is not None:
             val_intervals = ctx.s_AtTElement()
-            for val_interval in val_intervals:
-                interval_str = val_interval.getText()
-                value_intervals.append(self.getInterval(interval_str))
+            if isinstance(val_intervals, list):
+                for val_interval in val_intervals:
+                    interval_str = val_interval.getText()
+                    value_intervals.append(self.getInterval(interval_str))
+            else:
+                value_intervals = [self.getInterval(val_intervals.getText())]
         # 构造值节点
         for val_content, val_interval in zip(value_contents, value_intervals):
-            value_node_list.append(ValueNode(val_content, None, val_interval))
-        # 将属性节点和值节点组合成对象节点的属性
-        for prop_node, val_node in zip(property_node_list, value_node_list):
-            self.properties[prop_node] = val_node
+            self.value_node_list.append(ValueNode(val_content, None, val_interval))
 
     # 获取时间
     def enterS_AtTElement(self, ctx: s_cypherParser.S_AtTElementContext):
@@ -203,7 +210,7 @@ class SCypherWalker(s_cypherListener):
         else:
             raise FormatError("Invalid time format!")
         self.interval = Interval(interval_to, interval_from)
-        print("enter S_AtTElement")
+        print("enter S_AtTElement: " + str(self.interval))
 
     def enterOC_RelationshipDetail(self, ctx: s_cypherParser.OC_RelationshipDetailContext):
         variable = ""
@@ -240,10 +247,14 @@ class SCypherWalker(s_cypherListener):
         else:
             self.match_patterns.append(ctx.oC_PatternElement().getText())
 
-    def enterOC_Expression(self, ctx:s_cypherParser.OC_ExpressionContext):
+    def enterOC_Expression(self, ctx: s_cypherParser.OC_ExpressionContext):
         pass
 
-    def exitOC_Return(self, ctx:s_cypherParser.OC_ReturnContext):
+    def exitOC_Return(self, ctx: s_cypherParser.OC_ReturnContext):
+        # projection_items: List[ProjectionItem],
+        # is_distinct: bool = False,
+        # order_by_clause: OrderByClause = None, skip_clause: SkipClause = None,
+        # limit_clause: LimitClause = None
         projection_items = ctx.oC_ProjectionBody().oC_ProjectionItems().oC_ProjectionItem()
         is_distinct = False
         if ctx.oC_ProjectionBody().DISTINCT() is not None:
@@ -252,4 +263,7 @@ class SCypherWalker(s_cypherListener):
         skip_clause = self.skip_clause
         limit_clause = self.limit_clause
         self.return_clause = ReturnClause(projection_items, is_distinct, order_by_clause, skip_clause, limit_clause)
+
+    def enterOC_ProjectionItem(self, ctx: s_cypherParser.OC_ProjectionItemContext):
+        pass
 
