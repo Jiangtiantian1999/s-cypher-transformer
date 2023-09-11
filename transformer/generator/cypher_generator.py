@@ -5,7 +5,7 @@ from transformer.ir.s_expression import *
 from transformer.ir.s_graph import SEdge, SNode, ObjectNode, SPath
 
 
-class CypherConverter:
+class CypherGenerator:
     count_num = 1000
     variables_dict = []
     s_cypher_clause = None
@@ -15,7 +15,7 @@ class CypherConverter:
             self.count_num = self.count_num + 1
         return 'var' + str(self.count_num)
 
-    def convert_cypher_query(self, s_cypher_clause: SCypherClause) -> str:
+    def generate_cypher_query(self, s_cypher_clause: SCypherClause) -> str:
         self.count_num = 1000
         self.variables_dict = s_cypher_clause.get_variables_dict()
         self.s_cypher_clause = s_cypher_clause
