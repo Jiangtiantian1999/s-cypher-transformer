@@ -195,7 +195,7 @@ class CypherGenerator:
             interval_condition = edge.variable + ".interval_to >= " + str(edge.interval.interval_to.timestamp())
             interval_conditions.append(interval_condition)
         if time_window:
-            if time_window.__class__ == TimePoint.__class__:
+            if time_window.__class__ == TimePoint:
                 interval_condition = edge.variable + ".interval_from <= " + str(time_window.timestamp())
                 interval_conditions.append(interval_condition)
                 interval_condition = edge.variable + ".interval_to >= " + str(time_window.timestamp())
@@ -229,7 +229,7 @@ class CypherGenerator:
             interval_conditions.append(interval_condition)
 
         if time_window:
-            if time_window.__class__ == TimePoint.__class__:
+            if time_window.__class__ == TimePoint:
                 interval_condition = node.variable + ".interval_from <= " + str(time_window.timestamp())
                 interval_conditions.append(interval_condition)
                 interval_condition = node.variable + ".interval_to >= " + str(time_window.timestamp())
@@ -325,11 +325,11 @@ class CypherGenerator:
         subject_string = self.convert_add_subtract_expression(subject_expression.add_or_subtract_expression)
         if subject_expression.predicate_expression:
             predicate_string = ""
-            if subject_expression.predicate_expression.__class__ == TimePredicateExpression.__class__:
+            if subject_expression.predicate_expression.__class__ == TimePredicateExpression:
                 predicate_string = self.convert_time_predicate_expression(subject_expression.predicate_expression)
-            elif subject_expression.predicate_expression.__class__ == StringPredicateExpression.__class__:
+            elif subject_expression.predicate_expression.__class__ == StringPredicateExpression:
                 predicate_string = self.convert_string_predicate_expression(subject_expression.predicate_expression)
-            elif subject_expression.predicate_expression.__class__ == ListPredicateExpression.__class__:
+            elif subject_expression.predicate_expression.__class__ == ListPredicateExpression:
                 predicate_string = self.convert_list_predicate_expression(subject_expression.predicate_expression)
             return subject_string + ' ' + predicate_string
         return subject_string
@@ -376,10 +376,10 @@ class CypherGenerator:
 
     def convert_list_index_expression(self, list_index_expression: ListIndexExpression):
         list_index_string = ""
-        if list_index_expression.principal_expression.__class__ == PropertiesLabelsExpression.__class__:
+        if list_index_expression.principal_expression.__class__ == PropertiesLabelsExpression:
             list_index_string = self.convert_properties_labels_expressions(
                 list_index_expression.principal_expression)
-        elif list_index_expression.principal_expression.__class__ == AtTExpression.__class__:
+        elif list_index_expression.principal_expression.__class__ == AtTExpression:
             list_index_string = self.convert_at_t_expression(list_index_expression.principal_expression)
         if list_index_expression.index_expression:
             list_index_string = list_index_string + '[' + self.convert_expression(
@@ -409,15 +409,15 @@ class CypherGenerator:
         return at_t_string
 
     def convert_atom(self, atom: Atom):
-        if atom.__class__ == LiteralString.__class__:
+        if atom.__class__ == LiteralString:
             return self.convert_literal_string(atom)
-        elif atom.__class__ == ListLiteral.__class__:
+        elif atom.__class__ == ListLiteral:
             return self.convert_list_literal(atom)
-        elif atom.__class__ == MapLiteral.__class__:
+        elif atom.__class__ == MapLiteral:
             return self.convert_map_literal(atom)
-        elif atom.__class__ == ParenthesizedExpression.__class__:
+        elif atom.__class__ == ParenthesizedExpression:
             return self.convert_parenthesized_expression(atom)
-        elif atom.__class__ == FunctionInvocation.__class__:
+        elif atom.__class__ == FunctionInvocation:
             return self.convert_function_invocation(atom)
         else:
             pass
