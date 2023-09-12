@@ -6,17 +6,18 @@ from transformer.ir.s_graph import SEdge, SNode, ObjectNode, SPath
 
 
 class CypherGenerator:
-    count_num = 1000
+    count_num = 999
     variables_dict = []
     s_cypher_clause = None
 
     def get_random_variable(self) -> str:
+        self.count_num = self.count_num + 1
         while 'var' + str(self.count_num) in self.variables_dict.keys():
             self.count_num = self.count_num + 1
         return 'var' + str(self.count_num)
 
     def generate_cypher_query(self, s_cypher_clause: SCypherClause) -> str:
-        self.count_num = 1000
+        self.count_num = 999
         self.variables_dict = s_cypher_clause.get_variables_dict()
         self.s_cypher_clause = s_cypher_clause
         if s_cypher_clause.query_clause.__class__ == UnionQueryClause:
