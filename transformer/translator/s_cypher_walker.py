@@ -89,7 +89,6 @@ class SCypherWalker(s_cypherListener):
         pass
 
     def exitOC_Match(self, ctx: s_cypherParser.OC_MatchContext):
-        print("exit oc_match")
         is_optional = False
         patterns = []
         time_window = None
@@ -144,7 +143,10 @@ class SCypherWalker(s_cypherListener):
             elif find_to:
                 interval_to += interval_str[index]
             index = index + 1
-        interval = Interval(interval_from, interval_to)
+        if interval_to == "NOW":
+            interval = Interval(LocalDateTime(interval_from.strip('"')), TimePoint.NOW)
+        else:
+            interval = Interval(LocalDateTime(interval_from.strip('"')), LocalDateTime(interval_to.strip('"')))
         return interval
 
     # 获取对象节点
@@ -159,9 +161,9 @@ class SCypherWalker(s_cypherListener):
             node_labels = ctx.oC_NodeLabels()
             if isinstance(node_labels, list):
                 for node_label in node_labels:
-                    node_label_list.append(node_label.getText())
+                    node_label_list.append(node_label.getText().strip(':'))
             else:
-                node_label_list.append(node_labels.getText())
+                node_label_list.append(node_labels.getText().strip(':'))
         if ctx.s_AtTElement() is not None:
             n_interval = ctx.s_AtTElement()
             interval_str = n_interval.getText()
@@ -171,14 +173,12 @@ class SCypherWalker(s_cypherListener):
         self.object_node_list.append(ObjectNode(node_label_list, None, interval, properties))
 
     def exitS_PropertiesPattern(self, ctx: s_cypherParser.S_PropertiesPatternContext):
-        print("exit properties pattern")
         # 将属性节点和值节点组合成对象节点的属性
         for prop_node, val_node in zip(self.property_node_list, self.value_node_list):
             self.properties[prop_node] = val_node
 
     # 获取属性节点
     def enterS_PropertyNode(self, ctx: s_cypherParser.S_PropertyNodeContext):
-        print("enter property node")
         property_contents = []  # 属性节点内容
         property_intervals = []  # 属性节点时间
         # 获取属性节点内容
@@ -232,15 +232,17 @@ class SCypherWalker(s_cypherListener):
         time_list = ctx.s_TimePointLiteral()
         now = ctx.NOW()
         if len(time_list) == 2 and now is None:
-            interval_from = time_list[0].getText()
-            interval_to = time_list[1].getText()
+            interval_from = time_list[0].getText().strip('"')
+            interval_to = time_list[1].getText().strip('"')
         elif len(time_list) == 1 and now is not None:
-            interval_from = time_list[0].getText()
-            interval_to = ctx.NOW().getText()
+            interval_from = time_list[0].getText().strip('"')
+            interval_to = ctx.NOW().getText().strip('"')
         else:
             raise FormatError("Invalid time format!")
-        self.interval = Interval(interval_to, interval_from)
-        print("enter S_AtTElement: " + str(self.interval))
+        if interval_to == "NOW":
+            self.interval = Interval(LocalDateTime(interval_from), TimePoint.NOW)
+        else:
+            self.interval = Interval(LocalDateTime(interval_from), LocalDateTime(interval_to))
 
     def enterOC_RelationshipDetail(self, ctx: s_cypherParser.OC_RelationshipDetailContext):
         variable = ""

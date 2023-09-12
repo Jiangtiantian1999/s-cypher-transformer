@@ -123,7 +123,6 @@ class CypherTranslator:
         # is_optional: bool = False,
         # where_clause: WhereClause = None,
         # time_window: TimePoint | Interval = None
-        print("translate match clause")
         match_tree = self.parser.oC_Match()
         match_extractor = SCypherWalker(self.parser)
         self.walker.walk(match_extractor, match_tree)
