@@ -17,6 +17,7 @@ class TimePoint:
 
     time_point_type = LOCALDATETIME
 
+    # 根据时间点类型获取当前时间的时间点对象
     def now(self):
         if self.time_point_type == self.DATE:
             return datetime.now().date()
@@ -37,14 +38,14 @@ class TimePoint:
         elif self.time_point_type in [self.DATETIME, self.LOCALDATETIME]:
             return datetime.min
 
+    # 转换为时间戳
     def timestamp(self):
-        now = self.now()
         if self.time_point_type == self.DATE:
-            return datetime.combine(now, time(0)).timestamp()
+            return datetime.combine(self.date, time(0)).timestamp()
         elif self.time_point_type in [self.TIME, self.LOCALTIME]:
-            return datetime.combine(date(1970, 1, 1), now).timestamp()
+            return datetime.combine(date(1970, 1, 1), self.time).timestamp()
         elif self.time_point_type in [self.DATETIME, self.LOCALDATETIME]:
-            return now.timestamp()
+            return self.datetime.timestamp()
 
     def __lt__(self, other):
         if self.time_point_type == other.time_point_type:
