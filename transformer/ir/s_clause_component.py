@@ -1,16 +1,25 @@
 from typing import List
 
-from transformer.ir.s_graph import SNode, SPath
+from transformer.ir.s_graph import *
 
 
 class TemporalPathCall:
     def __init__(self, variable: str, function_name: str, path: SPath):
+        # 时态路径变量名
         self.variable = variable
         self.function_name = function_name
         if len(path.nodes) != 2:
             raise ValueError("The length of the temporal path  are not matched.")
-        self.start_node = SPath
-        self.path = path
+        self.start_node = path.nodes[0]
+        self.edge = path.edges[0]
+        self.end_node = path.nodes[1]
+
+    def get_variables_dict(self):
+        variables_dict = {self.variable: self}
+        variables_dict.update(self.start_node.get_variables_dict())
+        variables_dict.update(self.edge.get_variables_dict())
+        variables_dict.update(self.end_node.get_variables_dict())
+        return variables_dict
 
 
 class Pattern:
@@ -24,14 +33,21 @@ class Pattern:
             self.temporal_path_call = pattern
 
     def get_variables_dict(self):
-        if self.path is not None:
+        if self.path:
             return self.path.get_variables_dict()
         else:
-            variables_dict = {self.temporal_path_call.variable: self.temporal_path_call}
-            variables_dict.update(self.temporal_path_call.path.get_variables_dict())
-            return variables_dict
+            return self.temporal_path_call.get_variables_dict()
 
 
 class ProjectionItem:
-    ALL_ITEM = '*'
-    pass
+
+    def __init__(self, is_all: bool = False, expression: Exception = None, variable: str = None):
+        # 要么为*，要么为expression( as variable)
+        if is_all is False and expression is None:
+            raise ValueError("The projection item can't be empty.")
+        # 是否返回所有变量，即return *
+        self.is_all = is_all
+        # 表达式
+        self.expression = expression
+        # 别名
+        self.variable = variable
