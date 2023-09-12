@@ -208,6 +208,6 @@ class SCypherClause(Clause):
         self.query_clause = query_clause
 
     def get_variables_dict(self):
-        if self.query_clause.__class__ in [UnionQueryClause.__class__, CallClause.__class__]:
+        if self.query_clause.__class__ in [UnionQueryClause, CallClause]:
             return self.query_clause.get_variables_dict()
         return {}
