@@ -459,7 +459,8 @@ class Duration:
 
 class Interval:
 
-    def __init__(self, interval_from: Date | Time | LocalTime | DateTime | LocalDateTime, interval_to):
+    def __init__(self, interval_from: Date | Time | LocalTime | DateTime | LocalDateTime,
+                 interval_to: Date | Time | LocalTime | DateTime | LocalDateTime | str):
         if interval_from.__class__ == interval_to.__class__:
             if interval_from > interval_from:
                 raise ValueError("The start time cannot be later than the end time.")

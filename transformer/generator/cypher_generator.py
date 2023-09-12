@@ -1,5 +1,6 @@
 from typing import List
 
+from transformer.ir.s_clause_component import *
 from transformer.ir.s_cypher_clause import *
 from transformer.ir.s_expression import *
 from transformer.ir.s_graph import SEdge, SNode, ObjectNode, SPath
@@ -99,11 +100,12 @@ class CypherGenerator:
         return with_query_string
 
     def convert_reading_clause(self, reading_clause: ReadingClause) -> str:
-        if reading_clause.reading_clause.__class__ == MatchClause:
-            return self.convert_match_clause(reading_clause.reading_clause)
-        elif reading_clause.reading_clause.__class__ == UnwindClause:
+        reading_clause = reading_clause.reading_clause
+        if reading_clause.__class__ == MatchClause:
+            return self.convert_match_clause(reading_clause)
+        elif reading_clause.__class__ == UnwindClause:
             pass
-        elif reading_clause.reading_clause.__class__ == CallClause:
+        elif reading_clause.__class__ == CallClause:
             pass
 
     def convert_match_clause(self, match_clause: MatchClause) -> str:
@@ -112,11 +114,9 @@ class CypherGenerator:
         if match_clause.is_optional:
             match_string = "OPTIONAL MATCH "
         interval_conditions = []
-        print("match_clause.patterns:")
         for pattern in match_clause.patterns:
-            print(pattern.__class__)
-            if hasattr(pattern, 'path'):
-                print(pattern.path)
+            pattern = pattern.pattern
+            if pattern.__class__ == SPath:
                 path_pattern, property_patterns, path_interval_conditions = self.convert_path(pattern.path,
                                                                                               match_clause.time_window)
                 if match_string not in ["MATCH ", "OPTIONAL MATCH "]:
@@ -129,18 +129,15 @@ class CypherGenerator:
                 for property_pattern in property_patterns:
                     path_pattern = path_pattern + ', ' + property_pattern
                 interval_conditions.extend(path_interval_conditions)
-            elif hasattr(pattern, 'temporal_path_call'):
-                start_variable = pattern.temporal_path_call.path.nodes[0].variable
-                edge_variable = pattern.temporal_path_call.path.edges[0].variable
-                end_variable = pattern.temporal_path_call.path.nodes[1].variable
-                if start_variable is None:
-                    pattern.temporal_path_call.path.nodes[0].variable = self.get_random_variable()
-                if edge_variable is None:
-                    pattern.temporal_path_call.path.edges[0].variable = self.get_random_variable()
-                if end_variable is None:
-                    pattern.temporal_path_call.path.nodes[1].variable = self.get_random_variable()
+            elif pattern.__class__ == TemporalPathCall:
+                if pattern.start_node.variable is None:
+                    pattern.start_node.variable = self.get_random_variable()
+                if pattern.edge.variable is None:
+                    pattern.edge.variable = self.get_random_variable()
+                if pattern.end_node.variable is None:
+                    pattern.end_node.variable = self.get_random_variable()
                 path_pattern, property_patterns, path_interval_conditions = self.convert_path(
-                    pattern.temporal_path_call.path, match_clause.time_window)
+                    pattern.path, match_clause.time_window)
                 if call_string != "":
                     call_string = call_string + '\n'
                 call_string = call_string + 'MATCH ' + + path_pattern
@@ -155,8 +152,9 @@ class CypherGenerator:
                             call_string = call_string + interval_condition
                         else:
                             call_string = call_string + ' and ' + interval_condition
-                call_string = call_string + '\nCALL ' + pattern.temporal_path_call.function_name + '( start: ' + start_variable + ', edge: ' + \
-                              edge_variable + ', end: ' + end_variable + ' )\nYIELD ' + pattern.temporal_path_call.path.variable
+                call_string = call_string + '\nCALL ' + pattern.function_name + '( start: ' + pattern.start_node.variable + \
+                              ', edge: ' + pattern.edge.variable + ', end: ' + pattern.end_node.variable + \
+                              ' )\nYIELD ' + pattern.path.variable
         if call_string != "":
             match_string = call_string + '\n' + match_string
         if match_clause.where_clause or len(interval_conditions) != 0:
@@ -258,6 +256,7 @@ class CypherGenerator:
         # 节点的有效时间限制
         interval_conditions = []
         if node.interval:
+            print(node.interval.interval_from)
             interval_condition = node.variable + ".interval_from <= " + str(node.interval.interval_from.timestamp())
             interval_conditions.append(interval_condition)
             interval_condition = node.variable + ".interval_to >= " + str(node.interval.interval_to.timestamp())
@@ -377,6 +376,7 @@ class CypherGenerator:
         return left_string
 
     def convert_time_predicate_expression(self, time_predicate_expression: TimePredicateExpression):
+        # 待实现
         return time_predicate_expression.time_operation + ' ' + self.convert_add_subtract_expression(
             time_predicate_expression.add_or_subtract_expression)
         pass
@@ -443,9 +443,10 @@ class CypherGenerator:
             at_t_string = at_t_string + '.' + proprety
         return at_t_string
 
-    def convert_atom(self, atom: Atom):
-        if atom.__class__ == LiteralString:
-            return self.convert_literal_string(atom)
+    def convert_atom(self, atom: Atom) -> str:
+        atom = atom.atom
+        if atom.__class__ == str:
+            return atom
         elif atom.__class__ == ListLiteral:
             return self.convert_list_literal(atom)
         elif atom.__class__ == MapLiteral:
@@ -456,9 +457,6 @@ class CypherGenerator:
             return self.convert_function_invocation(atom)
         else:
             pass
-
-    def convert_literal_string(self, literal_string: LiteralString):
-        return str(literal_string)
 
     def convert_list_literal(self, list_literal: ListLiteral):
         list_string = ""
@@ -474,8 +472,8 @@ class CypherGenerator:
         for index, (key, value) in enumerate(map_literal.keys_values.items()):
             if index != 0:
                 map_string = map_string + ', '
-            map_string = map_string + key + ' : ' + self.convert_expression(value)
-        map_string = '[' + map_string + ']'
+            map_string = map_string + key + ': ' + self.convert_expression(value)
+        map_string = '{' + map_string + '}'
         return map_string
 
     def convert_case_expression(self, case_expression: CaseExpression):
@@ -487,7 +485,7 @@ class CypherGenerator:
     def convert_pattern_comprehension(self, pattern_comprehension: PatternComprehension):
         pass
 
-    def convert_parenthesized_expression(self, parenthesized_expression: ParenthesizedExpression):
+    def convert_parenthesized_expression(self, parenthesized_expression: ParenthesizedExpression) -> str:
         return '( ' + self.convert_expression(parenthesized_expression.expression) + ' )'
 
     def convert_function_invocation(self, function_invocation: FunctionInvocation):

@@ -1,51 +1,37 @@
 from typing import List
 
 
-# 基础原子对象
-class Atom:
-    pass
-
-
-# 代表可以直接用字符串形式存储的原子对象，包括BooleanLiteral、NULL、NumberLiteral、StringLiteral、COUNT(*)和Parameter
-class LiteralString(Atom):
-    def __init__(self, literal_string: str):
-        self.literal_string = literal_string
-
-    def __str__(self):
-        return self.literal_string
-
-
-class ListLiteral(Atom):
+class ListLiteral:
     # 注意：该处expressions为List[Expression]类型，由于与Expression相互引用，故此处不写明类型。
     def __init__(self, expressions: List):
         self.expressions = expressions
 
 
-class MapLiteral(Atom):
+class MapLiteral:
     # 注意：该处key_values为dict[str, Expression]类型，由于与Expression相互引用，故此处不写明类型。
     def __init__(self, keys_values: dict):
         self.keys_values = keys_values
 
 
-class CaseExpression(Atom):
+class CaseExpression:
     pass
 
 
-class ListComprehension(Atom):
+class ListComprehension:
     pass
 
 
-class PatternComprehension(Atom):
+class PatternComprehension:
     pass
 
 
-class ParenthesizedExpression(Atom):
+class ParenthesizedExpression:
     # 注意：该处expression为Expression类型，由于与Expression相互引用，故此处不写明类型。
     def __init__(self, expression):
         self.expression = expression
 
 
-class FunctionInvocation(Atom):
+class FunctionInvocation:
     # 注意：该处expressions为List[Expression]类型，由于与Expression相互引用，故此处不写明类型。
     def __init__(self, function_name: str, is_distinct=False, expressions: List = None):
         self.function_name = function_name
@@ -55,8 +41,16 @@ class FunctionInvocation(Atom):
         self.expressions = expressions
 
 
-class ExistentialSubquery(Atom):
+class ExistentialSubquery:
     pass
+
+
+# 基础原子对象
+class Atom:
+    def __init__(self,
+                 atom: str | ListLiteral | MapLiteral | CaseExpression | ListComprehension | PatternComprehension | ParenthesizedExpression | FunctionInvocation | ExistentialSubquery):
+        # BooleanLiteral、NULL、NumberLiteral、StringLiteral、COUNT(*)和Parameter类型可以直接用str存储
+        self.atom = atom
 
 
 class PropertiesLabelsExpression:

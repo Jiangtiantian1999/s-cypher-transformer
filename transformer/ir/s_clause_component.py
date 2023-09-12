@@ -10,6 +10,7 @@ class TemporalPathCall:
         self.function_name = function_name
         if len(path.nodes) != 2:
             raise ValueError("The length of the temporal path  are not matched.")
+        self.path = path
         self.start_node = path.nodes[0]
         self.edge = path.edges[0]
         self.end_node = path.nodes[1]
@@ -25,18 +26,10 @@ class TemporalPathCall:
 class Pattern:
 
     def __init__(self, pattern: SPath | TemporalPathCall):
-        if pattern.__class__ == SPath:
-            # 单点或路径
-            self.path = pattern
-        else:
-            # 查找时态路径
-            self.temporal_path_call = pattern
+        self.pattern = pattern
 
     def get_variables_dict(self):
-        if self.path:
-            return self.path.get_variables_dict()
-        else:
-            return self.temporal_path_call.get_variables_dict()
+        self.pattern.get_variables_dict()
 
 
 class ProjectionItem:
