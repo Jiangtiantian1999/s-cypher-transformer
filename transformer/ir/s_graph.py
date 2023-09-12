@@ -74,6 +74,12 @@ class SEdge:
             properties = []
         self.properties = properties
 
+    def get_variables_dict(self) -> dict:
+        variables_dict = {}
+        if self.variable:
+            variables_dict[self.variable] = self
+        return variables_dict
+
 
 class SPath:
     def __init__(self, nodes: List[ObjectNode], edges: List[SEdge] = None, variable: str = None):
@@ -92,6 +98,5 @@ class SPath:
         for node in self.nodes:
             variables_dict.update(node.get_variables_dict())
         for edge in self.edges:
-            if edge.variable:
-                variables_dict[edge.variable] = edge
+            variables_dict.update(edge.get_variables_dict())
         return variables_dict

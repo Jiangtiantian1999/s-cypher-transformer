@@ -7,9 +7,11 @@ from transformer.ir.s_graph import SEdge, SNode, ObjectNode, SPath
 
 class CypherGenerator:
     count_num = 999
+    # 原句里自带的变量名
     variables_dict = []
     s_cypher_clause = None
 
+    # 获取新的变量名
     def get_random_variable(self) -> str:
         self.count_num = self.count_num + 1
         while 'var' + str(self.count_num) in self.variables_dict.keys():
@@ -24,8 +26,8 @@ class CypherGenerator:
             return self.convert_union_query_clause(s_cypher_clause.query_clause)
         elif s_cypher_clause.query_clause.__class__ == CallClause:
             return self.convert_call_clause(s_cypher_clause.query_clause)
-        elif s_cypher_clause.query_clause.__class__ == UnwindClause:
-            return self.convert_unwind_clause(s_cypher_clause.query_clause)
+        elif s_cypher_clause.query_clause.__class__ == TimeWindowLimitClause:
+            return self.convert_time_window_limit_clause(s_cypher_clause.query_clause)
 
     def convert_union_query_clause(self, s_cypher_clause: UnionQueryClause) -> str:
         union_query_string = self.convert_multi_query_clause(s_cypher_clause.multi_query_clauses[0])
@@ -39,28 +41,61 @@ class CypherGenerator:
             index = index + 1
         return union_query_string
 
-    def convert_call_clause(self, call_clause: CallClause):
+    def convert_call_clause(self, call_clause: CallClause) -> str:
         pass
 
-    def convert_unwind_clause(self, unwind_clause: UnwindClause):
+    def convert_time_window_limit_clause(self, time_window_limit_clause: TimeWindowLimitClause) -> str:
         pass
 
     def convert_multi_query_clause(self, multi_query_clause: MultiQueryClause) -> str:
         multi_query_string = ""
+        # with连接的查询部分
         for with_query_clause in multi_query_clause.with_query_clauses:
-            multi_query_string = multi_query_string + '\n' + self.convert_with_query_clause(with_query_clause)
-        multi_query_string = multi_query_string.lstrip('\n') + '\n' + self.convert_single_query_clause(
+            if multi_query_string != "":
+                multi_query_string = multi_query_string + '\n'
+            multi_query_string = multi_query_string + self.convert_with_query_clause(with_query_clause)
+        # 最后一个查询部分
+        if multi_query_string != "":
+            multi_query_string = multi_query_string + '\n'
+        multi_query_string = multi_query_string + self.convert_single_query_clause(
             multi_query_clause.single_query_clause)
         return multi_query_string
 
+    def convert_single_query_clause(self, single_query_clause: SingleQueryClause) -> str:
+        single_query_string = ""
+        # reading_clauses部分
+        for reading_clause in single_query_clause.reading_clauses:
+            if single_query_string != "":
+                single_query_string = single_query_string + '\n'
+            single_query_string = single_query_string + self.convert_reading_clause(reading_clause)
+        # updating_clauses部分
+        for updating_clause in single_query_clause.updating_clauses:
+            if single_query_string != "":
+                single_query_string = single_query_string + '\n'
+            single_query_string = single_query_string + self.convert_updating_clause(updating_clause)
+        # return_clause部分
+        if single_query_clause.return_clause:
+            if single_query_string != "":
+                single_query_string = single_query_string + '\n'
+            single_query_string = single_query_string + self.convert_return_clause(single_query_string.return_clause)
+        return single_query_string
+
     def convert_with_query_clause(self, with_query_clause: WithQueryClause) -> str:
         with_query_string = ""
+        # reading_clauses部分
         for reading_clause in with_query_clause.reading_clauses:
-            with_query_string = with_query_string + '\n' + self.convert_reading_clause(reading_clause)
+            if with_query_string == "":
+                with_query_string = with_query_string + '\n'
+            with_query_string = with_query_string + self.convert_reading_clause(reading_clause)
+        # updating_clauses部分
         for updating_clause in with_query_clause.updating_clauses:
-            with_query_string = with_query_string + '\n' + self.convert_updating_clause(updating_clause)
-        with_query_string = with_query_string.lstrip('\n') + '\n' + self.convert_with_clause(
-            with_query_string.with_clause)
+            if with_query_string == "":
+                with_query_string = with_query_string + '\n'
+            with_query_string = with_query_string + self.convert_updating_clause(updating_clause)
+        # with_clause部分
+        if with_query_string == "":
+            with_query_string = with_query_string + '\n'
+        with_query_string = with_query_string + self.convert_with_clause(with_query_string.with_clause)
         return with_query_string
 
     def convert_reading_clause(self, reading_clause: ReadingClause) -> str:
@@ -77,8 +112,11 @@ class CypherGenerator:
         if match_clause.is_optional:
             match_string = "OPTIONAL MATCH "
         interval_conditions = []
+        print("match_clause.patterns:")
         for pattern in match_clause.patterns:
-            if pattern.path:
+            print(pattern.__class__)
+            if hasattr(pattern, 'path'):
+                print(pattern.path)
                 path_pattern, property_patterns, path_interval_conditions = self.convert_path(pattern.path,
                                                                                               match_clause.time_window)
                 if match_string not in ["MATCH ", "OPTIONAL MATCH "]:
@@ -91,7 +129,7 @@ class CypherGenerator:
                 for property_pattern in property_patterns:
                     path_pattern = path_pattern + ', ' + property_pattern
                 interval_conditions.extend(path_interval_conditions)
-            elif pattern.temporal_path_call:
+            elif hasattr(pattern, 'temporal_path_call'):
                 start_variable = pattern.temporal_path_call.path.nodes[0].variable
                 edge_variable = pattern.temporal_path_call.path.edges[0].variable
                 end_variable = pattern.temporal_path_call.path.nodes[1].variable
@@ -141,23 +179,20 @@ class CypherGenerator:
             where_string = where_string + interval_condition
         return where_string
 
-    def convert_updating_clause(self, updating_clause: UpdatingClause):
+    def convert_updating_clause(self, updating_clause: UpdatingClause) -> str:
         pass
 
-    def convert_with_clause(self, with_clause: WithClause):
+    def convert_with_clause(self, with_clause: WithClause) -> str:
         pass
 
-    def convert_single_query_clause(self, single_query_clause: SingleQueryClause):
-        single_query_string = ""
-        for index, reading_clause in enumerate(single_query_clause.reading_clauses):
-            if index != 0:
-                single_query_string = single_query_string + '\n'
-            single_query_string = single_query_string + self.convert_reading_clause(reading_clause)
-        # update_clause和return_clause待实现
-        return single_query_string
+    def convert_return_clause(self, return_clause: ReturnClause) -> str:
+        pass
+
+    def convert_unwind_clause(self, unwind_clause: UnwindClause) -> str:
         pass
 
     def convert_edge(self, edge: SEdge, time_window: TimePoint | Interval = None) -> (str, List[str]):
+        # 若边没有变量名，但却有时态限制，那么为它赋一个变量名
         if (edge.interval and edge.variable is None) or time_window:
             edge.variable = self.get_random_variable()
         # 边模式
@@ -208,7 +243,7 @@ class CypherGenerator:
         return edge_pattern, interval_conditions
 
     def convert_node(self, node: SNode, time_window: TimePoint | Interval = None) -> (str, List[str]):
-        # 节点模式
+        # 若节点没有变量名，但却有时态限制，那么为它赋一个变量名
         if (node.interval and node.variable is None) or time_window:
             node.variable = self.get_random_variable()
         node_pattern = ""

@@ -34,6 +34,8 @@ class ReturnClause(Clause):
     def __init__(self, projection_items: List[ProjectionItem], is_distinct: bool = False,
                  order_by_clause: OrderByClause = None, skip_clause: SkipClause = None,
                  limit_clause: LimitClause = None):
+        if len(projection_items) == 0:
+            raise ValueError("The projection_items can't be empty.")
         self.projection_items = projection_items
         self.is_distinct = is_distinct
         self.order_by_clause = order_by_clause
