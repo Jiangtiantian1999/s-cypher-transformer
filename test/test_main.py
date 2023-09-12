@@ -17,7 +17,6 @@ def main():
     # 转换为中间形式
     translator = CypherTranslator(parser)
     s_cypher_entity = translator.translate_s_cypher_query()
-    print("-------translate end----------")
     # 转换为Cypher查询字符串
     cypher_query = CypherGenerator().generate_cypher_query(s_cypher_entity)
     print(cypher_query)
