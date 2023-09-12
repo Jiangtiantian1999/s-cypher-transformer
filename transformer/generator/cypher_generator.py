@@ -19,11 +19,12 @@ class CypherGenerator:
         self.count_num = 1000
         self.variables_dict = s_cypher_clause.get_variables_dict()
         self.s_cypher_clause = s_cypher_clause
-        if s_cypher_clause.query_clause.__class__ == UnionQueryClause.__class__:
+        if s_cypher_clause.query_clause.__class__ == UnionQueryClause:
+            print("generate_cypher_query")
             return self.convert_union_query_clause(s_cypher_clause.query_clause)
-        elif s_cypher_clause.query_clause.__class__ == CallClause.__class__:
+        elif s_cypher_clause.query_clause.__class__ == CallClause:
             return self.convert_call_clause(s_cypher_clause.query_clause)
-        elif s_cypher_clause.query_clause.__class__ == UnwindClause.__class__:
+        elif s_cypher_clause.query_clause.__class__ == UnwindClause:
             return self.convert_unwind_clause(s_cypher_clause.query_clause)
 
     def convert_union_query_clause(self, s_cypher_clause: UnionQueryClause) -> str:
@@ -63,11 +64,11 @@ class CypherGenerator:
         return with_query_string
 
     def convert_reading_clause(self, reading_clause: ReadingClause) -> str:
-        if reading_clause.__class__ == MatchClause.__class__:
-            return self.convert_match_clause(reading_clause)
-        elif reading_clause.__class__ == UnwindClause.__class__:
+        if reading_clause.reading_clause.__class__ == MatchClause:
+            return self.convert_match_clause(reading_clause.reading_clause)
+        elif reading_clause.reading_clause.__class__ == UnwindClause:
             pass
-        elif reading_clause.__class__ == CallClause.__class__:
+        elif reading_clause.reading_clause.__class__ == CallClause:
             pass
 
     def convert_match_clause(self, match_clause: MatchClause) -> str:

@@ -41,7 +41,7 @@ class ReturnClause(Clause):
         self.limit_clause = limit_clause
 
 
-class MatchClause():
+class MatchClause(Clause):
 
     def __init__(self, patterns: List[Pattern], is_optional: bool = False, where_clause: WhereClause = None,
                  time_window: TimePoint | Interval = None):
@@ -111,7 +111,7 @@ class UpdatingClause(Clause):
 # 最后的子句为return或update的查询模块，单一查询
 class SingleQueryClause(Clause):
     def __init__(self, reading_clauses: List[ReadingClause] = None, updating_clauses: List[UpdatingClause] = None,
-                 return_clause: ReadingClause = None):
+                 return_clause: ReturnClause = None):
         if updating_clauses is None and return_clause is None:
             raise ClauseError("The updating_clauses and the return_clause can't be None at the same time.")
         if reading_clauses is None:

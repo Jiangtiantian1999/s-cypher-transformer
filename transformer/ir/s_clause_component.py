@@ -16,7 +16,7 @@ class TemporalPathCall:
 class Pattern:
 
     def __init__(self, pattern: SPath | TemporalPathCall):
-        if pattern.__class__ == SPath.__class__:
+        if pattern.__class__ == SPath:
             # 单点或路径
             self.path = pattern
         else:
@@ -33,4 +33,5 @@ class Pattern:
 
 
 class ProjectionItem:
+    ALL_ITEM = '*'
     pass
