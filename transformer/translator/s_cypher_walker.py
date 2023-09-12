@@ -34,7 +34,10 @@ class SCypherWalker(s_cypherListener):
         self.order_by_clause = None
         self.skip_clause = None
         self.limit_clause = None
+
         self.return_clause = None
+        self.projection_items = []
+
         self.updating_clause = None
         self.single_query_clause = None
         self.with_query_clause = None
@@ -293,9 +296,10 @@ class SCypherWalker(s_cypherListener):
     def exitOC_Return(self, ctx: s_cypherParser.OC_ReturnContext):
         # projection_items: List[ProjectionItem],
         # is_distinct: bool = False,
-        # order_by_clause: OrderByClause = None, skip_clause: SkipClause = None,
+        # order_by_clause: OrderByClause = None,
+        # skip_clause: SkipClause = None,
         # limit_clause: LimitClause = None
-        projection_items = ctx.oC_ProjectionBody().oC_ProjectionItems().oC_ProjectionItem()
+        projection_items = self.projection_items
         is_distinct = False
         if ctx.oC_ProjectionBody().DISTINCT() is not None:
             is_distinct = True
@@ -304,6 +308,23 @@ class SCypherWalker(s_cypherListener):
         limit_clause = self.limit_clause
         self.return_clause = ReturnClause(projection_items, is_distinct, order_by_clause, skip_clause, limit_clause)
 
-    def enterOC_ProjectionItem(self, ctx: s_cypherParser.OC_ProjectionItemContext):
-        pass
+    def enterOC_ProjectionItems(self, ctx:s_cypherParser.OC_ProjectionItemsContext):
+        # is_all: bool = False,
+        # expression: Exception = None,
+        # variable: str = None
+        is_all = False
+        if '*' in ctx.getText():
+            is_all = True
+        projection_item = ctx.oC_ProjectionItem()
+        variable = None
+        if isinstance(projection_item, list):
+            for item in projection_item:
+                expression = item.oC_Expression().getText()
+                if item.oC_Variable is not None:
+                    variable = item.oC_Variable()
+                self.projection_items.append(ProjectionItem(is_all, expression, variable))
+        else:
+            expression = projection_item.oC_Expression().getText()
+            variable = projection_item.oC_Variable().getText()
+            self.projection_items.append(ProjectionItem(is_all, expression, variable))
 

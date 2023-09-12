@@ -33,7 +33,7 @@ class CypherTranslator:
         # --------test match--------
         match_clause = self.translate_match_clause()
         reading_clause = ReadingClause(match_clause)
-        return_clause = ReadingClause([])
+        return_clause = self.translate_return_clause()
         single_query_clause = SingleQueryClause(reading_clauses=[reading_clause], return_clause=return_clause)
         multi_query_clause = MultiQueryClause(single_query_clause)
         union_query_clause = UnionQueryClause([multi_query_clause])
