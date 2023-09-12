@@ -21,7 +21,6 @@ class CypherGenerator:
         self.variables_dict = s_cypher_clause.get_variables_dict()
         self.s_cypher_clause = s_cypher_clause
         if s_cypher_clause.query_clause.__class__ == UnionQueryClause:
-            print("generate_cypher_query")
             return self.convert_union_query_clause(s_cypher_clause.query_clause)
         elif s_cypher_clause.query_clause.__class__ == CallClause:
             return self.convert_call_clause(s_cypher_clause.query_clause)
@@ -122,19 +121,24 @@ class CypherGenerator:
                               edge_variable + ', end: ' + end_variable + ' )\nYIELD ' + pattern.temporal_path_call.path.variable
         if call_string != "":
             match_string = call_string + '\n' + match_string
-        if match_clause.where_clause:
+        if match_clause.where_clause or len(interval_conditions) != 0:
             where_string = self.convert_where_clause(match_clause.where_clause, interval_conditions)
             match_string = match_string + '\n' + where_string
         return match_string
 
-    def convert_where_clause(self, where_clause: WhereClause, interval_conditions: List[str] = None) -> str:
+    def convert_where_clause(self, where_clause: WhereClause = None, interval_conditions: List[str] = None) -> str:
+        if where_clause is None and interval_conditions is None:
+            raise ValueError("The where_clause and the interval_conditions can't be None at the same time.")
         if interval_conditions is None:
             interval_conditions = []
         where_string = "WHERE "
-        expression_string = self.convert_expression(where_clause.expression)
-        where_string = where_string + expression_string
+        if where_clause:
+            expression_string = self.convert_expression(where_clause.expression)
+            where_string = where_string + expression_string
         for interval_condition in interval_conditions:
-            where_string = where_string + ' and ' + interval_condition
+            if where_string != "WHERE ":
+                where_string = where_string + ' and '
+            where_string = where_string + interval_condition
         return where_string
 
     def convert_updating_clause(self, updating_clause: UpdatingClause):
