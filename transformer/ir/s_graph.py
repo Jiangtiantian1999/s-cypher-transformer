@@ -70,6 +70,8 @@ class SEdge:
         self.labels = labels  # 相当于content
         self.length = length
         self.interval = interval
+        if properties is None:
+            properties = []
         self.properties = properties
 
 
