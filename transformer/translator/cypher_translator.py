@@ -24,14 +24,21 @@ class CypherTranslator:
         clause = None
         # if self.parser.oC_Union() is not None:
         #     clause = self.translate_union_query_clause()
+        #     # clause = self.translate_match_clause()
         # elif self.parser.oC_StandaloneCall() is not None:
         #     clause = self.translate_call_query_clause()
         # elif self.parser.oC_Unwind() is not None:
         #     clause = self.translate_unwind_query_clause()
         # return SCypherClause(clause)
-        # test match
-        clause = self.translate_match_clause()
-        return SCypherClause(clause)
+        # --------test match--------
+        match_clause = self.translate_match_clause()
+        reading_clause = ReadingClause(match_clause)
+        return_clause = ReadingClause([])
+        single_query_clause = SingleQueryClause(reading_clauses=[reading_clause], return_clause=return_clause)
+        multi_query_clause = MultiQueryClause(single_query_clause)
+        union_query_clause = UnionQueryClause([multi_query_clause])
+        s_query_clause = SCypherClause(union_query_clause)
+        return s_query_clause
 
     def translate_union_query_clause(self) -> UnionQueryClause:
         # multi_query_clauses: List[MultiQueryClause],
@@ -43,13 +50,17 @@ class CypherTranslator:
         if "UNION ALL" in union_tree.getText():
             is_all_list.append(True)
             pass
+        else:
+            is_all_list.append(False)
+            pass
         return UnionQueryClause(multi_query_clauses, is_all_list)
 
     def translate_multi_query_clause(self) -> List[MultiQueryClause]:
         # single_query_clause: SingleQueryClause = None,
         # with_query_clauses: List[WithQueryClause] = None
         multi_tree = self.parser.oC_MultiPartQuery()
-        self.walker.walk(self.extractor, multi_tree)
+        multi_extractor = SCypherWalker(self.parser)
+        self.walker.walk(multi_extractor, multi_tree)
         single_query_clause = self.translate_single_query_clause()
         with_query_clauses = self.translate_with_query_clauses()
         return [MultiQueryClause(single_query_clause, with_query_clauses)]
@@ -60,7 +71,8 @@ class CypherTranslator:
         # return_clause: ReadingClause
         # -----------------是不是要换成ReturnClause-------------
         single_tree = self.parser.oC_SinglePartQuery()
-        self.walker.walk(self.extractor, single_tree)
+        single_extractor = SCypherWalker(self.parser)
+        self.walker.walk(single_extractor, single_tree)
         reading_clauses = self.translate_reading_clause()
         updating_clauses = self.translate_updating_clause()
         return_clause = self.translate_return_clause()
@@ -70,23 +82,30 @@ class CypherTranslator:
         #  with_clause: WithClause,
         #  reading_clauses: List[ReadingClause] = None,
         #  updating_clauses: List[UpdatingClause] = None
-        pass
+        with_tree = self.parser.oC_With()
+        with_extractor = SCypherWalker(self.parser)
+        self.walker.walk(with_extractor, with_tree)
+        reading_clauses = self.translate_reading_clause()
+        updating_clauses = self.translate_updating_clause()
+        with_clause = self.extractor.with_clause
+        return [WithQueryClause(with_clause, reading_clauses, updating_clauses)]
 
     def translate_reading_clause(self) -> List[ReadingClause]:
         # reading_clause: MatchClause | UnwindClause | CallClause
         reading_tree = self.parser.oC_ReadingClause()
-        self.walker.walk(self.extractor, reading_tree)
+        reading_extractor = SCypherWalker(self.parser)
+        self.walker.walk(reading_extractor, reading_tree)
         clause = None
         if self.parser.oC_Match() is not None:
             clause = self.translate_match_clause()
         elif self.parser.oC_Unwind() is not None:
             clause = self.translate_unwind_query_clause()
         elif self.parser.oC_InQueryCall() is not None:
-            clause = self.extractor.inner_call_clause
+            clause = self.translate_in_query_clause()
         reading_clauses = [ReadingClause(clause)]
         return reading_clauses
 
-    def translate_updating_clause(self) ->List[UpdatingClause]:
+    def translate_updating_clause(self) -> List[UpdatingClause]:
         pass
 
     def translate_return_clause(self) -> ReturnClause:
@@ -94,7 +113,10 @@ class CypherTranslator:
         # is_distinct: bool = False,
         # order_by_clause: OrderByClause = None, skip_clause: SkipClause = None,
         # limit_clause: LimitClause = None
-        return self.extractor.return_clause
+        return_tree = self.parser.oC_Return()
+        return_extractor = SCypherWalker(self.parser)
+        self.walker.walk(return_extractor, return_tree)
+        return return_extractor.return_clause
 
     def translate_match_clause(self) -> MatchClause:
         # patterns: List[Pattern],
@@ -103,8 +125,9 @@ class CypherTranslator:
         # time_window: TimePoint | Interval = None
         print("translate match clause")
         match_tree = self.parser.oC_Match()
-        self.walker.walk(self.extractor, match_tree)
-        match_clause = self.extractor.match_clause
+        match_extractor = SCypherWalker(self.parser)
+        self.walker.walk(match_extractor, match_tree)
+        match_clause = match_extractor.match_clause
         return match_clause
 
     def translate_unwind_query_clause(self) -> UnwindClause:
@@ -120,19 +143,6 @@ class CypherTranslator:
         self.walker.walk(self.extractor, where_tree)
         return self.extractor.where_clause
 
-    def translate_edge(self, edge_input) -> SEdge:
-        pass
-
-    def translate_node(self, node_input) -> SNode:
-        node_parser = self.set_parser(node_input)
-        node_tree = node_parser.oC_Where()
-        node_walker = ParseTreeWalker()
-        node_extractor = SCypherWalker(node_parser)
-        node_walker.walk(node_extractor, node_tree)
-        # labels: List[str], content: str = None, variable: str = None, interval: Interval = None
-
-    def translate_object_node(self, obj_node_input) -> ObjectNode:
-        pass
-
-    def translate_path(self, path_input) -> SPath:
+    # reading clause
+    def translate_in_query_clause(self):
         pass

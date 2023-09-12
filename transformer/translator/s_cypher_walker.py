@@ -24,8 +24,9 @@ class SCypherWalker(s_cypherListener):
         self.path_function_name = ""
         # clauses
         self.multi_query_clauses = []
-
         self.match_clause = None
+        self.with_clause = None
+
         self.where_clause = None
         self.reading_clause = None
         self.unwind_clause = None
@@ -36,12 +37,56 @@ class SCypherWalker(s_cypherListener):
         self.return_clause = None
         self.updating_clause = None
         self.single_query_clause = None
-        self.with_clause = None
         self.with_query_clause = None
-
         self.union_query_clause = None
         self.stand_alone_call_clause = None
         self.time_window_limit_clause = None
+
+    def exitOC_Union(self, ctx: s_cypherParser.OC_UnionContext):
+        # multi_query_clauses: List[MultiQueryClause],
+        # is_all: List[bool]
+        # ---------test match--------
+        is_all_list = []
+        if "UNION ALL" in ctx.UNION().getText():
+            is_all_list.append(True)
+        else:
+            is_all_list.append(False)
+        self.union_query_clause = UnionQueryClause(self.multi_query_clauses, is_all_list)
+
+    def exitOC_MultiPartQuery(self, ctx: s_cypherParser.OC_MultiPartQueryContext):
+        # single_query_clause: SingleQueryClause = None,
+        # with_query_clauses: List[WithQueryClause] = None
+        pass
+
+    def exitOC_SingleQuery(self, ctx: s_cypherParser.OC_SingleQueryContext):
+        # reading_clauses: List[ReadingClause] = None,
+        # updating_clauses: List[UpdatingClause] = None,
+        # return_clause: ReadingClause
+        # -----------------是不是要换成ReturnClause-------------
+        pass
+
+    def exitOC_With(self, ctx:s_cypherParser.OC_WithContext):
+        #  with_clause: WithClause,
+        #  reading_clauses: List[ReadingClause] = None,
+        #  updating_clauses: List[UpdatingClause] = None
+        pass
+
+    def enterOC_ReadingClause(self, ctx: s_cypherParser.OC_ReadingClauseContext):
+        match_clause = None
+        unwind_clause = None
+        in_query_call_clause = None
+        if ctx.oC_Match() is not None:
+            self.reading_clause = ReadingClause(self.match_clause)
+        elif ctx.oC_Unwind() is not None:
+            self.reading_clause = ReadingClause(self.unwind_clause)
+        elif ctx.oC_InQueryCall() is not None:
+            self.reading_clause = ReadingClause(self.inner_call_clause)
+        else:
+            pass
+
+    def exitOC_ReadingClause(self, ctx:s_cypherParser.OC_ReadingClauseContext):
+        # reading_clause: MatchClause | UnwindClause | CallClause
+        pass
 
     def exitOC_Match(self, ctx: s_cypherParser.OC_MatchContext):
         print("exit oc_match")
@@ -77,19 +122,6 @@ class SCypherWalker(s_cypherListener):
 
     def enterOC_InQueryCall(self, ctx:s_cypherParser.OC_InQueryCallContext):
         self.inner_call_clause = ctx.CALL().getText()
-
-    def enterOC_ReadingClause(self, ctx: s_cypherParser.OC_ReadingClauseContext):
-        match_clause = None
-        unwind_clause = None
-        in_query_call_clause = None
-        if ctx.oC_Match() is not None:
-            self.reading_clause = ReadingClause(self.match_clause)
-        elif ctx.oC_Unwind() is not None:
-            self.reading_clause = ReadingClause(self.unwind_clause)
-        elif ctx.oC_InQueryCall() is not None:
-            self.reading_clause = ReadingClause(self.inner_call_clause)
-        else:
-            pass
 
     @staticmethod
     def getInterval(interval_str) -> Interval:
@@ -141,7 +173,7 @@ class SCypherWalker(s_cypherListener):
         self.node_pattern.content = node_content
 
     def exitS_PropertiesPattern(self, ctx: s_cypherParser.S_PropertiesPatternContext):
-        print("enter properties pattern")
+        print("exit properties pattern")
         # 将属性节点和值节点组合成对象节点的属性
         for prop_node, val_node in zip(self.property_node_list, self.value_node_list):
             self.properties[prop_node] = val_node
