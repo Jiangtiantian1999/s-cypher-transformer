@@ -1,8 +1,8 @@
 from transformer.grammar_parser.s_cypherListener import s_cypherListener
 from transformer.grammar_parser.s_cypherParser import s_cypherParser
 from transformer.ir.s_cypher_clause import *
-from transformer.ir.s_pattern import *
 from transformer.ir.s_datetime import *
+from transformer.ir.s_graph import *
 
 
 # This class records important information about the query
@@ -17,9 +17,9 @@ class SCypherWalker(s_cypherListener):
         self.at_time = None
         self.interval = None
         # pattern
-        self.match_patterns = []
-        self.node_pattern = []
-        self.relationship_pattern = None
+        self.patterns = []
+        self.object_node_list = []
+        self.edge_list = None
         # path
         self.path_function_name = ""
         # clauses
@@ -97,7 +97,7 @@ class SCypherWalker(s_cypherListener):
         if ctx.OPTIONAL() is not None:
             is_optional = True
         if ctx.oC_Pattern() is not None:
-            patterns = self.match_patterns
+            patterns = self.patterns
         if ctx.s_AtTime() is not None:
             time_window = self.at_time
         elif ctx.s_Between() is not None:
@@ -147,15 +147,14 @@ class SCypherWalker(s_cypherListener):
         interval = Interval(interval_from, interval_to)
         return interval
 
-    # 对象节点
+    # 获取对象节点
     def exitOC_NodePattern(self, ctx: s_cypherParser.OC_NodePatternContext):
-        print("exit node pattern")
-        node_content = ""  # 对象节点内容
+        # node_content = ""  # 对象节点内容
         node_label_list = []  # 对象节点标签
         interval = None  # 对象节点时间
         properties = []  # 对象节点属性
-        if ctx.oC_Variable() is not None:
-            node_content = ctx.oC_Variable().getText()
+        # if ctx.oC_Variable() is not None:
+        #     node_content = ctx.oC_Variable().getText()
         if ctx.oC_NodeLabels() is not None:
             node_labels = ctx.oC_NodeLabels()
             if isinstance(node_labels, list):
@@ -169,8 +168,7 @@ class SCypherWalker(s_cypherListener):
             interval = self.getInterval(interval_str)
         if ctx.s_Properties() is not None:
             properties = self.properties
-        self.node_pattern = ObjectNode(node_label_list, None, interval, properties)
-        self.node_pattern.content = node_content
+        self.object_node_list.append(ObjectNode(node_label_list, None, interval, properties))
 
     def exitS_PropertiesPattern(self, ctx: s_cypherParser.S_PropertiesPatternContext):
         print("exit properties pattern")
@@ -261,7 +259,7 @@ class SCypherWalker(s_cypherListener):
         property_list = []
         for property_ in property_list:
             property_list.append(property_.getText())
-        self.relationship_pattern = SEdge('UNDIRECTED', variable, labels, length_tuple, interval, properties)
+        self.edge_list = SEdge('UNDIRECTED', variable, labels, length_tuple, interval, properties)
 
     def exitOC_RelationshipPattern(self, ctx:s_cypherParser.OC_RelationshipPatternContext):
         direction = 'UNDIRECTED'
@@ -269,15 +267,23 @@ class SCypherWalker(s_cypherListener):
             direction = 'LEFT'
         elif ctx.oC_LeftArrowHead() is None and ctx.oC_RightArrowHead() is not None:
             direction = 'RIGHT'
-        self.relationship_pattern.direction = direction
+        self.edge_list.direction = direction
 
-    def exitOC_AnonymousPatternPart(self, ctx: s_cypherParser.OC_AnonymousPatternPartContext):
-        if self.node_pattern is not None:
-            self.match_patterns.append(self.node_pattern)
-            if self.relationship_pattern is not None:
-                self.match_patterns.append(self.relationship_pattern)
-        else:
-            self.match_patterns.append(ctx.oC_PatternElement().getText())
+    # def exitOC_AnonymousPatternPart(self, ctx: s_cypherParser.OC_AnonymousPatternPartContext):
+    #     if self.object_node_list is not None:
+    #         self.match_patterns.append(self.object_node_list)
+    #         if self.edge_list is not None:
+    #             self.match_patterns.append(self.edge_list)
+    #     else:
+    #         self.match_patterns.append(ctx.oC_PatternElement().getText())
+
+    def exitOC_Pattern(self, ctx: s_cypherParser.OC_PatternContext):
+        # nodes: List[ObjectNode],
+        # edges: List[SEdge] = None,
+        # variable: str = None
+        nodes = self.object_node_list
+        edges = self.edge_list
+        self.patterns.append(Pattern(SPath(nodes, edges)))
 
     def enterOC_Expression(self, ctx: s_cypherParser.OC_ExpressionContext):
         pass
