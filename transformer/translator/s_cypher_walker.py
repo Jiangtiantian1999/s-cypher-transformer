@@ -3,6 +3,7 @@ from transformer.grammar_parser.s_cypherParser import s_cypherParser
 from transformer.ir.s_cypher_clause import *
 from transformer.ir.s_datetime import *
 from transformer.ir.s_graph import *
+from transformer.ir.s_expression import *
 
 
 # This class records important information about the query
@@ -44,6 +45,25 @@ class SCypherWalker(s_cypherListener):
         self.union_query_clause = None
         self.stand_alone_call_clause = None
         self.time_window_limit_clause = None
+
+        # expression
+        self.expression = None
+        self.or_expression = None
+        self.xor_expressions = []
+        self.and_expressions = []
+        self.not_expressions = []
+        self.comparison_expression = None
+        self.subject_expression = None
+        self.null_predicate_expression = None
+        self.list_predicate_expression = None
+        self.string_predicate_expression = None
+        self.time_predicate_expression = None
+        self.add_subtract_expression = None
+        self.multiply_divide_expression = None
+        self.power_expression = None
+        self.list_index_expression = None
+        self.at_t_expression = None
+        self.properties_labels_expression = None
 
     def exitOC_Union(self, ctx: s_cypherParser.OC_UnionContext):
         # multi_query_clauses: List[MultiQueryClause],
@@ -157,7 +177,7 @@ class SCypherWalker(s_cypherListener):
         # node_content = ""  # 对象节点内容
         node_label_list = []  # 对象节点标签
         interval = None  # 对象节点时间
-        properties = []  # 对象节点属性
+        properties = dict()  # 对象节点属性
         # if ctx.oC_Variable() is not None:
         #     node_content = ctx.oC_Variable().getText()
         if ctx.oC_NodeLabels() is not None:
@@ -290,9 +310,6 @@ class SCypherWalker(s_cypherListener):
         edges = self.edge_list
         self.patterns.append(Pattern(SPath(nodes, edges)))
 
-    def enterOC_Expression(self, ctx: s_cypherParser.OC_ExpressionContext):
-        pass
-
     def exitOC_Return(self, ctx: s_cypherParser.OC_ReturnContext):
         # projection_items: List[ProjectionItem],
         # is_distinct: bool = False,
@@ -301,7 +318,7 @@ class SCypherWalker(s_cypherListener):
         # limit_clause: LimitClause = None
         projection_items = self.projection_items
         is_distinct = False
-        if ctx.oC_ProjectionBody().DISTINCT() is not None:
+        if ctx.oC_ProjectionBody() and ctx.oC_ProjectionBody().DISTINCT() is not None:
             is_distinct = True
         order_by_clause = self.order_by_clause
         skip_clause = self.skip_clause
@@ -319,6 +336,7 @@ class SCypherWalker(s_cypherListener):
         variable = None
         if isinstance(projection_item, list):
             for item in projection_item:
+                # expression的获取待处理
                 expression = item.oC_Expression().getText()
                 if item.oC_Variable is not None:
                     variable = item.oC_Variable()
@@ -328,3 +346,47 @@ class SCypherWalker(s_cypherListener):
             variable = projection_item.oC_Variable().getText()
             self.projection_items.append(ProjectionItem(is_all, expression, variable))
 
+    def exitOC_Expression(self, ctx: s_cypherParser.OC_ExpressionContext):
+        self.expression = Expression(self.or_expression)
+
+    def exitOC_OrExpression(self, ctx: s_cypherParser.OC_OrExpressionContext):
+        # xor_expressions: List[XorExpression]
+        self.or_expression = OrExpression(self.xor_expressions)
+
+    def exitOC_XorExpression(self, ctx: s_cypherParser.OC_XorExpressionContext):
+        # and_expressions: List[AndExpression]
+        self.xor_expressions.append(XorExpression(self.and_expressions))
+
+    def exitOC_AndExpression(self, ctx: s_cypherParser.OC_AndExpressionContext):
+        # not_expressions: List[NotExpression]
+        self.and_expressions.append(AndExpression(self.not_expressions))
+
+    def exitOC_NotExpression(self, ctx: s_cypherParser.OC_NotExpressionContext):
+        # comparison_expression: ComparisonExpression,
+        # is_not=False
+        is_not = False  # 待处理
+        self.not_expressions.append(NotExpression(self.comparison_expression, is_not))
+
+    def exitOC_ComparisonExpression(self, ctx: s_cypherParser.OC_ComparisonExpressionContext):
+        # left_expression: SubjectExpression,
+        # comparison_operation: str = None,
+        # right_expression: SubjectExpression = None
+        left_expression = self.subject_expression
+        # comparison_operation待处理
+        self.comparison_expression = ComparisonExpression()
+
+    # subject_expression待处理
+
+    def exitOC_NullPredicateExpression(self, ctx: s_cypherParser.OC_NullPredicateExpressionContext):
+        is_null = True
+        if ctx.IS() and ctx.NOT() and ctx.NULL() is not None:
+            is_null = False
+        self.null_predicate_expression = NullPredicateExpression(is_null)
+
+    def exitOC_ListPredicateExpression(self, ctx:s_cypherParser.OC_ListPredicateExpressionContext):
+        # add_or_subtract_expression: AddSubtractExpression = None
+        self.list_predicate_expression = ListPredicateExpression(self.add_subtract_expression)
+
+
+    def exitOC_AddOrSubtractExpression(self, ctx: s_cypherParser.OC_AddOrSubtractExpressionContext):
+        pass
