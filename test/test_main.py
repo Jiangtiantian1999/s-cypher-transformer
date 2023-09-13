@@ -1,26 +1,28 @@
-import traceback
+import unittest
+
 from antlr4 import *
-from antlr4.tree.Trees import Trees
 from transformer.generator.cypher_generator import CypherGenerator
 from transformer.grammar_parser.s_cypherLexer import s_cypherLexer
 from transformer.grammar_parser.s_cypherParser import s_cypherParser
-from transformer.translator.s_cypher_walker import SCypherWalker
+from transformer.main import transform_to_cypher
 from transformer.translator.cypher_translator import CypherTranslator
+from unittest import TestCase, TestSuite, TextTestRunner
 
 
-def main():
-    s_cypher_query = FileStream("test_match.txt")
-    # 词法分析
-    lexer = s_cypherLexer(s_cypher_query)
-    # 语法分析
-    parser = s_cypherParser(CommonTokenStream(lexer))
-    # 转换为中间形式
-    translator = CypherTranslator(parser)
-    s_cypher_entity = translator.translate_s_cypher_query()
-    # 转换为Cypher查询字符串
-    cypher_query = CypherGenerator().generate_cypher_query(s_cypher_entity)
-    print(cypher_query)
+class TestMain(TestCase):
+    def test_match_1(self):
+        transform_to_cypher('MATCH (n:City@T("1690", NOW) {name@T("1900", NOW): "London"@T("2000", NOW)})'
+                            'RETURN n;')
+
+    def test_match_2(self):
+        transform_to_cypher('MATCH (n:City@T("1690", NOW) )'
+                            'RETURN n;')
 
 
 if __name__ == '__main__':
-    main()
+    match_suite = TestSuite()
+    match_suite.addTest(TestMain('test_match_1'))
+    match_suite.addTest(TestMain('test_match_2'))
+
+    runner = TextTestRunner()
+    runner.run(match_suite)

@@ -1,2 +1,0 @@
-MATCH (n:City@T("1690", NOW) {name@T("1900", NOW): "London"@T("2000", NOW)})
-RETURN n;
