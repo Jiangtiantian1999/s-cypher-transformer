@@ -78,7 +78,7 @@ class CypherGenerator:
         if single_query_clause.return_clause:
             if single_query_string != "":
                 single_query_string = single_query_string + '\n'
-            single_query_string = single_query_string + self.convert_return_clause(single_query_string.return_clause)
+            single_query_string = single_query_string + self.convert_return_clause(single_query_clause.return_clause)
         return single_query_string
 
     def convert_with_query_clause(self, with_query_clause: WithQueryClause) -> str:
@@ -117,17 +117,17 @@ class CypherGenerator:
         for pattern in match_clause.patterns:
             pattern = pattern.pattern
             if pattern.__class__ == SPath:
-                path_pattern, property_patterns, path_interval_conditions = self.convert_path(pattern.path,
+                path_pattern, property_patterns, path_interval_conditions = self.convert_path(pattern,
                                                                                               match_clause.time_window)
                 if match_string not in ["MATCH ", "OPTIONAL MATCH "]:
                     match_string = match_string + ', '
-                if pattern.path.variable:
-                    match_string = match_string + pattern.path.variable + ' = ' + path_pattern
+                if pattern.variable:
+                    match_string = match_string + pattern.variable + ' = ' + path_pattern
                 else:
                     match_string = match_string + path_pattern
                 # 添加节点属性模式的匹配
                 for property_pattern in property_patterns:
-                    path_pattern = path_pattern + ', ' + property_pattern
+                    match_string = match_string + ', ' + property_pattern
                 interval_conditions.extend(path_interval_conditions)
             elif pattern.__class__ == TemporalPathCall:
                 if pattern.start_node.variable is None:
@@ -184,7 +184,20 @@ class CypherGenerator:
         pass
 
     def convert_return_clause(self, return_clause: ReturnClause) -> str:
-        pass
+        return_string = "RETURN "
+        for projection_item in return_clause.projection_items:
+            if projection_item.is_all:
+                for variable in self.variables_dict.keys():
+                    if return_string != "RETURN ":
+                        return_string = return_string + ', '
+                    return_string = return_string + variable
+            elif projection_item.expression:
+                if return_string != "RETURN ":
+                    return_string = return_string + ', '
+                return_string = return_string + self.convert_expression(projection_item.expression)
+                if projection_item.variable:
+                    return_string = return_string + ' AS ' + projection_item.variable
+        return return_string
 
     def convert_unwind_clause(self, unwind_clause: UnwindClause) -> str:
         pass
@@ -249,14 +262,15 @@ class CypherGenerator:
             node_pattern = node.variable
         for label in node.labels:
             node_pattern = node_pattern + ':' + label
-        if node.content:
-            node_pattern = "{content: '" + node.content + "'}"
+        if node.__class__ == PropertyNode:
+            node_pattern = node_pattern + "{content: \"" + node.content + "\"}"
+        elif node.__class__ == ValueNode:
+            node_pattern = node_pattern + "{content: " + self.convert_expression(node.content) + "}"
         node_pattern = '(' + node_pattern + ')'
 
         # 节点的有效时间限制
         interval_conditions = []
         if node.interval:
-            print(node.interval.interval_from)
             interval_condition = node.variable + ".interval_from <= " + str(node.interval.interval_from.timestamp())
             interval_conditions.append(interval_condition)
             interval_condition = node.variable + ".interval_to >= " + str(node.interval.interval_to.timestamp())
@@ -296,16 +310,15 @@ class CypherGenerator:
         return node_pattern, property_patterns, interval_conditions
 
     def convert_path(self, path: SPath, time_window: TimePoint | Interval = None) -> (str, List[str], List[str]):
-        # 路径模式，对象节点属性模式，路径有效时间限制
+        # 路径模式，属性节点和值节点的模式，路径有效时间限制
         path_pattern, property_patterns, interval_conditions = self.convert_object_node(path.nodes[0], time_window)
-        # 路径中的节点属性模式
-        property_patterns = []
         index = 1
         while index < len(path.nodes):
+            # 生成边模式
             edge_pattern, edge_interval_conditions = self.convert_edge(path.edges[index - 1], time_window)
             path_pattern = path_pattern + edge_pattern
             interval_conditions.extend(edge_interval_conditions)
-
+            # 生成节点模式
             node_pattern, node_property_patterns, node_interval_conditions = self.convert_object_node(path.nodes[index],
                                                                                                       time_window)
             path_pattern = path_pattern + node_pattern
@@ -316,6 +329,9 @@ class CypherGenerator:
         return path_pattern, property_patterns, interval_conditions
 
     def convert_expression(self, expression: Expression):
+        # 暂用于测试
+        if expression.__class__ == str:
+            return expression
         return self.convert_or_expression(expression.or_expression)
 
     def convert_or_expression(self, or_expression: OrExpression):

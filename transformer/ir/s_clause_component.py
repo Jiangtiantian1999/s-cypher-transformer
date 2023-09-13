@@ -29,12 +29,12 @@ class Pattern:
         self.pattern = pattern
 
     def get_variables_dict(self):
-        self.pattern.get_variables_dict()
+        return self.pattern.get_variables_dict()
 
 
 class ProjectionItem:
 
-    def __init__(self, is_all: bool = False, expression: Exception = None, variable: str = None):
+    def __init__(self, is_all: bool = False, expression: Expression = None, variable: str = None):
         # 要么为*，要么为expression( as variable)
         if is_all is False and expression is None:
             raise ValueError("The projection item can't be empty.")
