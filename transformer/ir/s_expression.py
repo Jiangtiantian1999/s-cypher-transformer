@@ -238,7 +238,7 @@ class ComparisonExpression:
         if comparison_operations is None:
             comparison_operations = []
         if len(subject_expressions) != len(comparison_operations) + 1:
-            raise ValueError("The numbers of the subject_expressions and ecomparison_operations are not matched.")
+            raise ValueError("The numbers of the subject_expressions and comparison_operations are not matched.")
         for comparison_operation in comparison_operations:
             if comparison_operation not in ['=', '<>', '<', '>', '<=', '>=']:
                 raise ValueError("The comparison operation must in '=', '<>', '<', '>', '<=', '>='.")
