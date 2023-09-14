@@ -233,18 +233,23 @@ class SubjectExpression:
 
 
 class ComparisonExpression:
-    def __init__(self, left_expression: SubjectExpression, comparison_operation: str = None,
-                 right_expression: SubjectExpression = None):
-        if comparison_operation not in ['=', '<>', '<', '>', '<=', '>=']:
-            raise ValueError("The comparison operation must in '=', '<>', '<', '>', '<=', '>='.")
-        self.left_expression = left_expression
-        self.comparison_operation = comparison_operation
-        self.right_expression = right_expression
+    def __init__(self, subject_expressions: List[SubjectExpression], comparison_operations: List[str] = None):
+        self.subject_expressions = subject_expressions
+        if comparison_operations is None:
+            comparison_operations = []
+        if len(subject_expressions) != len(comparison_operations) + 1:
+            raise ValueError("The numbers of the subject_expressions and ecomparison_operations are not matched.")
+        for comparison_operation in comparison_operations:
+            if comparison_operation not in ['=', '<>', '<', '>', '<=', '>=']:
+                raise ValueError("The comparison operation must in '=', '<>', '<', '>', '<=', '>='.")
+        self.comparison_operations = comparison_operations
 
     def get_at_t_expressions(self) -> List[AtTExpression]:
-        at_t_expressions = self.left_expression.get_at_t_expressions()
-        if self.right_expression:
-            at_t_expressions.extend(self.right_expression.get_at_t_expressions())
+        at_t_expressions = []
+        index = 0
+        while index < len(self.subject_expressions):
+            at_t_expressions.extend(self.subject_expressions[index].get_at_t_expressions())
+            index = index + 1
         return at_t_expressions
 
 

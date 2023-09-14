@@ -365,11 +365,14 @@ class CypherGenerator:
         return comparison_string
 
     def convert_comparison_expression(self, comparison_expression: ComparisonExpression):
-        if comparison_expression.comparison_operation and comparison_expression.right_expression:
-            return self.convert_subject_expression(
-                comparison_expression.left_expression) + ' ' + comparison_expression.comparison_operation + ' ' + self.convert_subject_expression(
-                comparison_expression.right_expression)
-        return self.convert_subject_expression(comparison_expression.left_expression)
+        comparison_string = self.convert_subject_expression(comparison_expression.subject_expressions[0])
+        index = 0
+        if index < len(comparison_expression.comparison_operations):
+            comparison_string = comparison_string + ' ' + comparison_expression.comparison_operations[index] + ' '
+            comparison_string = comparison_string + self.convert_subject_expression(
+                comparison_expression.subject_expressions[index + 1])
+            index = index + 1
+        return comparison_string
 
     def convert_subject_expression(self, subject_expression: SubjectExpression):
         subject_string = self.convert_add_subtract_expression(subject_expression.add_or_subtract_expression)
