@@ -373,7 +373,8 @@ class SCypherWalker(s_cypherListener):
         # right_expression: SubjectExpression = None
         left_expression = self.subject_expression
         # comparison_operation待处理
-        self.comparison_expression = ComparisonExpression()
+        # self.comparison_expression = ComparisonExpression()
+        pass
 
     # subject_expression待处理
 
