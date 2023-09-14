@@ -16,3 +16,8 @@ class GraphError(Exception):
 class ClauseError(Exception):
     def __int__(self, message):
         super().__init__(message)
+
+
+class SyntaxError(Exception):
+    def __int__(self, message):
+        super().__init__(message)

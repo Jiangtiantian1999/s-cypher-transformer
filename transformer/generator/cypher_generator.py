@@ -391,8 +391,9 @@ class CypherGenerator:
             return left_string + ' ' + add_subtract_expression.add_subtract_operation + ' ' + right_string
         return left_string
 
+    # 待实现
     def convert_time_predicate_expression(self, time_predicate_expression: TimePredicateExpression):
-        # 待实现
+
         return time_predicate_expression.time_operation + ' ' + self.convert_add_subtract_expression(
             time_predicate_expression.add_or_subtract_expression)
         pass
@@ -432,6 +433,7 @@ class CypherGenerator:
                 list_index_expression.principal_expression)
         elif list_index_expression.principal_expression.__class__ == AtTExpression:
             list_index_string = self.convert_at_t_expression(list_index_expression.principal_expression)
+
         if list_index_expression.index_expression:
             list_index_string = list_index_string + '[' + self.convert_expression(
                 list_index_expression.index_expression) + ']'
@@ -499,6 +501,12 @@ class CypherGenerator:
         pass
 
     def convert_pattern_comprehension(self, pattern_comprehension: PatternComprehension):
+        pass
+
+    def convert_quantifier(self, quantifier: Quantifier):
+        pass
+
+    def convert_pattern_predicate(self, pattern_predicate: PatternPredicate):
         pass
 
     def convert_parenthesized_expression(self, parenthesized_expression: ParenthesizedExpression) -> str:

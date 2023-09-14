@@ -11,12 +11,17 @@ from unittest import TestCase, TestSuite, TextTestRunner
 
 class TestMain(TestCase):
     def test_match_1(self):
-        transform_to_cypher('MATCH (n:City@T("1690", NOW) {name@T("1900", NOW): "London"@T("2000", NOW)})'
-                            'RETURN n;')
+        cypher_query = transform_to_cypher(
+            'MATCH (n:City@T("1690", NOW) {name@T("1900", NOW): "London"@T("2000", NOW)})'
+            'RETURN n;')
+        print("test_match_1--------------")
+        print(cypher_query)
 
     def test_match_2(self):
-        transform_to_cypher('MATCH (n:City@T("1690", NOW) )'
-                            'RETURN n;')
+        cypher_query = transform_to_cypher('MATCH (n:City@T("1690", NOW) )'
+                                           'RETURN n;')
+        print("test_match_2--------------")
+        print(cypher_query)
 
 
 if __name__ == '__main__':
