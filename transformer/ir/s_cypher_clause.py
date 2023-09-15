@@ -1,5 +1,3 @@
-from typing import List
-
 from transformer.exceptions.s_exception import ClauseError
 from transformer.ir.s_clause_component import *
 from transformer.ir.s_expression import Expression
@@ -21,7 +19,7 @@ class ReturnClause:
                  order_by_clause: OrderByClause = None, skip_expression: Expression = None,
                  limit_expression: Expression = None):
         if len(projection_items) == 0:
-            raise ValueError("The projection_items can't be empty.")
+            raise ValueError("The projection items can't be empty.")
         self.projection_items = projection_items
         self.is_distinct = is_distinct
         self.order_by_clause = order_by_clause
@@ -42,13 +40,13 @@ class BetweenClause:
 class MatchClause:
 
     def __init__(self, patterns: List[Pattern], is_optional: bool = False, where_expression: Expression = None,
-                 time_window_limit: AtTimeClause | BetweenClause = None):
+                 time_window: AtTimeClause | BetweenClause = None):
         if len(patterns) == 0:
             raise ValueError("The patterns can't be empty.")
         self.patterns = patterns
         self.is_optional = is_optional
         self.where_expression = where_expression
-        self.time_window_limit = time_window_limit
+        self.time_window = time_window
 
     def get_variables_dict(self):
         variables_dict = {}
@@ -118,26 +116,24 @@ class CreateClause:
 class DeleteClause:
     def __init__(self, delete_items: List[DeleteItem]):
         if len(delete_items) == 0:
-            raise ValueError("The delete_items can't be empty.")
+            raise ValueError("The delete items can't be empty.")
         self.delete_items = delete_items
 
-    def get_variables_dict(self):
-        variables_dict = {}
-        for delete_item in self.delete_items:
-            variables_dict[delete_item.variable] = delete_item
-        return variables_dict
+
+class StaleClause:
+    # stale_item和delete_item的形式是相同的
+    def __init__(self, stale_items: List[DeleteItem]):
+        if len(stale_items) == 0:
+            raise ValueError("The stale items can't be empty.")
+        self.stale_items = stale_items
+
 
 class SetClause:
     def __init__(self, set_items: List[SetItem]):
         if len(set_items) == 0:
-            raise ValueError("The set_items can't be empty.")
+            raise ValueError("The set items can't be empty.")
         self.set_items = set_items
 
-    def get_variables_dict(self):
-        variables_dict = {}
-        for set_item in self.set_items:
-            variables_dict[set_item.variable] = set_item
-        return variables_dict
 
 class MergeClause:
     def __init__(self, patterns: List[Pattern], actions: dict[str, SetClause] = None):
@@ -155,22 +151,40 @@ class MergeClause:
         return variables_dict
 
 
-# 更新查询
+class RemoveClause:
+    def __init__(self, object_variable: str | Atom, property_variable: str = None, labels: List[str] = None):
+        if property_variable is None and labels is None:
+            raise ValueError("Only can remove the labels or properties of object nodes.")
+        self.object_variable = object_variable
+        # 为(SP? oC_PropertyLookup) + 的字符串表示
+        self.property_variable = property_variable
+        if labels is None:
+            labels = []
+        self.labels = labels
+
+    # 更新查询
+
+
 class UpdatingClause:
-    def __init__(self, update_clause: CreateClause, at_time_clause: AtTimeClause = None):
+    def __init__(self,
+                 update_clause: CreateClause | DeleteClause | StaleClause | SetClause | MergeClause | RemoveClause,
+                 at_time_clause: AtTimeClause = None):
         self.update_clause = update_clause
         self.at_time_clause = at_time_clause
 
-    def get_variables_dict(self, update_clause: CreateClause, at_time_clase: AtTimeClause = None):
+    def get_variables_dict(self):
+        if self.update_clause.__class__ in [CreateClause, MergeClause]:
+            return self.update_clause.get_variables_dict()
         return {}
 
+    # 最后的子句为return或update的查询模块，单一查询
 
-# 最后的子句为return或update的查询模块，单一查询
+
 class SingleQueryClause:
     def __init__(self, reading_clauses: List[ReadingClause] = None, updating_clauses: List[UpdatingClause] = None,
                  return_clause: ReturnClause = None):
         if updating_clauses is None and return_clause is None:
-            raise ClauseError("The updating_clauses and the return_clause can't be None at the same time.")
+            raise ClauseError("The updating clauses and the return_clause can't be None at the same time.")
         if reading_clauses is None:
             reading_clauses = []
         self.reading_clauses = reading_clauses

@@ -64,7 +64,7 @@ class NOW(TimePoint):
     def __init__(self, time_point_type=TimePoint.time_point_type):
         if time_point_type not in [self.DATE, self.TIME, self.LOCALTIME, self.DATETIME, self.LOCALDATETIME]:
             raise ValueError(
-                "The time point type must be in 'DATE', 'TIME', 'LOCALTIME', 'DATETIME' and 'LOCALDATETIME'.")
+                "The time point type must be 'DATE', 'TIME', 'LOCALTIME', 'DATETIME' or 'LOCALDATETIME'.")
         self.time_point_type = time_point_type
 
     def __getattribute__(self, name):
@@ -109,7 +109,7 @@ class Date(TimePoint):
             if date_input['year']:
                 if int(date_input['month'] is None) + int(date_input['week'] is None) + int(
                         date_input['quarter'] is None) + int(date_input['ordinal_day'] is None) < 3:
-                    raise FormatError('The combination of the date components is incorrect')
+                    raise FormatError('The combination of the date components is incorrect.')
                 if (date_input['day'] and not date_input['month']) or (
                         date_input['day_of_week'] and not date_input['week']) or (
                         date_input['day_of_quarter'] and not date_input['quarter']):
@@ -320,11 +320,11 @@ class DateTime(TimePoint):
             if datetime_input['year']:
                 if int(datetime_input['month'] is None) + int(datetime_input['week'] is None) + int(
                         datetime_input['quarter'] is None) + int(datetime_input['ordinal_day'] is None) < 3:
-                    raise FormatError('The combination of the date components is incorrect')
+                    raise FormatError('The combination of the date components is incorrect.')
                 if (datetime_input['day'] and not datetime_input['month']) or (
                         datetime_input['day_of_week'] and not datetime_input['week']) or (
                         datetime_input['day_of_quarter'] and not datetime_input['quarter']):
-                    raise FormatError('The combination of the date components is incorrect')
+                    raise FormatError('The combination of the date components is incorrect.')
                 date_var = Date.date_parse(datetime_input)
                 if datetime_input['millisecond']:
                     if not datetime_input['microsecond']:
@@ -337,7 +337,7 @@ class DateTime(TimePoint):
             elif datetime_input['timezone'] and key_num == 1:
                 self.datetime = datetime.now(Time.timezone_parse(datetime_input['timezone']))
             else:
-                raise FormatError('The combination of the datetime components is incorrect')
+                raise FormatError('The combination of the datetime components is incorrect.')
         elif datetime_input is None:
             self.datetime = self.now()
         else:

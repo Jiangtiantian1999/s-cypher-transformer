@@ -1,13 +1,13 @@
 from typing import List, Tuple
 
 from transformer.exceptions.s_exception import GraphError
-from transformer.ir.s_datetime import Interval
+from transformer.ir.s_clause_component import AtTElement
 from transformer.ir.s_expression import Expression
 
 
 class SNode:
     def __init__(self, labels: List[str], content: str | Expression = None, variable: str = None,
-                 interval: Interval = None):
+                 interval: AtTElement = None):
         # 节点标签，至少有一个区别节点类型的标签（Object, Property或Value），对象节点的内容以标签形式存储
         self.labels = labels
         # 节点内容, 对象节点的内容以标签形式存储，即对象节点的content属性为null; 属性节点的内容为属性名，为str类型; 值节点的内容为属性值，为Expression类型
@@ -19,18 +19,18 @@ class SNode:
 
 
 class PropertyNode(SNode):
-    def __init__(self, content: str, variable: str = None, interval: Interval = None):
+    def __init__(self, content: str, variable: str = None, interval: AtTElement = None):
         super().__init__(['Property'], content, variable, interval)
 
 
 class ValueNode(SNode):
-    def __init__(self, content: Expression, variable: str = None, interval: Interval = None):
+    def __init__(self, content: Expression, variable: str = None, interval: AtTElement = None):
         super().__init__(['Value'], content, variable, interval)
 
 
 class ObjectNode(SNode):
 
-    def __init__(self, labels: List[str] = None, variable: str = None, interval: Interval = None,
+    def __init__(self, labels: List[str] = None, variable: str = None, interval: AtTElement = None,
                  properties: dict[PropertyNode, ValueNode] = None):
         if labels is None:
             labels = []
@@ -58,9 +58,9 @@ class SEdge:
     UNDIRECTED = 'UNDIRECTED'
 
     def __init__(self, direction, variable: str = None, labels: List[str] = None, length: Tuple[int, int] = (1, 1),
-                 interval: Interval = None, properties: dict = None):
+                 interval: AtTElement = None, properties: dict = None):
         if direction not in [self.LEFT, self.RIGHT, self.UNDIRECTED]:
-            raise ValueError("Direction of edges must in 'LEFT', 'RIGHT' and 'UNDIRECTED'.")
+            raise ValueError("Direction of edges must be 'LEFT', 'RIGHT' or 'UNDIRECTED'.")
         if length[0] < 0 or length[0] > length[1]:
             raise ValueError("The length range of edge is incorrect.")
         self.direction = direction

@@ -1,5 +1,6 @@
 from typing import List
 
+from transformer.ir.s_expression import MapLiteral, Atom
 from transformer.ir.s_graph import *
 
 
@@ -32,6 +33,18 @@ class Pattern:
         return self.pattern.get_variables_dict()
 
 
+class TimePointLiteral:
+    def __init__(self, time_point: str | MapLiteral):
+        self.time_point = time_point
+
+
+
+class AtTElement:
+    def __init__(self, interval_from: TimePointLiteral, interval_to: TimePointLiteral):
+        self.interval_from = interval_from
+        self.interval_to = interval_to
+
+
 class ProjectionItem:
 
     def __init__(self, is_all: bool = False, expression: Expression = None, variable: str = None):
@@ -44,3 +57,51 @@ class ProjectionItem:
         self.expression = expression
         # 别名
         self.variable = variable
+
+
+class DeleteItem:
+    def __init__(self, expression: Expression, property_name: str = None, is_value=False):
+        self.expression = expression
+        if property_name is None and is_value is True:
+            raise ValueError("Can't delete the value node without property name.")
+        self.property_name = property_name
+        # 删除的是否为值节点
+        self.is_value = is_value
+
+
+class SetItem:
+    def __init__(self, operator: str, object: str | Atom, labels: List[str] = None, object_interval: AtTElement = None,
+                 property_variable: str = None, property_interval: AtTElement = None, value_interval: AtTElement = None,
+                 value_expression: Expression = None):
+
+        if operator == '=':
+            if value_expression is None or labels:
+                raise ValueError("The combination of the set item is incorrect.")
+        elif operator == '+=':
+            if value_expression is None or labels or object_interval or property_variable or property_interval or value_interval:
+                raise ValueError("The combination of the set item is incorrect.")
+        elif operator == '@T':
+            if value_expression or labels or (property_variable is None and property_interval):
+                raise ValueError("The combination of the set item is incorrect.")
+        elif operator == ':':
+            if labels is None or value_expression or object_interval or property_variable or property_interval or value_interval:
+                raise ValueError("The combination of the set item is incorrect.")
+        else:
+            raise ValueError("Unknow set operation.")
+        self.operator = operator
+        # object为对象节点变量名或者Atom表达式
+        self.object = object
+        if labels:
+            labels = []
+        # 设置对象节点的label
+        self.labels = labels
+        # 设置对象节点的有效时间
+        self.object_interval = object_interval
+        # 为属性节点名称，或者( SP? oC_PropertyLookup )+的字符串表示
+        self.property_variable = property_variable
+        # 设置属性节点的有效时间
+        self.property_interval = property_interval
+        # 设置值节点的有效时间
+        self.value_interval = value_interval
+        # 设置值节点的值，或者表达式赋值
+        self.value_expression = value_expression

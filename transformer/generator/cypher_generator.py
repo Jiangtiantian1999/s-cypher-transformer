@@ -42,12 +42,6 @@ class CypherGenerator:
             index = index + 1
         return union_query_string
 
-    def convert_call_clause(self, call_clause: CallClause) -> str:
-        pass
-
-    def convert_time_window_limit_clause(self, time_window_limit_clause: TimeWindowLimitClause) -> str:
-        pass
-
     def convert_multi_query_clause(self, multi_query_clause: MultiQueryClause) -> str:
         multi_query_string = ""
         # with连接的查询部分
@@ -73,7 +67,7 @@ class CypherGenerator:
         for updating_clause in single_query_clause.updating_clauses:
             if single_query_string != "":
                 single_query_string = single_query_string + '\n'
-            single_query_string = single_query_string + self.convert_updating_clause(updating_clause)
+            single_query_string = single_query_string + updating_clause.convert()
         # return_clause部分
         if single_query_clause.return_clause:
             if single_query_string != "":
@@ -92,11 +86,11 @@ class CypherGenerator:
         for updating_clause in with_query_clause.updating_clauses:
             if with_query_string == "":
                 with_query_string = with_query_string + '\n'
-            with_query_string = with_query_string + self.convert_updating_clause(updating_clause)
+            with_query_string = with_query_string + updating_clause.convert()
         # with_clause部分
         if with_query_string == "":
             with_query_string = with_query_string + '\n'
-        with_query_string = with_query_string + self.convert_with_clause(with_query_string.with_clause)
+        with_query_string = with_query_string + with_query_string.with_clause.convert()
         return with_query_string
 
     def convert_reading_clause(self, reading_clause: ReadingClause) -> str:
@@ -157,31 +151,25 @@ class CypherGenerator:
                               ' )\nYIELD ' + pattern.path.variable
         if call_string != "":
             match_string = call_string + '\n' + match_string
-        if match_clause.where_clause or len(interval_conditions) != 0:
-            where_string = self.convert_where_clause(match_clause.where_clause, interval_conditions)
+        if match_clause.where_expression or len(interval_conditions) != 0:
+            where_string = self.convert_where_clause(match_clause.where_expression, interval_conditions)
             match_string = match_string + '\n' + where_string
         return match_string
 
-    def convert_where_clause(self, where_clause: WhereClause = None, interval_conditions: List[str] = None) -> str:
-        if where_clause is None and interval_conditions is None:
-            raise ValueError("The where_clause and the interval_conditions can't be None at the same time.")
+    def convert_where_clause(self, where_expression: Expression = None, interval_conditions: List[str] = None) -> str:
+        if where_expression is None and interval_conditions is None:
+            raise ValueError("The where_expression and the interval_conditions can't be None at the same time.")
         if interval_conditions is None:
             interval_conditions = []
         where_string = "WHERE "
-        if where_clause:
-            expression_string = self.convert_expression(where_clause.expression)
+        if where_expression:
+            expression_string = where_expression.convert()
             where_string = where_string + expression_string
         for interval_condition in interval_conditions:
             if where_string != "WHERE ":
                 where_string = where_string + ' and '
             where_string = where_string + interval_condition
         return where_string
-
-    def convert_updating_clause(self, updating_clause: UpdatingClause) -> str:
-        pass
-
-    def convert_with_clause(self, with_clause: WithClause) -> str:
-        pass
 
     def convert_return_clause(self, return_clause: ReturnClause) -> str:
         return_string = "RETURN "
@@ -194,7 +182,7 @@ class CypherGenerator:
             elif projection_item.expression:
                 if return_string != "RETURN ":
                     return_string = return_string + ', '
-                return_string = return_string + self.convert_expression(projection_item.expression)
+                return_string = return_string + projection_item.expression.convert()
                 if projection_item.variable:
                     return_string = return_string + ' AS ' + projection_item.variable
         return return_string
@@ -202,7 +190,7 @@ class CypherGenerator:
     def convert_unwind_clause(self, unwind_clause: UnwindClause) -> str:
         pass
 
-    def convert_edge(self, edge: SEdge, time_window: TimePoint | Interval = None) -> (str, List[str]):
+    def convert_edge(self, edge: SEdge, time_window: Expression = None) -> (str, List[str]):
         # 若边没有变量名，但却有时态限制，那么为它赋一个变量名
         if (edge.interval and edge.variable is None) or time_window:
             edge.variable = self.get_random_variable()
@@ -235,25 +223,25 @@ class CypherGenerator:
 
         # 边的有效时间限制
         interval_conditions = []
-        if edge.interval:
-            interval_condition = edge.variable + ".interval_from <= " + str(edge.interval.interval_from.timestamp())
-            interval_conditions.append(interval_condition)
-            interval_condition = edge.variable + ".interval_to >= " + str(edge.interval.interval_to.timestamp())
-            interval_conditions.append(interval_condition)
-        if time_window:
-            if time_window.__class__ == TimePoint:
-                interval_condition = edge.variable + ".interval_from <= " + str(time_window.timestamp())
-                interval_conditions.append(interval_condition)
-                interval_condition = edge.variable + ".interval_to >= " + str(time_window.timestamp())
-                interval_conditions.append(interval_condition)
-            else:
-                interval_condition = edge.variable + ".interval_from <= " + str(time_window.interval_from.timestamp())
-                interval_conditions.append(interval_condition)
-                interval_condition = edge.variable + ".interval_to >= " + str(time_window.interval_to.timestamp())
-                interval_conditions.append(interval_condition)
+        # if edge.interval:
+        #     interval_condition = edge.variable + ".interval_from <= " + str(edge.interval.interval_from.timestamp())
+        #     interval_conditions.append(interval_condition)
+        #     interval_condition = edge.variable + ".interval_to >= " + str(edge.interval.interval_to.timestamp())
+        #     interval_conditions.append(interval_condition)
+        # if time_window:
+        #     if time_window.__class__ == TimePoint:
+        #         interval_condition = edge.variable + ".interval_from <= " + str(time_window.timestamp())
+        #         interval_conditions.append(interval_condition)
+        #         interval_condition = edge.variable + ".interval_to >= " + str(time_window.timestamp())
+        #         interval_conditions.append(interval_condition)
+        #     else:
+        #         interval_condition = edge.variable + ".interval_from <= " + str(time_window.interval_from.timestamp())
+        #         interval_conditions.append(interval_condition)
+        #         interval_condition = edge.variable + ".interval_to >= " + str(time_window.interval_to.timestamp())
+        #         interval_conditions.append(interval_condition)
         return edge_pattern, interval_conditions
 
-    def convert_node(self, node: SNode, time_window: TimePoint | Interval = None) -> (str, List[str]):
+    def convert_node(self, node: SNode, time_window: Expression = None) -> (str, List[str]):
         # 若节点没有变量名，但却有时态限制，那么为它赋一个变量名
         if (node.interval and node.variable is None) or time_window:
             node.variable = self.get_random_variable()
@@ -265,32 +253,32 @@ class CypherGenerator:
         if node.__class__ == PropertyNode:
             node_pattern = node_pattern + "{content: \"" + node.content + "\"}"
         elif node.__class__ == ValueNode:
-            node_pattern = node_pattern + "{content: " + self.convert_expression(node.content) + "}"
+            node_pattern = node_pattern + "{content: " + node.content.convert() + "}"
         node_pattern = '(' + node_pattern + ')'
 
         # 节点的有效时间限制
         interval_conditions = []
-        if node.interval:
-            interval_condition = node.variable + ".interval_from <= " + str(node.interval.interval_from.timestamp())
-            interval_conditions.append(interval_condition)
-            interval_condition = node.variable + ".interval_to >= " + str(node.interval.interval_to.timestamp())
-            interval_conditions.append(interval_condition)
-
-        if time_window:
-            if time_window.__class__ == TimePoint:
-                interval_condition = node.variable + ".interval_from <= " + str(time_window.timestamp())
-                interval_conditions.append(interval_condition)
-                interval_condition = node.variable + ".interval_to >= " + str(time_window.timestamp())
-                interval_conditions.append(interval_condition)
-            else:
-                interval_condition = node.variable + ".interval_from <= " + str(time_window.interval_from.timestamp())
-                interval_conditions.append(interval_condition)
-                interval_condition = node.variable + ".interval_to >= " + str(time_window.interval_to.timestamp())
-                interval_conditions.append(interval_condition)
+        # if node.interval:
+        #     interval_condition = node.variable + ".interval_from <= " + str(node.interval.interval_from.timestamp())
+        #     interval_conditions.append(interval_condition)
+        #     interval_condition = node.variable + ".interval_to >= " + str(node.interval.interval_to.timestamp())
+        #     interval_conditions.append(interval_condition)
+        #
+        # if time_window:
+        #     if time_window.__class__ == TimePoint:
+        #         interval_condition = node.variable + ".interval_from <= " + str(time_window.timestamp())
+        #         interval_conditions.append(interval_condition)
+        #         interval_condition = node.variable + ".interval_to >= " + str(time_window.timestamp())
+        #         interval_conditions.append(interval_condition)
+        #     else:
+        #         interval_condition = node.variable + ".interval_from <= " + str(time_window.interval_from.timestamp())
+        #         interval_conditions.append(interval_condition)
+        #         interval_condition = node.variable + ".interval_to >= " + str(time_window.interval_to.timestamp())
+        #         interval_conditions.append(interval_condition)
 
         return node_pattern, interval_conditions
 
-    def convert_object_node(self, node: ObjectNode, time_window: TimePoint | Interval = None) -> (
+    def convert_object_node(self, node: ObjectNode, time_window: Expression = None) -> (
             str, List[str], List[str]):
         # 对象节点模式, 对象节点的有效时间限制
         node_pattern, interval_conditions = self.convert_node(node, time_window)
@@ -309,7 +297,7 @@ class CypherGenerator:
 
         return node_pattern, property_patterns, interval_conditions
 
-    def convert_path(self, path: SPath, time_window: TimePoint | Interval = None) -> (str, List[str], List[str]):
+    def convert_path(self, path: SPath, time_window: Expression = None) -> (str, List[str], List[str]):
         # 路径模式，属性节点和值节点的模式，路径有效时间限制
         path_pattern, property_patterns, interval_conditions = self.convert_object_node(path.nodes[0], time_window)
         index = 1
@@ -327,209 +315,3 @@ class CypherGenerator:
 
             index = index + 1
         return path_pattern, property_patterns, interval_conditions
-
-    def convert_expression(self, expression: Expression):
-        # 暂用于测试
-        if expression.__class__ == str:
-            return expression
-        return self.convert_or_expression(expression.or_expression)
-
-    def convert_or_expression(self, or_expression: OrExpression):
-        expression_string = ""
-        for index, xor_expression in enumerate(or_expression.xor_expressions):
-            if index != 0:
-                expression_string = expression_string + ' OR '
-            expression_string = expression_string + self.convert_xor_expression(xor_expression)
-        return expression_string
-
-    def convert_xor_expression(self, xor_expression: XorExpression):
-        xor_expression_string = ""
-        for index, and_expression in enumerate(xor_expression.and_expressions):
-            if index != 0:
-                xor_expression_string = xor_expression_string + ' XOR '
-            xor_expression_string = xor_expression_string + self.convert_and_expression(and_expression)
-        return xor_expression_string
-
-    def convert_and_expression(self, and_expression: AndExpression):
-        and_expression_string = ""
-        for index, not_expression in enumerate(and_expression.not_expressions):
-            if index != 0:
-                and_expression_string = and_expression_string + ' OR '
-            and_expression_string = and_expression_string + self.convert_not_expression(not_expression)
-        return and_expression_string
-
-    def convert_not_expression(self, not_expression: NotExpression):
-        comparison_string = self.convert_comparison_expression(not_expression.comparison_expression)
-        if not_expression.is_not:
-            comparison_string = 'NOT ' + comparison_string
-        return comparison_string
-
-    def convert_comparison_expression(self, comparison_expression: ComparisonExpression):
-        comparison_string = self.convert_subject_expression(comparison_expression.subject_expressions[0])
-        index = 0
-        if index < len(comparison_expression.comparison_operations):
-            comparison_string = comparison_string + ' ' + comparison_expression.comparison_operations[index] + ' '
-            comparison_string = comparison_string + self.convert_subject_expression(
-                comparison_expression.subject_expressions[index + 1])
-            index = index + 1
-        return comparison_string
-
-    def convert_subject_expression(self, subject_expression: SubjectExpression):
-        subject_string = self.convert_add_subtract_expression(subject_expression.add_or_subtract_expression)
-        if subject_expression.predicate_expression:
-            predicate_string = ""
-            if subject_expression.predicate_expression.__class__ == TimePredicateExpression:
-                predicate_string = self.convert_time_predicate_expression(subject_expression.predicate_expression)
-            elif subject_expression.predicate_expression.__class__ == StringPredicateExpression:
-                predicate_string = self.convert_string_predicate_expression(subject_expression.predicate_expression)
-            elif subject_expression.predicate_expression.__class__ == ListPredicateExpression:
-                predicate_string = self.convert_list_predicate_expression(subject_expression.predicate_expression)
-            return subject_string + ' ' + predicate_string
-        return subject_string
-
-    def convert_add_subtract_expression(self, add_subtract_expression: AddSubtractExpression):
-        add_subtract_string = self.convert_multiply_divide_expression(
-            add_subtract_expression.multiply_divide_expressions[0])
-        index = 0
-        if index < len(add_subtract_expression.multiply_divide_expressions):
-            add_subtract_string = add_subtract_string + ' ' + add_subtract_expression.add_subtract_operations[
-                index] + ' '
-            add_subtract_string = add_subtract_string + self.convert_multiply_divide_expression(
-                add_subtract_expression.multiply_divide_expressions[index + 1])
-            index = index + 1
-        return add_subtract_string
-
-    # 待实现
-    def convert_time_predicate_expression(self, time_predicate_expression: TimePredicateExpression):
-
-        return time_predicate_expression.time_operation + ' ' + self.convert_add_subtract_expression(
-            time_predicate_expression.add_or_subtract_expression)
-        pass
-
-    def convert_string_predicate_expression(self, string_predicate_expression: StringPredicateExpression):
-        return string_predicate_expression.string_operation + ' ' + self.convert_add_subtract_expression(
-            string_predicate_expression.add_or_subtract_expression)
-
-    def convert_list_predicate_expression(self, list_predicate_expression: ListPredicateExpression):
-        return 'IN ' + self.convert_add_subtract_expression(list_predicate_expression.add_or_subtract_expression)
-
-    def convert_null_predicate_expression(self, null_predicate_expression: NullPredicateExpression):
-        if null_predicate_expression.is_null:
-            return 'IS NULL'
-        return 'IS NOT NULL'
-
-    def convert_multiply_divide_expression(self, multiply_divide_expression: MultiplyDivideExpression):
-        left_string = self.convert_power_expression(multiply_divide_expression.left_expression)
-        if multiply_divide_expression.multiply_divide_operation and multiply_divide_expression.right_expression:
-            right_string = self.convert_power_expression(multiply_divide_expression.right_expression)
-            left_string = left_string + ' ' + multiply_divide_expression.multiply_divide_operation + ' ' + right_string
-        return left_string
-
-    def convert_power_expression(self, power_experssion: PowerExpression):
-        power_string = ""
-        for index, list_expression in enumerate(power_experssion.list_index_expressions):
-            if index == 0:
-                power_string = self.convert_list_index_expression(list_expression)
-            else:
-                power_string = power_string + '^' + self.convert_list_index_expression(list_expression) + ''
-        return power_string
-
-    def convert_list_index_expression(self, list_index_expression: ListIndexExpression):
-        list_index_string = ""
-        if list_index_expression.principal_expression.__class__ == PropertiesLabelsExpression:
-            list_index_string = self.convert_properties_labels_expressions(
-                list_index_expression.principal_expression)
-        elif list_index_expression.principal_expression.__class__ == AtTExpression:
-            list_index_string = self.convert_at_t_expression(list_index_expression.principal_expression)
-
-        if list_index_expression.index_expression:
-            list_index_string = list_index_string + '[' + self.convert_expression(
-                list_index_expression.index_expression) + ']'
-        if list_index_expression.is_positive is False:
-            list_index_string = '-' + list_index_string
-        return list_index_string
-
-    def convert_properties_labels_expressions(self, properties_labels_expression: PropertiesLabelsExpression):
-        properties_labels_string = self.convert_atom(properties_labels_expression.atom)
-        for proprety in properties_labels_expression.property_chains:
-            properties_labels_string = properties_labels_string + '.' + proprety
-        for label in properties_labels_expression.labels:
-            properties_labels_string = properties_labels_string + ':' + label
-        return properties_labels_string
-
-    # 待实现
-    def convert_at_t_expression(self, at_t_expression: AtTExpression):
-        at_t_string = self.convert_atom(at_t_expression.atom)
-        for proprety in at_t_expression.property_chains:
-            at_t_string = at_t_string + '.' + proprety
-        if at_t_expression.is_value:
-            at_t_string = at_t_string + '#Value'
-        at_t_string = at_t_string + '@T'
-        for proprety in at_t_expression.time_property_chains:
-            at_t_string = at_t_string + '.' + proprety
-        return at_t_string
-
-    def convert_atom(self, atom: Atom) -> str:
-        atom = atom.atom
-        if atom.__class__ == str:
-            return atom
-        elif atom.__class__ == ListLiteral:
-            return self.convert_list_literal(atom)
-        elif atom.__class__ == MapLiteral:
-            return self.convert_map_literal(atom)
-        elif atom.__class__ == ParenthesizedExpression:
-            return self.convert_parenthesized_expression(atom)
-        elif atom.__class__ == FunctionInvocation:
-            return self.convert_function_invocation(atom)
-        else:
-            pass
-
-    def convert_list_literal(self, list_literal: ListLiteral):
-        list_string = ""
-        for index, expression in enumerate(list_literal.expressions):
-            if index != 0:
-                list_string = list_string + ', '
-            list_string = list_string + self.convert_expression(expression)
-        list_string = '[' + list_string + ']'
-        return list_string
-
-    def convert_map_literal(self, map_literal: MapLiteral):
-        map_string = ""
-        for index, (key, value) in enumerate(map_literal.keys_values.items()):
-            if index != 0:
-                map_string = map_string + ', '
-            map_string = map_string + key + ': ' + self.convert_expression(value)
-        map_string = '{' + map_string + '}'
-        return map_string
-
-    def convert_case_expression(self, case_expression: CaseExpression):
-        pass
-
-    def convert_list_comprehension(self, list_comprehension: ListComprehension):
-        pass
-
-    def convert_pattern_comprehension(self, pattern_comprehension: PatternComprehension):
-        pass
-
-    def convert_quantifier(self, quantifier: Quantifier):
-        pass
-
-    def convert_pattern_predicate(self, pattern_predicate: PatternPredicate):
-        pass
-
-    def convert_parenthesized_expression(self, parenthesized_expression: ParenthesizedExpression) -> str:
-        return '( ' + self.convert_expression(parenthesized_expression.expression) + ' )'
-
-    def convert_function_invocation(self, function_invocation: FunctionInvocation):
-        function_invocation_string = ""
-        if function_invocation.is_distinct:
-            function_invocation_string = function_invocation_string + 'DISTINCT '
-        for index, expression in function_invocation.expressions:
-            if index != 0:
-                function_invocation_string = function_invocation_string + ','
-            function_invocation_string = function_invocation_string + self.convert_expression(expression)
-        function_invocation_string = function_invocation.function_name + '( ' + function_invocation_string + ' )'
-        return function_invocation_string
-
-    def convert_existential_subquery(self, existential_subquery: ExistentialSubquery):
-        pass
