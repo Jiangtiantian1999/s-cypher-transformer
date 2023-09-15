@@ -166,18 +166,23 @@ class MultiplyDivideExpression:
 
 
 class AddSubtractExpression:
-    def __init__(self, left_expression: MultiplyDivideExpression, add_subtract_operation: str = None,
-                 right_expression: MultiplyDivideExpression = None):
-        if add_subtract_operation not in ['-', '+']:
-            raise ValueError("The add_subtract_operation must in '-' and '+'.")
-        self.left_expression = left_expression
-        self.add_subtract_operation = add_subtract_operation
-        self.right_expression = right_expression
+    def __init__(self, multiply_divide_expressions: List[MultiplyDivideExpression],
+                 add_subtract_operations: List[str] = None):
+        self.multiply_divide_expressions = multiply_divide_expressions
+        if add_subtract_operations is None:
+            add_subtract_operations = []
+        if len(multiply_divide_expressions) != len(add_subtract_operations) + 1:
+            raise ValueError(
+                "The numbers of the multiply_divide_expressions and add_subtract_operations are not matched.")
+        for add_subtract_operation in add_subtract_operations:
+            if add_subtract_operation not in ['-', '+']:
+                raise ValueError("The add_subtract_operation must be '+' or '-'.")
+        self.add_subtract_operations = add_subtract_operations
 
     def get_at_t_expressions(self) -> List[AtTExpression]:
-        at_t_expressions = self.left_expression.get_at_t_expressions()
-        if self.right_expression:
-            at_t_expressions.extend(self.right_expression.get_at_t_expressions())
+        at_t_expressions = []
+        for multiply_divide_expression in self.multiply_divide_expressions:
+            at_t_expressions.extend(multiply_divide_expression.get_at_t_expressions())
         return at_t_expressions
 
 
@@ -246,10 +251,8 @@ class ComparisonExpression:
 
     def get_at_t_expressions(self) -> List[AtTExpression]:
         at_t_expressions = []
-        index = 0
-        while index < len(self.subject_expressions):
-            at_t_expressions.extend(self.subject_expressions[index].get_at_t_expressions())
-            index = index + 1
+        for subject_expression in self.subject_expressions:
+            at_t_expressions.extend(subject_expression.get_at_t_expressions())
         return at_t_expressions
 
 

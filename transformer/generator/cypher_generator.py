@@ -388,11 +388,16 @@ class CypherGenerator:
         return subject_string
 
     def convert_add_subtract_expression(self, add_subtract_expression: AddSubtractExpression):
-        left_string = str(add_subtract_expression.left_expression)
-        if add_subtract_expression.add_subtract_operation and add_subtract_expression.right_expression:
-            right_string = str(add_subtract_expression.right_expression)
-            return left_string + ' ' + add_subtract_expression.add_subtract_operation + ' ' + right_string
-        return left_string
+        add_subtract_string = self.convert_multiply_divide_expression(
+            add_subtract_expression.multiply_divide_expressions[0])
+        index = 0
+        if index < len(add_subtract_expression.multiply_divide_expressions):
+            add_subtract_string = add_subtract_string + ' ' + add_subtract_expression.add_subtract_operations[
+                index] + ' '
+            add_subtract_string = add_subtract_string + self.convert_multiply_divide_expression(
+                add_subtract_expression.multiply_divide_expressions[index + 1])
+            index = index + 1
+        return add_subtract_string
 
     # 待实现
     def convert_time_predicate_expression(self, time_predicate_expression: TimePredicateExpression):
