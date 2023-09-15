@@ -1,56 +1,54 @@
 from typing import List
 
 from transformer.exceptions.s_exception import ClauseError
-from transformer.ir.s_clause_component import Pattern, ProjectionItem
-from transformer.ir.s_datetime import TimePoint, Interval
+from transformer.ir.s_clause_component import *
 from transformer.ir.s_expression import Expression
 
 
-class Clause:
-    time_granularity = TimePoint.LOCALDATETIME
-
-
-class WhereClause(Clause):
-    def __init__(self, expression: Expression):
-        self.expression = expression
-
-
-class OrderByClause(Clause):
+class OrderByClause:
+    # dict[排序的元素，排序方式]
     def __init__(self, sort_items: dict[Expression, str]):
+        if len(sort_items) == 0:
+            raise ValueError("The sort_items can't be empty.")
+        for item in sort_items.values():
+            if item.upper() not in ['', 'ASCENDING', 'ASC', 'DESCENDING', 'DESC']:
+                raise ValueError("Uncertain sorting method.")
         self.sort_items = sort_items
 
 
-class SkipClause(Clause):
-    def __init__(self, expression: Expression):
-        self.expression = expression
-
-
-class LimitClause(Clause):
-    def __init__(self, expression: Expression):
-        self.expression = expression
-
-
-class ReturnClause(Clause):
+class ReturnClause:
     def __init__(self, projection_items: List[ProjectionItem], is_distinct: bool = False,
-                 order_by_clause: OrderByClause = None, skip_clause: SkipClause = None,
-                 limit_clause: LimitClause = None):
+                 order_by_clause: OrderByClause = None, skip_expression: Expression = None,
+                 limit_expression: Expression = None):
         if len(projection_items) == 0:
             raise ValueError("The projection_items can't be empty.")
         self.projection_items = projection_items
         self.is_distinct = is_distinct
         self.order_by_clause = order_by_clause
-        self.skip_clause = skip_clause
-        self.limit_clause = limit_clause
+        self.skip_expression = skip_expression
+        self.limit_expression = limit_expression
 
 
-class MatchClause(Clause):
+class AtTimeClause:
+    def __init__(self, time_point: Expression):
+        self.time_point = time_point
 
-    def __init__(self, patterns: List[Pattern], is_optional: bool = False, where_clause: WhereClause = None,
-                 time_window: TimePoint | Interval = None):
+
+class BetweenClause:
+    def __init__(self, interval: Expression):
+        self.interval = interval
+
+
+class MatchClause:
+
+    def __init__(self, patterns: List[Pattern], is_optional: bool = False, where_expression: Expression = None,
+                 time_window_limit: AtTimeClause | BetweenClause = None):
+        if len(patterns) == 0:
+            raise ValueError("The patterns can't be empty.")
         self.patterns = patterns
         self.is_optional = is_optional
-        self.where_clause = where_clause
-        self.time_window = time_window
+        self.where_expression = where_expression
+        self.time_window_limit = time_window_limit
 
     def get_variables_dict(self):
         variables_dict = {}
@@ -59,17 +57,19 @@ class MatchClause(Clause):
         return variables_dict
 
 
-class UnwindClause(Clause):
+class UnwindClause:
+    def __init__(self, expression: Expression, variable: str):
+        self.expression = expression
+        self.variable = variable
+
     def get_variables_dict(self):
-        return {}
-
-    pass
+        return {self.variable: self}
 
 
-class YieldClause(Clause):
-    def __init__(self, yield_items: dict[str, str], where_clause: WhereClause = None):
+class YieldClause:
+    def __init__(self, yield_items: dict[str, str], where_expression: Expression = None):
         self.yield_items = yield_items
-        self.where_clause = where_clause
+        self.where_expression = where_expression
 
     def get_variables_dict(self):
         variables_dict = {}
@@ -80,7 +80,7 @@ class YieldClause(Clause):
                 variables_dict[key] = YieldClause
 
 
-class CallClause(Clause):
+class CallClause:
 
     def __init__(self, procedure_name: str, input_items: List[Expression] = None, yield_clause: YieldClause = None):
         self.procedure_name = procedure_name
@@ -94,7 +94,7 @@ class CallClause(Clause):
 
 
 # 读查询
-class ReadingClause(Clause):
+class ReadingClause:
     def __init__(self, reading_clause: MatchClause | UnwindClause | CallClause):
         self.reading_clause = reading_clause
 
@@ -102,16 +102,71 @@ class ReadingClause(Clause):
         return self.reading_clause.get_variables_dict()
 
 
-# 更新查询
-class UpdatingClause(Clause):
-    def get_variables_dict(self):
-        return {}
+class CreateClause:
+    def __init__(self, patterns: List[Pattern]):
+        if len(patterns) == 0:
+            raise ValueError("The patterns can't be empty.")
+        self.patterns = patterns
 
-    pass
+    def get_variables_dict(self):
+        variables_dict = {}
+        for pattern in self.patterns:
+            variables_dict.update(pattern.get_variables_dict())
+        return variables_dict
+
+
+class DeleteClause:
+    def __init__(self, delete_items: List[DeleteItem]):
+        if len(delete_items) == 0:
+            raise ValueError("The delete_items can't be empty.")
+        self.delete_items = delete_items
+
+    def get_variables_dict(self):
+        variables_dict = {}
+        for delete_item in self.delete_items:
+            variables_dict[delete_item.variable] = delete_item
+        return variables_dict
+
+class SetClause:
+    def __init__(self, set_items: List[SetItem]):
+        if len(set_items) == 0:
+            raise ValueError("The set_items can't be empty.")
+        self.set_items = set_items
+
+    def get_variables_dict(self):
+        variables_dict = {}
+        for set_item in self.set_items:
+            variables_dict[set_item.variable] = set_item
+        return variables_dict
+
+class MergeClause:
+    def __init__(self, patterns: List[Pattern], actions: dict[str, SetClause] = None):
+        if len(patterns) == 0:
+            raise ValueError("The patterns can't be empty.")
+        self.patterns = patterns
+        if actions is None:
+            actions = []
+        self.actions = actions
+
+    def get_variables_dict(self):
+        variables_dict = {}
+        for pattern in self.patterns:
+            variables_dict.update(pattern.get_variables_dict())
+        return variables_dict
+
+
+# 更新查询
+class UpdatingClause:
+    def __init__(self, update_clause: CreateClause, at_time_clause: AtTimeClause = None):
+        self.update_clause = update_clause
+        self.at_time_clause = at_time_clause
+
+    def get_variables_dict(self, update_clause: CreateClause, at_time_clase: AtTimeClause = None):
+        return {}
 
 
 # 最后的子句为return或update的查询模块，单一查询
-class SingleQueryClause(Clause):
+class SingleQueryClause:
     def __init__(self, reading_clauses: List[ReadingClause] = None, updating_clauses: List[UpdatingClause] = None,
                  return_clause: ReturnClause = None):
         if updating_clauses is None and return_clause is None:
@@ -133,19 +188,19 @@ class SingleQueryClause(Clause):
         return variables_dict
 
 
-class WithClause(Clause):
+class WithClause:
     def __init__(self, projection_items: List[ProjectionItem], is_distinct: bool = False,
-                 order_by_clause: OrderByClause = None, skip_clause: SkipClause = None,
-                 limit_clause: LimitClause = None):
+                 order_by_clause: OrderByClause = None, skip_expression: Expression = None,
+                 limit_expression: Expression = None):
         self.projection_items = projection_items
         self.is_distinct = is_distinct
         self.order_by_clause = order_by_clause
-        self.skip_clause = skip_clause
-        self.limit_clause = limit_clause
+        self.skip_expression = skip_expression
+        self.limit_expression = limit_expression
 
 
 # 最后的子句为with的查询模块
-class WithQueryClause(Clause):
+class WithQueryClause:
     def __init__(self, with_clause: WithClause, reading_clauses: List[ReadingClause] = None,
                  updating_clauses: List[UpdatingClause] = None):
         self.with_clause = with_clause
@@ -166,7 +221,7 @@ class WithQueryClause(Clause):
 
 
 # 多个查询（用WITH子句连接）
-class MultiQueryClause(Clause):
+class MultiQueryClause:
     def __init__(self, single_query_clause: SingleQueryClause, with_query_clauses: List[WithQueryClause] = None):
         # 最后的子句为return或update的查询模块
         self.single_query_clause = single_query_clause
@@ -184,7 +239,7 @@ class MultiQueryClause(Clause):
 
 
 # 复合查询（用UNION或UNION ALL连接）
-class UnionQueryClause(Clause):
+class UnionQueryClause:
     def __init__(self, multi_query_clauses: List[MultiQueryClause], is_all: List[bool] = None):
         if is_all is None:
             is_all = []
@@ -200,12 +255,23 @@ class UnionQueryClause(Clause):
         return variables_dict
 
 
+class SnapshotClause:
+    def __init__(self, time_point: Expression):
+        self.time_point = time_point
+
+
+class ScopeClause:
+    def __init__(self, interval: Expression):
+        self.interval = interval
+
+
 # 时间窗口限定
-class TimeWindowLimitClause(Clause):
-    pass
+class TimeWindowLimitClause:
+    def __init__(self, time_window_limit: SnapshotClause | ScopeClause):
+        self.time_window_limit = time_window_limit
 
 
-class SCypherClause(Clause):
+class SCypherClause:
     def __init__(self, query_clause: UnionQueryClause | CallClause | TimeWindowLimitClause):
         self.query_clause = query_clause
 

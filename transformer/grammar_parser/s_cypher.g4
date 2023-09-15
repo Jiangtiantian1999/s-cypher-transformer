@@ -11,9 +11,9 @@ oC_Match : ( OPTIONAL SP )? MATCH SP? oC_Pattern ( SP? ( s_AtTime | s_Between ) 
 oC_UpdatingClause : ( oC_Create | oC_Merge | oC_Delete | oC_Set | oC_Remove | s_Stale) ( SP? s_AtTime )? ;
 
 oC_SetItem : ( oC_Variable SP? s_AtTElement )
-           | ( oC_Variable ( SP? s_AtTElement )? '.' oC_Variable SP? s_AtTElement )
-           | ( oC_Variable ( SP? s_AtTElement )? '.' oC_Variable ( SP? s_AtTElement )? ( SP? PoundValue )? SP? s_AtTElement )
-           | ( oC_Variable ( SP? s_AtTElement )? '.' oC_Variable ( SP? s_AtTElement )? SP? '=' SP? oC_Expression ( SP? s_AtTElement )? )
+           | ( oC_Variable ( SP? s_AtTElement )? '.' oC_PropertyKeyName SP? s_AtTElement )
+           | ( oC_Variable ( SP? s_AtTElement )? '.' oC_PropertyKeyName ( SP? s_AtTElement )? SP? PoundValue SP? s_AtTElement )
+           | ( oC_Variable ( SP? s_AtTElement )? '.' oC_PropertyKeyName ( SP? s_AtTElement )? SP? '=' SP? oC_Expression ( SP? s_AtTElement )? )
            | ( oC_PropertyExpression SP? '=' SP? oC_Expression )
            | ( oC_Variable SP? '=' SP? oC_Expression )
            | ( oC_Variable SP? '+=' SP? oC_Expression )
@@ -22,11 +22,15 @@ oC_SetItem : ( oC_Variable SP? s_AtTElement )
 
 s_Stale : STALE SP? s_StaleItem ( SP? ',' SP? s_StaleItem )* ;
 
-s_StaleItem : oC_Variable ( '.' oC_Variable ( SP? PoundValue )? )? ;
+s_StaleItem : oC_Expression '.' oC_PropertyKeyName ( SP? PoundValue )?
+            | oC_Expression
+            ;
 
 oC_Delete :  ( DETACH SP )? DELETE SP? s_DeleteItem ( SP? ',' SP? s_DeleteItem )* ;
 
-s_DeleteItem : oC_Variable ( '.' oC_Variable ( SP? PoundValue )? )? ;
+s_DeleteItem : oC_Expression '.' oC_PropertyKeyName ( SP? PoundValue )?
+             | oC_Expression
+             ;
 
 s_AtTime : AT_TIME SP? oC_Expression;
 
