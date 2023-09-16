@@ -22,13 +22,13 @@ oC_SetItem : ( oC_Variable SP? s_AtTElement )
 
 s_Stale : STALE SP? s_StaleItem ( SP? ',' SP? s_StaleItem )* ;
 
-s_StaleItem : oC_Expression '.' oC_PropertyKeyName ( SP? PoundValue )?
+s_StaleItem : oC_Expression '.' oC_PropertyKeyName SP? PoundValue
             | oC_Expression
             ;
 
 oC_Delete :  ( DETACH SP )? DELETE SP? s_DeleteItem ( SP? ',' SP? s_DeleteItem )* ;
 
-s_DeleteItem : oC_Expression '.' oC_PropertyKeyName ( SP? PoundValue )?
+s_DeleteItem : oC_Expression '.' oC_PropertyKeyName SP? PoundValue
              | oC_Expression
              ;
 
