@@ -15,12 +15,6 @@ class ListLiteral:
         list_string = '[' + list_string + ']'
         return list_string
 
-    def get_at_t_expressions(self) -> List:
-        at_t_expressions = []
-        for expression in self.expressions:
-            at_t_expressions.extend(expression.get_at_t_expressions())
-        return at_t_expressions
-
 
 class MapLiteral:
     # 注意：该处key_values为dict[str, Expression]类型，由于与Expression相互引用，故此处不写明类型。
@@ -35,12 +29,6 @@ class MapLiteral:
             map_string = map_string + key + ': ' + value.convert()
         map_string = '{' + map_string + '}'
         return map_string
-
-    def get_at_t_expressions(self) -> List:
-        at_t_expressions = []
-        for expression in self.keys_values.values():
-            at_t_expressions.extend(expression.get_at_t_expressions())
-        return at_t_expressions
 
 
 class CaseExpression:
@@ -71,9 +59,6 @@ class ParenthesizedExpression:
     def convert(self):
         return '( ' + self.expression.convert() + ' )'
 
-    def get_at_t_expressions(self) -> List:
-        return self.expression.get_at_t_expressions()
-
 
 class FunctionInvocation:
     # 注意：该处expressions为List[Expression]类型，由于与Expression相互引用，故此处不写明类型。
@@ -95,12 +80,6 @@ class FunctionInvocation:
         function_invocation_string = self.function_name + '( ' + function_invocation_string + ' )'
         return function_invocation_string
 
-    def get_at_t_expressions(self) -> List:
-        at_t_expressions = []
-        for expression in self.expressions:
-            at_t_expressions.extend(expression.get_at_t_expressions())
-        return at_t_expressions
-
 
 class ExistentialSubquery:
     pass
@@ -117,12 +96,6 @@ class Atom:
         if self.atom.__class__ == str:
             return self.atom
         return self.atom.convert()
-
-    def get_at_t_expressions(self) -> List:
-        if self.atom.__class__ in [ListLiteral, MapLiteral, CaseExpression, ListComprehension, PatternComprehension,
-                                   Quantifier, ParenthesizedExpression, FunctionInvocation]:
-            return self.atom.get_at_t_expression()
-        return []
 
 
 class PropertiesLabelsExpression:
@@ -142,9 +115,6 @@ class PropertiesLabelsExpression:
         for label in self.labels:
             properties_labels_string = properties_labels_string + ':' + label
         return properties_labels_string
-
-    def get_at_t_expressions(self) -> List:
-        return self.atom.get_at_t_expressions()
 
 
 class AtTExpression:
@@ -186,15 +156,6 @@ class ListIndexExpression:
             list_index_string = '-' + list_index_string
         return list_index_string
 
-    def get_at_t_expressions(self) -> List[AtTExpression]:
-        at_t_expressions = []
-        if self.principal_expression.__class__ == PropertiesLabelsExpression:
-            at_t_expressions = self.principal_expression.get_at_t_expressions()
-        elif self.principal_expression.__class__ == AtTExpression:
-            at_t_expressions = self.principal_expression
-        at_t_expressions.extend(self.index_expression.get_at_t_expressions())
-        return at_t_expressions
-
 
 class PowerExpression:
     def __init__(self, list_index_expressions: List[ListIndexExpression]):
@@ -209,34 +170,27 @@ class PowerExpression:
                 power_string = power_string + '^' + list_expression.convert() + ''
         return power_string
 
-    def get_at_t_expressions(self) -> List[AtTExpression]:
-        at_t_expressions = []
-        for list_index_expression in self.list_index_expressions:
-            at_t_expressions.extend(list_index_expression.get_at_t_expressions())
-        return at_t_expressions
-
 
 class MultiplyDivideExpression:
-    def __init__(self, left_expression: PowerExpression, multiply_divide_operation: str = None,
-                 right_expression: PowerExpression = None):
-        if multiply_divide_operation not in ['*', '/']:
-            raise ValueError("The multiply_divide_operation must be '*' or '/'.")
-        self.left_expression = left_expression
-        self.multiply_divide_operation = multiply_divide_operation
-        self.right_expression = right_expression
+    def __init__(self, power_expressions: List[PowerExpression], multiply_divide_operations: List[str] = None):
+        self.power_expressions = power_expressions
+        if multiply_divide_operations is None:
+            multiply_divide_operations = []
+        if len(power_expressions) != len(multiply_divide_operations):
+            raise ValueError(
+                "The numbers of the multiply/divide expressions and add/subtract operations are not matched.")
+        for multiply_divide_operation in multiply_divide_operations:
+            if multiply_divide_operation not in ['*', '/']:
+                raise ValueError("The multiply/divide operation must be '*' or '/'.")
+        self.multiply_divide_operations = multiply_divide_operations
 
     def convert(self):
-        multiply_divide_string = self.left_expression.convert()
-        if self.multiply_divide_operation and self.right_expression:
-            right_string = self.right_expression.convert()
-            multiply_divide_string = multiply_divide_string + ' ' + self.multiply_divide_operation + ' ' + right_string
+        multiply_divide_string = self.power_expressions[0].convert()
+        index = 0
+        while index < len(self.power_expressions):
+            multiply_divide_string = multiply_divide_string + ' ' + self.multiply_divide_operations[index] + ' '
+            multiply_divide_string = multiply_divide_string + self.power_expressions[index + 1].convert()
         return multiply_divide_string
-
-    def get_at_t_expressions(self) -> List[AtTExpression]:
-        at_t_expressions = self.left_expression.get_at_t_expressions()
-        if self.right_expression:
-            at_t_expressions.extend(self.right_expression.get_at_t_expressions())
-        return at_t_expressions
 
 
 class AddSubtractExpression:
@@ -247,10 +201,10 @@ class AddSubtractExpression:
             add_subtract_operations = []
         if len(multiply_divide_expressions) != len(add_subtract_operations) + 1:
             raise ValueError(
-                "The numbers of the multiply_divide_expressions and add_subtract_operations are not matched.")
+                "The numbers of the multiply/divide expressions and add_subtract_operations are not matched.")
         for add_subtract_operation in add_subtract_operations:
             if add_subtract_operation not in ['-', '+']:
-                raise ValueError("The add_subtract_operation must be '+' or '-'.")
+                raise ValueError("The add/subtract operation must be '+' or '-'.")
         self.add_subtract_operations = add_subtract_operations
 
     def convert(self):
@@ -263,12 +217,6 @@ class AddSubtractExpression:
             index = index + 1
         return add_subtract_string
 
-    def get_at_t_expressions(self) -> List[AtTExpression]:
-        at_t_expressions = []
-        for multiply_divide_expression in self.multiply_divide_expressions:
-            at_t_expressions.extend(multiply_divide_expression.get_at_t_expressions())
-        return at_t_expressions
-
 
 class TimePredicateExpression:
     def __init__(self, time_operation: str, add_or_subtract_expression: AddSubtractExpression = None):
@@ -279,9 +227,6 @@ class TimePredicateExpression:
 
     def convert(self):
         pass
-
-    def get_at_t_expressions(self) -> List[AtTExpression]:
-        return self.add_or_subtract_expression.get_at_t_expressions()
 
 
 class StringPredicateExpression:
@@ -294,9 +239,6 @@ class StringPredicateExpression:
     def convert(self):
         return self.string_operation + ' ' + self.add_or_subtract_expression.convert()
 
-    def get_at_t_expressions(self) -> List[AtTExpression]:
-        return self.add_or_subtract_expression.get_at_t_expressions()
-
 
 class ListPredicateExpression:
     def __init__(self, add_or_subtract_expression: AddSubtractExpression = None):
@@ -304,9 +246,6 @@ class ListPredicateExpression:
 
     def convert(self):
         return 'IN ' + self.add_or_subtract_expression.convert()
-
-    def get_at_t_expressions(self) -> List[AtTExpression]:
-        return self.add_or_subtract_expression.get_at_t_expressions()
 
 
 class NullPredicateExpression:
@@ -340,13 +279,6 @@ class SubjectExpression:
             return subject_string + ' ' + predicate_string
         return subject_string
 
-    def get_at_t_expressions(self) -> List[AtTExpression]:
-        at_t_expressions = self.add_or_subtract_expression.get_at_t_expressions()
-        if self.predicate_expression.__class__ in [TimePredicateExpression, StringPredicateExpression,
-                                                   ListPredicateExpression]:
-            at_t_expressions.extend(self.predicate_expression.get_at_t_expressions())
-        return at_t_expressions
-
 
 class ComparisonExpression:
     def __init__(self, subject_expressions: List[SubjectExpression], comparison_operations: List[str] = None):
@@ -354,7 +286,7 @@ class ComparisonExpression:
         if comparison_operations is None:
             comparison_operations = []
         if len(subject_expressions) != len(comparison_operations) + 1:
-            raise ValueError("The numbers of the subject_expressions and comparison_operations are not matched.")
+            raise ValueError("The numbers of the subject expressions and comparison_operations are not matched.")
         for comparison_operation in comparison_operations:
             if comparison_operation not in ['=', '<>', '<', '>', '<=', '>=']:
                 raise ValueError("The comparison operation must be '=', '<>', '<', '>', '<=' or '>='.")
@@ -369,16 +301,11 @@ class ComparisonExpression:
             index = index + 1
         return comparison_string
 
-    def get_at_t_expressions(self) -> List[AtTExpression]:
-        at_t_expressions = []
-        for subject_expression in self.subject_expressions:
-            at_t_expressions.extend(subject_expression.get_at_t_expressions())
-        return at_t_expressions
-
 
 class NotExpression:
     def __init__(self, comparison_expression: ComparisonExpression, is_not=False):
         self.comparison_expression = comparison_expression
+        # 是否有not操作
         self.is_not = is_not
 
     def convert(self):
@@ -386,9 +313,6 @@ class NotExpression:
         if self.is_not:
             comparison_string = 'NOT ' + comparison_string
         return comparison_string
-
-    def get_at_t_expressions(self) -> List[AtTExpression]:
-        return self.comparison_expression.get_at_t_expressions()
 
 
 class AndExpression:
@@ -403,12 +327,6 @@ class AndExpression:
             and_expression_string = and_expression_string + not_expression.convert()
         return and_expression_string
 
-    def get_at_t_expressions(self) -> List[AtTExpression]:
-        at_t_expressions = []
-        for not_expression in self.not_expressions:
-            at_t_expressions.extend(not_expression.get_at_t_expressions())
-        return at_t_expressions
-
 
 class XorExpression:
     def __init__(self, and_expressions: List[AndExpression]):
@@ -421,12 +339,6 @@ class XorExpression:
                 xor_expression_string = xor_expression_string + ' XOR '
             xor_expression_string = xor_expression_string + and_expression.convert()
         return xor_expression_string
-
-    def get_at_t_expressions(self) -> List[AtTExpression]:
-        at_t_expressions = []
-        for and_expression in self.and_expressions:
-            at_t_expressions.extend(and_expression.get_at_t_expressions())
-        return at_t_expressions
 
 
 class OrExpression:
@@ -441,12 +353,6 @@ class OrExpression:
             or_expression_string = or_expression_string + xor_expression.convert()
         return or_expression_string
 
-    def get_at_t_expressions(self) -> List[AtTExpression]:
-        at_t_expressions = []
-        for xor_expression in self.xor_expressions:
-            at_t_expressions.extend(xor_expression.get_at_t_expressions())
-        return at_t_expressions
-
 
 class Expression:
     def __init__(self, or_expression):
@@ -454,6 +360,3 @@ class Expression:
 
     def convert(self):
         return self.or_expression.convert()
-
-    def get_at_t_expressions(self) -> List[AtTExpression]:
-        return self.or_expression.get_at_t_expression()

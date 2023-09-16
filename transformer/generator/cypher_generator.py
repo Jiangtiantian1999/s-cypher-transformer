@@ -28,19 +28,22 @@ class CypherGenerator:
         elif s_cypher_clause.query_clause.__class__ == CallClause:
             return self.convert_call_clause(s_cypher_clause.query_clause)
         elif s_cypher_clause.query_clause.__class__ == TimeWindowLimitClause:
-            return self.convert_time_window_limit_clause(s_cypher_clause.query_clause)
+            return s_cypher_clause.query_clause.convert()
 
-    def convert_union_query_clause(self, s_cypher_clause: UnionQueryClause) -> str:
-        union_query_string = self.convert_multi_query_clause(s_cypher_clause.multi_query_clauses[0])
+    def convert_union_query_clause(self, union_query_clause: UnionQueryClause) -> str:
+        union_query_string = self.convert_multi_query_clause(union_query_clause.multi_query_clauses[0])
         index = 1
-        while index < len(s_cypher_clause.multi_query_clauses):
-            operator = "UNION"
-            if s_cypher_clause.is_all[index - 1]:
-                operator = "UNION ALL"
+        while index < len(union_query_clause.multi_query_clauses):
+            operator = " UNION "
+            if union_query_clause.is_all[index - 1]:
+                operator = " UNION ALL "
             union_query_string = union_query_string + '\n' + operator + self.convert_multi_query_clause(
-                s_cypher_clause.multi_query_clauses[index])
+                union_query_clause.multi_query_clauses[index])
             index = index + 1
         return union_query_string
+
+    def convert_call_clause(self, call_clause: CallClause) -> str:
+        pass
 
     def convert_multi_query_clause(self, multi_query_clause: MultiQueryClause) -> str:
         multi_query_string = ""
@@ -56,25 +59,6 @@ class CypherGenerator:
             multi_query_clause.single_query_clause)
         return multi_query_string
 
-    def convert_single_query_clause(self, single_query_clause: SingleQueryClause) -> str:
-        single_query_string = ""
-        # reading_clauses部分
-        for reading_clause in single_query_clause.reading_clauses:
-            if single_query_string != "":
-                single_query_string = single_query_string + '\n'
-            single_query_string = single_query_string + self.convert_reading_clause(reading_clause)
-        # updating_clauses部分
-        for updating_clause in single_query_clause.updating_clauses:
-            if single_query_string != "":
-                single_query_string = single_query_string + '\n'
-            single_query_string = single_query_string + updating_clause.convert()
-        # return_clause部分
-        if single_query_clause.return_clause:
-            if single_query_string != "":
-                single_query_string = single_query_string + '\n'
-            single_query_string = single_query_string + self.convert_return_clause(single_query_clause.return_clause)
-        return single_query_string
-
     def convert_with_query_clause(self, with_query_clause: WithQueryClause) -> str:
         with_query_string = ""
         # reading_clauses部分
@@ -86,12 +70,31 @@ class CypherGenerator:
         for updating_clause in with_query_clause.updating_clauses:
             if with_query_string == "":
                 with_query_string = with_query_string + '\n'
-            with_query_string = with_query_string + updating_clause.convert()
+            with_query_string = with_query_string + self.convert_updating_clause(updating_clause)
         # with_clause部分
         if with_query_string == "":
             with_query_string = with_query_string + '\n'
-        with_query_string = with_query_string + with_query_string.with_clause.convert()
+        with_query_string = with_query_string + with_query_clause.with_clause.convert()
         return with_query_string
+
+    def convert_single_query_clause(self, single_query_clause: SingleQueryClause) -> str:
+        single_query_string = ""
+        # reading_clauses部分
+        for reading_clause in single_query_clause.reading_clauses:
+            if single_query_string != "":
+                single_query_string = single_query_string + '\n'
+            single_query_string = single_query_string + self.convert_reading_clause(reading_clause)
+        # updating_clauses部分
+        for updating_clause in single_query_clause.updating_clauses:
+            if single_query_string != "":
+                single_query_string = single_query_string + '\n'
+            single_query_string = single_query_string + self.convert_updating_clause(updating_clause)
+        # return_clause部分
+        if single_query_clause.return_clause:
+            if single_query_string != "":
+                single_query_string = single_query_string + '\n'
+            single_query_string = single_query_string + self.convert_return_clause(single_query_clause.return_clause)
+        return single_query_string
 
     def convert_reading_clause(self, reading_clause: ReadingClause) -> str:
         reading_clause = reading_clause.reading_clause
@@ -171,6 +174,9 @@ class CypherGenerator:
             where_string = where_string + interval_condition
         return where_string
 
+    def convert_updating_clause(self, updating_clause: UpdatingClause) -> str:
+        pass
+
     def convert_return_clause(self, return_clause: ReturnClause) -> str:
         return_string = "RETURN "
         for projection_item in return_clause.projection_items:
@@ -187,8 +193,6 @@ class CypherGenerator:
                     return_string = return_string + ' AS ' + projection_item.variable
         return return_string
 
-    def convert_unwind_clause(self, unwind_clause: UnwindClause) -> str:
-        pass
 
     def convert_edge(self, edge: SEdge, time_window: Expression = None) -> (str, List[str]):
         # 若边没有变量名，但却有时态限制，那么为它赋一个变量名
