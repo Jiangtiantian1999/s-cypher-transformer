@@ -4,6 +4,7 @@ from transformer.ir.s_cypher_clause import *
 from transformer.ir.s_datetime import *
 from transformer.ir.s_graph import *
 from transformer.ir.s_expression import *
+import re
 
 
 # This class records important information about the query
@@ -53,15 +54,17 @@ class SCypherWalker(s_cypherListener):
         self.and_expressions = []
         self.not_expressions = []
         self.comparison_expression = None
-        self.subject_expression = None
+        self.subject_expressions = []
         self.null_predicate_expression = None
         self.list_predicate_expression = None
         self.string_predicate_expression = None
         self.time_predicate_expression = None
         self.add_subtract_expression = None
-        self.multiply_divide_expression = None
-        self.power_expression = None
-        self.list_index_expression = None
+        self.multiply_divide_expressions = []
+        self.power_expressions = []
+        self.unary_add_subtract_expressions = []
+        self.list_operation_expressions = []
+        self.list_index_expressions = []
         self.at_t_expression = None
         self.properties_labels_expression = None
 
@@ -130,7 +133,7 @@ class SCypherWalker(s_cypherListener):
 
     def enterOC_Where(self, ctx: s_cypherParser.OC_WhereContext):
         expression = ctx.oC_Expression().getText()
-        self.where_clause = WhereClause(expression)
+        self.where_clause = WhereClause(expression)  # where子句待处理
 
     def enterS_Between(self, ctx: s_cypherParser.S_BetweenContext):
         # 时间区间左右节点的获取待添加
@@ -364,19 +367,59 @@ class SCypherWalker(s_cypherListener):
     def exitOC_NotExpression(self, ctx: s_cypherParser.OC_NotExpressionContext):
         # comparison_expression: ComparisonExpression,
         # is_not=False
-        is_not = False  # 待处理
+        is_not = False
+        if ctx.NOT() is not None:
+            is_not = True
         self.not_expressions.append(NotExpression(self.comparison_expression, is_not))
 
+    # 运算符的获取
+    @staticmethod
+    def get_operations(expression: str, operations: list[str]) -> List[str]:
+        # 设置字典，{运算符:[该运算符所在字符串的索引列表]}
+        operation_index_dict = dict()
+        for operation in operations:
+            for index in re.finditer(operation, expression):
+                operation_index_dict.setdefault(operation, []).append(index.start())  # 存入运算符的每一个首位索引
+        # 按照索引大小对运算符进行排序存入新列表中
+        total_num = len(expression)
+        comparison_operations = [' '] * total_num
+        for operation in operation_index_dict:
+            index_list = operation_index_dict[operation]
+            for index in index_list:
+                comparison_operations[index - 1] = operation
+        i = 0
+        while i < len(comparison_operations):
+            if comparison_operations[i] == ' ':
+                comparison_operations.remove(comparison_operations[i])
+            else:
+                i += 1
+        return comparison_operations
+        
     def exitOC_ComparisonExpression(self, ctx: s_cypherParser.OC_ComparisonExpressionContext):
-        # left_expression: SubjectExpression,
-        # comparison_operation: str = None,
-        # right_expression: SubjectExpression = None
-        # left_expression = self.subject_expression
-        # comparison_operation待处理
-        # self.comparison_expression = ComparisonExpression()
-        pass
+        # subject_expressions: List[SubjectExpression],
+        # comparison_operations: List[str] = None
+        # 第一个SubjectExpression不可少，后面每一个符号和一个SubjectExpression为一组合
+        operations = ['=', '<>', '<', '>', '<=', '>=']
+        # 获取比较运算符
+        comparison_operations = self.get_operations(ctx.oC_PartialComparisonExpression().getText(), operations)
+        subject_expressions = self.subject_expressions
+        self.comparison_expression = ComparisonExpression(subject_expressions, comparison_operations)
 
-    # subject_expression待处理
+    # 处理subject_expression
+    def exitOC_StringListNullPredicateExpression(self, ctx:s_cypherParser.OC_StringListNullPredicateExpressionContext):
+        # add_or_subtract_expression: AddSubtractExpression,
+        # predicate_expression: TimePredicateExpression | StringPredicateExpression | ListPredicateExpression | NullPredicateExpression = None
+        add_or_subtract_expression = self.add_subtract_expression
+        predicate_expression = None
+        if self.time_predicate_expression is not None:
+            predicate_expression = self.time_predicate_expression
+        elif self.string_predicate_expression is not None:
+            predicate_expression = self.string_predicate_expression
+        elif self.list_predicate_expression is not None:
+            predicate_expression = self.list_predicate_expression
+        elif self.null_predicate_expression is not None:
+            predicate_expression = self.null_predicate_expression
+        self.subject_expressions.append(SubjectExpression(add_or_subtract_expression, predicate_expression))
 
     def exitOC_NullPredicateExpression(self, ctx: s_cypherParser.OC_NullPredicateExpressionContext):
         is_null = True
@@ -384,10 +427,97 @@ class SCypherWalker(s_cypherListener):
             is_null = False
         self.null_predicate_expression = NullPredicateExpression(is_null)
 
-    def exitOC_ListPredicateExpression(self, ctx:s_cypherParser.OC_ListPredicateExpressionContext):
+    def exitOC_ListPredicateExpression(self, ctx: s_cypherParser.OC_ListPredicateExpressionContext):
         # add_or_subtract_expression: AddSubtractExpression = None
         self.list_predicate_expression = ListPredicateExpression(self.add_subtract_expression)
 
-
     def exitOC_AddOrSubtractExpression(self, ctx: s_cypherParser.OC_AddOrSubtractExpressionContext):
+        # multiply_divide_expressions: List[MultiplyDivideExpression],
+        # add_subtract_operations: List[str] = None
+        multiply_divide_expressions = self.multiply_divide_expressions
+        # 获取加减运算符
+        operations = ['+', '-']
+        add_subtract_operations = self.get_operations(ctx.getText(), operations)
+        self.add_subtract_expression = AddSubtractExpression(multiply_divide_expressions, add_subtract_operations)
+        
+    def exitOC_MultiplyDivideModuloExpression(self, ctx:s_cypherParser.OC_MultiplyDivideModuloExpressionContext):
+        # power_expressions: List[PowerExpression],
+        # multiply_divide_operations: List[str] = None
+        power_expressions = self.power_expressions
+        # 获取乘除模运算符
+        operations = ['*', '/', '%']
+        multiply_divide_operations = self.get_operations(ctx.getText(), operations)
+        self.multiply_divide_expressions.append(MultiplyDivideExpression(power_expressions, multiply_divide_operations))
+
+    def exitOC_PowerOfExpression(self, ctx: s_cypherParser.OC_PowerOfExpressionContext):
+        # list_index_expressions: List[ListIndexExpression]
+        self.power_expressions.append(PowerExpression(self.list_index_expressions))
+
+    def exitOC_UnaryAddOrSubtractExpression(self, ctx:s_cypherParser.OC_UnaryAddOrSubtractExpressionContext):
+        # ListIndexExpression的参数如下
+        # principal_expression: PropertiesLabelsExpression | AtTExpression,
+        # is_positive=True,
+        # index_expression=None
+        is_positive = True
+        if '-' in ctx.getText():
+            is_positive = False
+        principal_expression = None
+        index_expression = None
+        if self.properties_labels_expression is not None:
+            principal_expression = self.properties_labels_expression
+        elif self.at_t_expression is not None:
+            principal_expression = self.at_t_expression
+        # 待补充oC_Expression
+        index_expression = ctx.oC_ListOperatorExpression().oC_Expression.getText()
+        self.list_index_expressions.append(ListIndexExpression(principal_expression, is_positive, index_expression))
+
+    def exitOC_PropertyOrLabelsExpression(self, ctx: s_cypherParser.OC_PropertyOrLabelsExpressionContext):
+        # atom: Atom,
+        # property_chains: List[str] = None,
+        # labels: List[str] = None
+        atom = Atom(ctx.oC_Atom().getText())
+        property_chains = ctx.oC_PropertyLookup()
+        property_chains_list = []
+        if isinstance(property_chains, list):
+            for property_chain in property_chains:
+                property_chains_list.append(property_chain.getText())
+        else:
+            property_chains_list.append(property_chains.getText())
+        labels = ctx.oC_NodeLabels()
+        labels_list = []
+        if isinstance(labels, list):
+            for label in labels:
+                labels_list.append(label.getText())
+        else:
+            labels_list.append(labels.getText())
+        self.properties_labels_expression = PropertiesLabelsExpression(atom, property_chains_list, labels_list)
+
+    def exitS_AtTExpression(self, ctx:s_cypherParser.S_AtTExpressionContext):
+        # atom: Atom,
+        # property_chains: List[str] = None,
+        # is_value: bool = False,
+        # time_property_chains: List[str] = None
+        atom = Atom(ctx.oC_Atom().getText())
+        property_chains = ctx.oC_PropertyLookup()
+        property_chains_list = []
+        if isinstance(property_chains, list):
+            for property_chain in property_chains:
+                property_chains_list.append(property_chain.getText())
+        else:
+            property_chains_list.append(property_chains.getText())
+        is_value = False
+        if ctx.PoundValue() is not None:
+            is_value = True
+        time_property_chains = None  # 修改语法文件，区分Propertylookup
+        self.at_t_expression = AtTExpression(atom, property_chains, is_value, time_property_chains)
+
+    def exitS_TimePredicateExpression(self, ctx:s_cypherParser.S_TimePredicateExpressionContext):
+        # time_operation: str,
+        # add_or_subtract_expression: AddSubtractExpression = None
         pass
+
+    def exitOC_StringPredicateExpression(self, ctx:s_cypherParser.OC_StringPredicateExpressionContext):
+        # string_operation: str,
+        # add_or_subtract_expression: AddSubtractExpression = None
+        pass
+
