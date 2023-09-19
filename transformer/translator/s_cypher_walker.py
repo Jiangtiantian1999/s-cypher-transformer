@@ -514,10 +514,29 @@ class SCypherWalker(s_cypherListener):
     def exitS_TimePredicateExpression(self, ctx:s_cypherParser.S_TimePredicateExpressionContext):
         # time_operation: str,
         # add_or_subtract_expression: AddSubtractExpression = None
-        pass
+        time_operation = ''
+        if ctx.DURING() is not None and ctx.OVERLAPS() is None:
+            time_operation = 'DURING'
+        elif ctx.DURING() is None and ctx.OVERLAPS() is not None:
+            time_operation = 'OVEERLAPS'
+        else:
+            raise FormatError("The time predicate expression must have the operation DURING or OVERLAPS.")
+        add_or_subtract_expression = self.add_subtract_expression
+        self.time_predicate_expression = TimePredicateExpression(time_operation, add_or_subtract_expression)
 
     def exitOC_StringPredicateExpression(self, ctx:s_cypherParser.OC_StringPredicateExpressionContext):
         # string_operation: str,
         # add_or_subtract_expression: AddSubtractExpression = None
-        pass
+        string_operation = ''
+        if ctx.STARTS() and ctx.WITH() is not None:
+            string_operation = 'STARTS WITH'
+        elif ctx.ENDS() and ctx.WITH() is not None:
+            string_operation = 'ENDS WITH'
+        elif ctx.CONTAINS() is not None:
+            string_operation = 'CONTAINS'
+        else:
+            raise FormatError("There must have an operation among 'STARTS WITH','ENDS WITH' and 'CONTAINS'.")
+        add_or_subtract_expression = self.add_subtract_expression
+        self.string_predicate_expression = StringPredicateExpression(string_operation, add_or_subtract_expression)
+
 
