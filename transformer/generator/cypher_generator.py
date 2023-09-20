@@ -1,6 +1,6 @@
 from transformer.ir.s_cypher_clause import *
 from transformer.ir.s_expression import *
-from transformer.ir.s_graph import SEdge, SNode, ObjectNode, SPath
+from transformer.ir.s_graph import *
 
 
 class CypherGenerator:
