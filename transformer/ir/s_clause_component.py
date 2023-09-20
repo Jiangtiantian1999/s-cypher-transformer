@@ -1,7 +1,7 @@
 from typing import List
 
-from transformer.ir.s_expression import MapLiteral, Atom
-from transformer.ir.s_graph import *
+from transformer.ir.s_expression import Atom, Expression
+from transformer.ir.s_graph import SPath, AtTElement
 
 
 class TemporalPathCall:
@@ -31,18 +31,6 @@ class Pattern:
 
     def get_variables_dict(self):
         return self.pattern.get_variables_dict()
-
-
-class TimePointLiteral:
-    def __init__(self, time_point: str | MapLiteral):
-        self.time_point = time_point
-
-
-
-class AtTElement:
-    def __init__(self, interval_from: TimePointLiteral, interval_to: TimePointLiteral):
-        self.interval_from = interval_from
-        self.interval_to = interval_to
 
 
 class ProjectionItem:
@@ -87,7 +75,7 @@ class SetItem:
             if labels is None or value_expression or object_interval or property_variable or property_interval or value_interval:
                 raise ValueError("The combination of the set item is incorrect.")
         else:
-            raise ValueError("Unknow set operation.")
+            raise ValueError("Unknown set operation.")
         self.operator = operator
         # object为对象节点变量名或者Atom表达式
         self.object = object

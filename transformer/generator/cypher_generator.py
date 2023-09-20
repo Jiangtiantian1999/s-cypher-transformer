@@ -1,6 +1,3 @@
-from typing import List
-
-from transformer.ir.s_clause_component import *
 from transformer.ir.s_cypher_clause import *
 from transformer.ir.s_expression import *
 from transformer.ir.s_graph import SEdge, SNode, ObjectNode, SPath
@@ -193,7 +190,6 @@ class CypherGenerator:
                     return_string = return_string + ' AS ' + projection_item.variable
         return return_string
 
-
     def convert_edge(self, edge: SEdge, time_window: Expression = None) -> (str, List[str]):
         # 若边没有变量名，但却有时态限制，那么为它赋一个变量名
         if (edge.interval and edge.variable is None) or time_window:
@@ -282,8 +278,7 @@ class CypherGenerator:
 
         return node_pattern, interval_conditions
 
-    def convert_object_node(self, node: ObjectNode, time_window: Expression = None) -> (
-            str, List[str], List[str]):
+    def convert_object_node(self, node: ObjectNode, time_window: Expression = None) -> (str, List[str], List[str]):
         # 对象节点模式, 对象节点的有效时间限制
         node_pattern, interval_conditions = self.convert_node(node, time_window)
 

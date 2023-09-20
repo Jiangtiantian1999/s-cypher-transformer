@@ -89,7 +89,7 @@ class NOW(TimePoint):
 class Date(TimePoint):
     time_point_type = TimePoint.DATE
 
-    date_pattern = "(?P<year>\d{4})(-?((?P<month>\d{2})(-?((?P<day>\d{2}))?)|" \
+    date_pattern = "(?P<year>\d{4})(-?((?P<month>\d{2})(-?(?P<day>\d{2})?)|" \
                    "(W(?P<week>\d{2})(-?(?P<day_of_week>\d))?)|" \
                    "(Q(?P<quarter>\d)(-?(?P<day_of_quarter>\d{2}))?)|" \
                    "(?P<ordinal_day>\d{3})))?"
@@ -158,7 +158,7 @@ class Date(TimePoint):
                 day_of_month = day_of_quarter - quarter_length[month]
                 month = month + 2
             else:
-                raise ValueError("day_of_quarter must be in 1..90(,91,92).")
+                raise ValueError("The day of quarter must be in 1..90(,91,92).")
             data_string = data_string + str(month).rjust(2, '0') + str(day_of_month).rjust(2, '0')
             data_pattern = data_pattern + '%m%d'
         else:
@@ -470,7 +470,7 @@ class Interval:
             self.interval_from = interval_from
             self.interval_to = NOW(interval_from.time_point_type)
         else:
-            raise TypeError("The types of interval_from and interval_to have to be same.")
+            raise TypeError("The types of interval.from and interval.to have to be same.")
 
     def __str__(self):
         return '[' + str(self.interval_from) + ', ' + str(self.interval_to) + ']'

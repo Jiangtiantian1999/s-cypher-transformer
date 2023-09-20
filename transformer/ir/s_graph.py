@@ -1,9 +1,18 @@
 from typing import List, Tuple
 
 from transformer.exceptions.s_exception import GraphError
-from transformer.ir.s_clause_component import AtTElement
-from transformer.ir.s_expression import Expression
+from transformer.ir.s_expression import Expression, MapLiteral
 
+
+class TimePointLiteral:
+    def __init__(self, time_point: str | MapLiteral):
+        self.time_point = time_point
+
+
+class AtTElement:
+    def __init__(self, interval_from: TimePointLiteral, interval_to: TimePointLiteral):
+        self.interval_from = interval_from
+        self.interval_to = interval_to
 
 class SNode:
     def __init__(self, labels: List[str], content: str | Expression = None, variable: str = None,
