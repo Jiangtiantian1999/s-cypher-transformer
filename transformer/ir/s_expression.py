@@ -132,16 +132,29 @@ class AtTExpression:
         self.time_property_chains = time_property_chains
 
 
+class IndexExpression:
+    # 注意：该处left_expression和right_expression为Expression类型，由于与Expression相互引用，故此处不写明类型。
+    def __init__(self, left_expression, right_expression=None):
+        self.left_expression = left_expression
+        self.right_expression = right_expression
+
+    def convert(self):
+        if self.right_expression is None:
+            return self.left_expression.convert()
+        return self.left_expression.convert() + ' .. ' + self.right_expression.convert()
+
+
 # 合并了oC_UnaryAddOrSubtractExpression和oC_ListOperatorExpression
 class ListIndexExpression:
-    # 注意：该处index_expression为Expression类型，由于与Expression相互引用，故此处不写明类型。
     def __init__(self, principal_expression: PropertiesLabelsExpression | AtTExpression, is_positive=True,
-                 index_expression=None):
+                 index_expressions: List[IndexExpression] = None):
         self.principal_expression = principal_expression
         # 是否为正
         self.is_positive = is_positive
         # 列表索引
-        self.index_expression = index_expression
+        if index_expressions is None:
+            index_expressions = []
+        self.index_expressions = index_expressions
 
     def convert(self):
         list_index_string = ""
@@ -149,9 +162,8 @@ class ListIndexExpression:
             list_index_string = self.principal_expression.convert()
         elif self.principal_expression.__class__ == AtTExpression:
             list_index_string = self.principal_expression.convert()
-
-        if self.index_expression:
-            list_index_string = list_index_string + '[' + self.index_expression.convert() + ']'
+        for index_expression in self.index_expressions:
+            list_index_string = list_index_string + '[' + index_expression.convert() + ']'
         if self.is_positive is False:
             list_index_string = '-' + list_index_string
         return list_index_string
