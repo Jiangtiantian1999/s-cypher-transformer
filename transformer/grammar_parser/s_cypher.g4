@@ -65,7 +65,11 @@ oC_RelationshipDetail : '[' SP? ( oC_Variable SP? )? ( oC_RelationshipTypes SP? 
 
 oC_StringListNullPredicateExpression : oC_AddOrSubtractExpression ( s_TimePredicateExpression | oC_StringPredicateExpression | oC_ListPredicateExpression | oC_NullPredicateExpression )? ;
 
-oC_ListOperatorExpression : ( oC_PropertyOrLabelsExpression | s_AtTExpression ) ( ( SP? '[' oC_Expression ']' ) | ( SP? '[' oC_Expression? '..' oC_Expression? ']' ) )* ;
+oC_ListOperatorExpression : ( oC_PropertyOrLabelsExpression | s_AtTExpression ) ( oC_SingleIndexExpression | oC_DoubleIndexExpression )* ;
+
+oC_SingleIndexExpression : SP? '[' oC_Expression ']' ;
+
+oC_DoubleIndexExpression : SP? '[' oC_Expression? '..' oC_Expression? ']' ;
 
 s_AtTExpression : oC_Atom ( ( SP? oC_PropertyLookup )+ ( SP? PoundValue )? )? SP? oC_PropertyLookupTime ;
 

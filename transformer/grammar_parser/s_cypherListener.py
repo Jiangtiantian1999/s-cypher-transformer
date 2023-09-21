@@ -206,6 +206,24 @@ class s_cypherListener(ParseTreeListener):
         pass
 
 
+    # Enter a parse tree produced by s_cypherParser#oC_SingleIndexExpression.
+    def enterOC_SingleIndexExpression(self, ctx:s_cypherParser.OC_SingleIndexExpressionContext):
+        pass
+
+    # Exit a parse tree produced by s_cypherParser#oC_SingleIndexExpression.
+    def exitOC_SingleIndexExpression(self, ctx:s_cypherParser.OC_SingleIndexExpressionContext):
+        pass
+
+
+    # Enter a parse tree produced by s_cypherParser#oC_DoubleIndexExpression.
+    def enterOC_DoubleIndexExpression(self, ctx:s_cypherParser.OC_DoubleIndexExpressionContext):
+        pass
+
+    # Exit a parse tree produced by s_cypherParser#oC_DoubleIndexExpression.
+    def exitOC_DoubleIndexExpression(self, ctx:s_cypherParser.OC_DoubleIndexExpressionContext):
+        pass
+
+
     # Enter a parse tree produced by s_cypherParser#s_AtTExpression.
     def enterS_AtTExpression(self, ctx:s_cypherParser.S_AtTExpressionContext):
         pass
