@@ -350,6 +350,15 @@ class s_cypherListener(ParseTreeListener):
         pass
 
 
+    # Enter a parse tree produced by s_cypherParser#s_WithPartQuery.
+    def enterS_WithPartQuery(self, ctx:s_cypherParser.S_WithPartQueryContext):
+        pass
+
+    # Exit a parse tree produced by s_cypherParser#s_WithPartQuery.
+    def exitS_WithPartQuery(self, ctx:s_cypherParser.S_WithPartQueryContext):
+        pass
+
+
     # Enter a parse tree produced by s_cypherParser#oC_ReadingClause.
     def enterOC_ReadingClause(self, ctx:s_cypherParser.OC_ReadingClauseContext):
         pass

@@ -22,38 +22,38 @@ class CypherTranslator:
 
     def translate_s_cypher_query(self) -> SCypherClause:
         clause = None
-        # if self.parser.oC_Union() is not None:
-        #     clause = self.translate_union_query_clause()
-        #     # clause = self.translate_match_clause()
-        # elif self.parser.oC_StandaloneCall() is not None:
-        #     clause = self.translate_call_query_clause()
-        # elif self.parser.oC_Unwind() is not None:
-        #     clause = self.translate_unwind_query_clause()
-        # return SCypherClause(clause)
+        if self.parser.oC_RegularQuery() is not None:
+            self.walker.walk(self.extractor, self.parser.oC_RegularQuery())
+            clause = self.extractor.union_query_clause
+        elif self.parser.oC_StandaloneCall() is not None:
+            clause = self.translate_call_query_clause()
+        elif self.parser.oC_Unwind() is not None:
+            clause = self.translate_unwind_query_clause()
+        return SCypherClause(clause)
         # --------test match--------
-        match_clause = self.translate_match_clause()
-        reading_clause = ReadingClause(match_clause)
-        return_clause = self.translate_return_clause()
-        single_query_clause = SingleQueryClause(reading_clauses=[reading_clause], return_clause=return_clause)
-        multi_query_clause = MultiQueryClause(single_query_clause)
-        union_query_clause = UnionQueryClause([multi_query_clause])
-        s_query_clause = SCypherClause(union_query_clause)
-        return s_query_clause
+        # match_clause = self.translate_match_clause()
+        # reading_clause = ReadingClause(match_clause)
+        # return_clause = self.translate_return_clause()
+        # single_query_clause = SingleQueryClause(reading_clauses=[reading_clause], return_clause=return_clause)
+        # multi_query_clause = MultiQueryClause(single_query_clause)
+        # union_query_clause = UnionQueryClause([multi_query_clause])
+        # s_query_clause = SCypherClause(union_query_clause)
+        # return s_query_clause
 
     def translate_union_query_clause(self) -> UnionQueryClause:
         # multi_query_clauses: List[MultiQueryClause],
         # is_all: List[bool]
         union_tree = self.parser.oC_Union()
         self.walker.walk(self.extractor, union_tree)
-        multi_query_clauses = self.translate_multi_query_clause()
-        is_all_list = []
-        if "UNION ALL" in union_tree.getText():
-            is_all_list.append(True)
-            pass
-        else:
-            is_all_list.append(False)
-            pass
-        return UnionQueryClause(multi_query_clauses, is_all_list)
+        # multi_query_clauses = self.translate_multi_query_clause()
+        # is_all_list = []
+        # if "UNION ALL" in union_tree.getText():
+        #     is_all_list.append(True)
+        #     pass
+        # else:
+        #     is_all_list.append(False)
+        #     pass
+        return self.extractor.union_query_clause
 
     def translate_multi_query_clause(self) -> List[MultiQueryClause]:
         # single_query_clause: SingleQueryClause = None,
@@ -137,10 +137,10 @@ class CypherTranslator:
         self.walker.walk((self.extractor, call_tree))
         return self.extractor.inner_call_clause
 
-    def translate_where_clause(self) -> WhereClause:
-        where_tree = self.parser.oC_Where()
-        self.walker.walk(self.extractor, where_tree)
-        return self.extractor.where_clause
+    # def translate_where_clause(self) -> WhereClause:
+    #     where_tree = self.parser.oC_Where()
+    #     self.walker.walk(self.extractor, where_tree)
+    #     return self.extractor.where_clause
 
     # reading clause
     def translate_in_query_clause(self):
