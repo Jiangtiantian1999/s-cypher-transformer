@@ -1,6 +1,6 @@
-# Generated from s_cypher.g4 by ANTLR 4.13.0
+# Generated from .\s_cypher.g4 by ANTLR 4.9.2
 from antlr4 import *
-if "." in __name__:
+if __name__ is not None and "." in __name__:
     from .s_cypherParser import s_cypherParser
 else:
     from s_cypherParser import s_cypherParser
@@ -212,6 +212,15 @@ class s_cypherListener(ParseTreeListener):
 
     # Exit a parse tree produced by s_cypherParser#s_AtTExpression.
     def exitS_AtTExpression(self, ctx:s_cypherParser.S_AtTExpressionContext):
+        pass
+
+
+    # Enter a parse tree produced by s_cypherParser#oC_PropertyLookupTime.
+    def enterOC_PropertyLookupTime(self, ctx:s_cypherParser.OC_PropertyLookupTimeContext):
+        pass
+
+    # Exit a parse tree produced by s_cypherParser#oC_PropertyLookupTime.
+    def exitOC_PropertyLookupTime(self, ctx:s_cypherParser.OC_PropertyLookupTimeContext):
         pass
 
 
