@@ -29,19 +29,20 @@ class SCypherWalker(s_cypherListener):
 
         # clauses
         self.multi_query_clauses = []
-        self.match_clause = None
-        self.with_clause = None
-        self.between_clause = None
-        self.reading_clauses = []
-        self.unwind_clause = None
-        self.call_clause = None
-        self.order_by_clause = None
-        self.return_clause = None
-
-        self.updating_clauses = []
         self.single_query_clause = None
         self.union_query_clause = None
+        self.with_clause = None
 
+        self.reading_clauses = []
+        self.match_clause = None
+        self.unwind_clause = None
+        self.call_clause = None
+        self.return_clause = None
+        self.between_clause = None
+        self.order_by_clause = None
+        self.yield_clause = None
+
+        self.updating_clauses = []
         # UpdatingClause
         self.create_clause = None
         self.merge_clause = None
@@ -82,6 +83,9 @@ class SCypherWalker(s_cypherListener):
         self.property_look_up_list = []
         self.property_look_up_time_list = []
         self.sort_items = dict()
+        self.yield_items = dict()
+        self.procedure_name = None
+        self.explicit_input_items = []  # 带参程序调用
 
     def exitOC_Union(self, ctx: s_cypherParser.OC_UnionContext):
         # multi_query_clauses: List[MultiQueryClause],
@@ -197,10 +201,35 @@ class SCypherWalker(s_cypherListener):
         self.at_time_clause = AtTimeClause(Expression(ctx.oC_Expression().getText()))
 
     def exitOC_Unwind(self, ctx: s_cypherParser.OC_UnwindContext):
-        self.unwind_clause = ctx.UNWIND().getText()
+        # expression: Expression,
+        # variable: str
+        expression = self.expression
+        variable = ctx.oC_Variable().getText()
+        self.unwind_clause = UnwindClause(expression, variable)
 
     def exitOC_InQueryCall(self, ctx: s_cypherParser.OC_InQueryCallContext):
-        self.call_clause = ctx.CALL().getText()
+        # procedure_name: str,
+        # input_items: List[Expression] = None,
+        # yield_clause: YieldClause = None
+        self.call_clause = CallClause(self.procedure_name, self.explicit_input_items, self.yield_clause)
+
+    def exitOC_ProcedureName(self, ctx: s_cypherParser.OC_ProcedureNameContext):
+        self.procedure_name = ctx.getText()
+
+    def exitOC_YieldItems(self, ctx:s_cypherParser.OC_YieldItemsContext):
+        # yield_items: dict[str, str],
+        # where_expression: Expression = None
+        self.yield_clause = YieldClause(self.yield_items, self.where_expression)
+
+    def exitOC_YieldItem(self, ctx:s_cypherParser.OC_YieldItemContext):
+        if ctx.oC_ProcedureResultField() is not None:
+            self.yield_items[ctx.oC_ProcedureResultField().getText()] = ctx.oC_Variable().getText()
+        else:
+            self.yield_items[None] = ctx.oC_Variable().getText()
+
+    # CALL查询
+    def exitOC_StandaloneCall(self, ctx: s_cypherParser.OC_StandaloneCallContext):
+        pass
 
     @staticmethod
     def getAtTElement(interval_str) -> AtTElement:
@@ -425,6 +454,7 @@ class SCypherWalker(s_cypherListener):
 
     def exitOC_Expression(self, ctx: s_cypherParser.OC_ExpressionContext):
         self.expression = Expression(self.or_expression)
+        self.explicit_input_items.append(self.expression)
 
     def exitOC_OrExpression(self, ctx: s_cypherParser.OC_OrExpressionContext):
         # xor_expressions: List[XorExpression]
@@ -631,6 +661,26 @@ class SCypherWalker(s_cypherListener):
     def exitOC_PropertyLookupTime(self, ctx:s_cypherParser.OC_PropertyLookupTimeContext):
         self.property_look_up_time_list.append(ctx.oC_PropertyLookup().getText())
 
+    # 更新语句
+    def exitOC_Create(self, ctx: s_cypherParser.OC_CreateContext):
+        pass
 
+    def exitOC_Merge(self, ctx:s_cypherParser.OC_MergeContext):
+        pass
 
+    def exitOC_Delete(self, ctx:s_cypherParser.OC_DeleteContext):
+        pass
 
+    def exitOC_Set(self, ctx:s_cypherParser.OC_SetContext):
+        pass
+
+    def exitOC_Remove(self, ctx:s_cypherParser.OC_RemoveContext):
+        pass
+
+    def exitS_Stale(self, ctx:s_cypherParser.S_StaleContext):
+        pass
+
+    # 时间窗口限定
+    def exitS_TimeWindowLimit(self, ctx:s_cypherParser.S_TimeWindowLimitContext):
+        # time_window_limit: SnapshotClause | ScopeClause
+        pass
