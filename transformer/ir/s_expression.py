@@ -188,7 +188,7 @@ class MultiplyDivideExpression:
         self.power_expressions = power_expressions
         if multiply_divide_operations is None:
             multiply_divide_operations = []
-        if len(power_expressions) != len(multiply_divide_operations):
+        if len(power_expressions) != len(multiply_divide_operations) + 1:
             raise ValueError(
                 "The numbers of the multiply/divide expressions and add/subtract operations are not matched.")
         for multiply_divide_operation in multiply_divide_operations:
