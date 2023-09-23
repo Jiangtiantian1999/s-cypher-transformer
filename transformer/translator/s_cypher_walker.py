@@ -32,11 +32,15 @@ class SCypherWalker(s_cypherListener):
         self.single_query_clause = None
         self.union_query_clause = None
         self.with_clause = None
+        self.time_window_limit_clause = None  # 时间窗口限定
+        self.snapshot_clause = None
+        self.scope_clause = None
 
         self.reading_clauses = []
         self.match_clause = None
         self.unwind_clause = None
-        self.call_clause = None
+        self.in_query_call_clause = None
+        self.stand_alone_call_clause = None
         self.return_clause = None
         self.between_clause = None
         self.order_by_clause = None
@@ -160,8 +164,8 @@ class SCypherWalker(s_cypherListener):
             reading_clause = ReadingClause(self.match_clause)
         elif self.unwind_clause is not None:
             reading_clause = ReadingClause(self.unwind_clause)
-        elif self.call_clause is not None:
-            reading_clause = ReadingClause(self.call_clause)
+        elif self.in_query_call_clause is not None:
+            reading_clause = ReadingClause(self.in_query_call_clause)
         else:
             raise ValueError("The reading clause must have a clause which is not None among MatchClause, UnwindClause "
                              "and CallClause.")
@@ -211,7 +215,7 @@ class SCypherWalker(s_cypherListener):
         # procedure_name: str,
         # input_items: List[Expression] = None,
         # yield_clause: YieldClause = None
-        self.call_clause = CallClause(self.procedure_name, self.explicit_input_items, self.yield_clause)
+        self.in_query_call_clause = CallClause(self.procedure_name, self.explicit_input_items, self.yield_clause)
 
     def exitOC_ProcedureName(self, ctx: s_cypherParser.OC_ProcedureNameContext):
         self.procedure_name = ctx.getText()
@@ -229,7 +233,13 @@ class SCypherWalker(s_cypherListener):
 
     # CALL查询
     def exitOC_StandaloneCall(self, ctx: s_cypherParser.OC_StandaloneCallContext):
-        pass
+        # procedure_name: str,
+        # input_items: List[Expression] = None,
+        # yield_clause: YieldClause = None
+        input_items = None
+        if ctx.oC_ExplicitProcedureInvocation() is not None:
+            input_items = self.explicit_input_items
+        self.stand_alone_call_clause = CallClause(self.procedure_name, input_items, self.yield_clause)
 
     @staticmethod
     def getAtTElement(interval_str) -> AtTElement:
@@ -419,7 +429,7 @@ class SCypherWalker(s_cypherListener):
         variable = None
         if isinstance(projection_item, list):
             for item in projection_item:
-                # expression的获取待处理
+                # expression的获取待完善
                 expression = Expression(item.oC_Expression().getText())
                 if item.oC_Variable is not None:
                     variable = item.oC_Variable()
@@ -433,7 +443,7 @@ class SCypherWalker(s_cypherListener):
         # sort_items: dict[Expression, str]
         self.order_by_clause = OrderByClause(self.sort_items)
 
-    def exitOC_SortItem(self, ctx:s_cypherParser.OC_SortItemContext):
+    def exitOC_SortItem(self, ctx: s_cypherParser.OC_SortItemContext):
         expression = Expression(ctx.oC_Expression().getText())
         string = None
         if ctx.ASCENDING() is not None:
@@ -681,6 +691,17 @@ class SCypherWalker(s_cypherListener):
         pass
 
     # 时间窗口限定
-    def exitS_TimeWindowLimit(self, ctx:s_cypherParser.S_TimeWindowLimitContext):
+    def exitS_TimeWindowLimit(self, ctx: s_cypherParser.S_TimeWindowLimitContext):
         # time_window_limit: SnapshotClause | ScopeClause
-        pass
+        if ctx.s_Snapshot() is not None:
+            self.time_window_limit_clause = TimeWindowLimitClause(self.snapshot_clause)
+        elif ctx.s_Scope() is not None:
+            self.time_window_limit_clause = TimeWindowLimitClause(self.scope_clause)
+
+    def exitS_Snapshot(self, ctx: s_cypherParser.S_SnapshotContext):
+        # time_point: Expression
+        self.snapshot_clause = SnapshotClause(self.expression)
+
+    def exitS_Scope(self, ctx: s_cypherParser.S_ScopeContext):
+        # interval: Expression
+        self.scope_clause = ScopeClause(self.expression)

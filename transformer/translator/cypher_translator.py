@@ -26,9 +26,9 @@ class CypherTranslator:
             self.walker.walk(self.extractor, self.parser.oC_RegularQuery())
             clause = self.extractor.union_query_clause
         elif self.parser.oC_StandaloneCall() is not None:
-            clause = self.translate_call_query_clause()
+            clause = self.extractor.stand_alone_call_clause
         elif self.parser.oC_Unwind() is not None:
-            clause = self.translate_unwind_query_clause()
+            clause = self.extractor.unwind_clause
         return SCypherClause(clause)
         # --------test match--------
         # match_clause = self.translate_match_clause()

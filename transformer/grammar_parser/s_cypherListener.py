@@ -107,6 +107,24 @@ class s_cypherListener(ParseTreeListener):
         pass
 
 
+    # Enter a parse tree produced by s_cypherParser#s_Snapshot.
+    def enterS_Snapshot(self, ctx:s_cypherParser.S_SnapshotContext):
+        pass
+
+    # Exit a parse tree produced by s_cypherParser#s_Snapshot.
+    def exitS_Snapshot(self, ctx:s_cypherParser.S_SnapshotContext):
+        pass
+
+
+    # Enter a parse tree produced by s_cypherParser#s_Scope.
+    def enterS_Scope(self, ctx:s_cypherParser.S_ScopeContext):
+        pass
+
+    # Exit a parse tree produced by s_cypherParser#s_Scope.
+    def exitS_Scope(self, ctx:s_cypherParser.S_ScopeContext):
+        pass
+
+
     # Enter a parse tree produced by s_cypherParser#oC_PatternPart.
     def enterOC_PatternPart(self, ctx:s_cypherParser.OC_PatternPartContext):
         pass

@@ -36,9 +36,13 @@ s_AtTime : AT_TIME SP? oC_Expression;
 
 s_Between : BETWEEN SP? oC_Expression;
 
-s_TimeWindowLimit : SNAPSHOT SP? oC_Expression
-                  | SCOPE SP? oC_Expression
+s_TimeWindowLimit : s_Snapshot
+                  | s_Scope
                   ;
+
+s_Snapshot : SNAPSHOT SP? oC_Expression ;
+
+s_Scope : SCOPE SP? oC_Expression ;
 
 oC_PatternPart : oC_Variable SP? '=' SP? s_PathFunctionPattern
                | oC_Variable SP? '=' SP? oC_AnonymousPatternPart
