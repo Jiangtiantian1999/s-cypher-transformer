@@ -4,31 +4,28 @@ from transformer.grammar_parser.s_cypherParser import s_cypherParser
 from transformer.grammar_parser.s_cypherLexer import s_cypherLexer
 from antlr4 import *
 from transformer.ir.s_graph import *
-
+from antlr4.tree.Trees import Trees
 
 # translate the S-Cypher input to its internal representation
 class CypherTranslator:
     def __init__(self, parser: s_cypherParser):
         self.parser = parser
-        self.walker = ParseTreeWalker()
-        self.extractor = SCypherWalker(parser)
-
-    @staticmethod
-    def set_parser(s_cypher_input) -> s_cypherParser:
-        lexer = s_cypherLexer(s_cypher_input)
-        tokens = CommonTokenStream(lexer)
-        parser = s_cypherParser(tokens)
-        return parser
+        # self.walker = ParseTreeWalker()
+        # self.extractor = SCypherWalker(parser)
 
     def translate_s_cypher_query(self) -> SCypherClause:
         clause = None
+        walker = ParseTreeWalker()
+        extractor = SCypherWalker(self.parser)
+        tree = self.parser.oC_Query()
+        walker.walk(extractor, tree)
         if self.parser.oC_RegularQuery() is not None:
-            self.walker.walk(self.extractor, self.parser.oC_RegularQuery())
-            clause = self.extractor.union_query_clause
+            # print(Trees.toStringTree(tree, None, self.parser))
+            clause = extractor.union_query_clause
         elif self.parser.oC_StandaloneCall() is not None:
-            clause = self.extractor.stand_alone_call_clause
+            clause = extractor.stand_alone_call_clause
         elif self.parser.oC_Unwind() is not None:
-            clause = self.extractor.unwind_clause
+            clause = extractor.unwind_clause
         return SCypherClause(clause)
         # --------test match--------
         # match_clause = self.translate_match_clause()
@@ -40,30 +37,17 @@ class CypherTranslator:
         # s_query_clause = SCypherClause(union_query_clause)
         # return s_query_clause
 
-    def translate_union_query_clause(self) -> UnionQueryClause:
-        # multi_query_clauses: List[MultiQueryClause],
-        # is_all: List[bool]
-        union_tree = self.parser.oC_Union()
-        self.walker.walk(self.extractor, union_tree)
-        # multi_query_clauses = self.translate_multi_query_clause()
-        # is_all_list = []
-        # if "UNION ALL" in union_tree.getText():
-        #     is_all_list.append(True)
-        #     pass
-        # else:
-        #     is_all_list.append(False)
-        #     pass
-        return self.extractor.union_query_clause
+    def translate_single_query(self):
+        self.walker.walk(self.extractor, self.parser.oC_SingleQuery())
 
     def translate_multi_query_clause(self) -> List[MultiQueryClause]:
         # single_query_clause: SingleQueryClause = None,
         # with_query_clauses: List[WithQueryClause] = None
-        multi_tree = self.parser.oC_MultiPartQuery()
-        multi_extractor = SCypherWalker(self.parser)
-        self.walker.walk(multi_extractor, multi_tree)
-        single_query_clause = self.translate_single_query_clause()
-        with_query_clauses = self.translate_with_query_clauses()
-        return [MultiQueryClause(single_query_clause, with_query_clauses)]
+        pass
+
+    def translate_union_query(self):
+        self.walker.walk(self.extractor, self.parser.oC_Union())
+        self.walker.walk(self.extractor, self.parser.oC_SinglePartQuery())
 
     def translate_single_query_clause(self) -> SingleQueryClause:
         # reading_clauses: List[ReadingClause] = None,
