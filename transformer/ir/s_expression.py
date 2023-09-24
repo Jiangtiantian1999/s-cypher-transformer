@@ -188,9 +188,9 @@ class MultiplyDivideExpression:
         self.power_expressions = power_expressions
         if multiply_divide_operations is None:
             multiply_divide_operations = []
-        if len(power_expressions) != len(multiply_divide_operations):
+        if len(power_expressions) != len(multiply_divide_operations) + 1:
             raise ValueError(
-                "The numbers of the multiply/divide expressions and add/subtract operations are not matched.")
+                "The numbers of the power expressions and multiply/divide operations are not matched.")
         for multiply_divide_operation in multiply_divide_operations:
             if multiply_divide_operation not in ['*', '/']:
                 raise ValueError("The multiply/divide operation must be '*' or '/'.")
@@ -213,7 +213,7 @@ class AddSubtractExpression:
             add_subtract_operations = []
         if len(multiply_divide_expressions) != len(add_subtract_operations) + 1:
             raise ValueError(
-                "The numbers of the multiply/divide expressions and add_subtract_operations are not matched.")
+                "The numbers of the multiply/divide expressions and add/subtract operations are not matched.")
         for add_subtract_operation in add_subtract_operations:
             if add_subtract_operation not in ['-', '+']:
                 raise ValueError("The add/subtract operation must be '+' or '-'.")
@@ -298,7 +298,7 @@ class ComparisonExpression:
         if comparison_operations is None:
             comparison_operations = []
         if len(subject_expressions) != len(comparison_operations) + 1:
-            raise ValueError("The numbers of the subject expressions and comparison_operations are not matched.")
+            raise ValueError("The numbers of the subject expressions and comparison operations are not matched.")
         for comparison_operation in comparison_operations:
             if comparison_operation not in ['=', '<>', '<', '>', '<=', '>=']:
                 raise ValueError("The comparison operation must be '=', '<>', '<', '>', '<=' or '>='.")
