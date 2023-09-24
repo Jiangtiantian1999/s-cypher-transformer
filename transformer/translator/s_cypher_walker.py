@@ -493,14 +493,17 @@ class SCypherWalker(s_cypherListener):
     def exitOC_OrExpression(self, ctx: s_cypherParser.OC_OrExpressionContext):
         # xor_expressions: List[XorExpression]
         self.or_expression = OrExpression(self.xor_expressions)
+        self.xor_expressions = []  # 退出时清空，避免重复记录
 
     def exitOC_XorExpression(self, ctx: s_cypherParser.OC_XorExpressionContext):
         # and_expressions: List[AndExpression]
         self.xor_expressions.append(XorExpression(self.and_expressions))
+        self.and_expressions = []  # 退出时清空，避免重复记录
 
     def exitOC_AndExpression(self, ctx: s_cypherParser.OC_AndExpressionContext):
         # not_expressions: List[NotExpression]
         self.and_expressions.append(AndExpression(self.not_expressions))
+        self.not_expressions = []  # 退出时清空，避免重复记录
 
     def exitOC_NotExpression(self, ctx: s_cypherParser.OC_NotExpressionContext):
         # comparison_expression: ComparisonExpression,
@@ -551,6 +554,7 @@ class SCypherWalker(s_cypherListener):
         else:
             comparison_operations.extend(self.get_operations(ctx.oC_PartialComparisonExpression().getText(), operations))
         subject_expressions = self.subject_expressions
+        self.subject_expressions = []  # 退出时清空，避免重复记录
         self.comparison_expression = ComparisonExpression(subject_expressions, comparison_operations)
 
     # 处理subject_expression
@@ -610,7 +614,6 @@ class SCypherWalker(s_cypherListener):
     def exitOC_AddOrSubtractExpression(self, ctx: s_cypherParser.OC_AddOrSubtractExpressionContext):
         # multiply_divide_expressions: List[MultiplyDivideExpression],
         # add_subtract_operations: List[str] = None
-        print("exitOC_AddOrSubtractExpression")
         multiply_divide_expressions = self.multiply_divide_expressions
         self.multiply_divide_expressions = []  # 退出时清空，避免重复记录
         # 获取加减运算符
@@ -621,7 +624,6 @@ class SCypherWalker(s_cypherListener):
     def exitOC_MultiplyDivideModuloExpression(self, ctx: s_cypherParser.OC_MultiplyDivideModuloExpressionContext):
         # power_expressions: List[PowerExpression],
         # multiply_divide_operations: List[str] = None
-        print("exit MultiplyDivideModuloExpression")
         power_expressions = self.power_expressions
         self.power_expressions = []  # 退出时清空，避免重复记录
         # 获取乘除模运算符
@@ -634,8 +636,8 @@ class SCypherWalker(s_cypherListener):
 
     def exitOC_PowerOfExpression(self, ctx: s_cypherParser.OC_PowerOfExpressionContext):
         # list_index_expressions: List[ListIndexExpression]
-        print("exit power expression")
         self.power_expressions.append(PowerExpression(self.list_index_expressions))
+        self.list_predicate_expression = []  # 退出时清空，避免重复记录
 
     def exitOC_UnaryAddOrSubtractExpression(self, ctx: s_cypherParser.OC_UnaryAddOrSubtractExpressionContext):
         # 最后要返回的ListIndexExpression的参数如下
@@ -651,6 +653,7 @@ class SCypherWalker(s_cypherListener):
         elif self.AtT_expression is not None:
             principal_expression = self.AtT_expression
         index_expressions = self.index_expressions
+        self.index_expressions = []  # 退出时清空，避免重复记录
         self.list_index_expressions.append(ListIndexExpression(principal_expression, is_positive, index_expressions))
 
     # 获取单个的IndexExpression
