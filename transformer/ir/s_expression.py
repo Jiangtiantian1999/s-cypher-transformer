@@ -199,7 +199,7 @@ class MultiplyDivideExpression:
     def convert(self):
         multiply_divide_string = self.power_expressions[0].convert()
         index = 0
-        while index < len(self.power_expressions):
+        while index < len(self.multiply_divide_operations):
             multiply_divide_string = multiply_divide_string + ' ' + self.multiply_divide_operations[index] + ' '
             multiply_divide_string = multiply_divide_string + self.power_expressions[index + 1].convert()
         return multiply_divide_string
@@ -222,7 +222,7 @@ class AddSubtractExpression:
     def convert(self):
         add_subtract_string = self.multiply_divide_expressions[0].convert()
         index = 0
-        if index < len(self.multiply_divide_expressions):
+        if index < len(self.add_subtract_operations):
             add_subtract_string = add_subtract_string + ' ' + self.add_subtract_operations[
                 index] + ' '
             add_subtract_string = add_subtract_string + self.multiply_divide_expressions[index + 1].convert()
