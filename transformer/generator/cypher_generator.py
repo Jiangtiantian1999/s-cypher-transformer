@@ -191,8 +191,7 @@ class CypherGenerator:
         return return_string
 
     def convert_edge(self, edge: SEdge, time_window: Expression = None) -> (str, List[str]):
-        # 若边没有变量名，但却有时态限制，那么为它赋一个变量名
-        if (edge.interval and edge.variable is None) or time_window:
+        if edge.variable is None:
             edge.variable = self.get_random_variable()
         # 边模式
         edge_pattern = ""
@@ -222,28 +221,21 @@ class CypherGenerator:
             edge_pattern = edge_pattern + '>'
 
         # 边的有效时间限制
-        interval_conditions = []
-        # if edge.interval:
-        #     interval_condition = edge.variable + ".interval_from <= " + str(edge.interval.interval_from.timestamp())
-        #     interval_conditions.append(interval_condition)
-        #     interval_condition = edge.variable + ".interval_to >= " + str(edge.interval.interval_to.timestamp())
-        #     interval_conditions.append(interval_condition)
-        # if time_window:
-        #     if time_window.__class__ == TimePoint:
-        #         interval_condition = edge.variable + ".interval_from <= " + str(time_window.timestamp())
-        #         interval_conditions.append(interval_condition)
-        #         interval_condition = edge.variable + ".interval_to >= " + str(time_window.timestamp())
-        #         interval_conditions.append(interval_condition)
-        #     else:
-        #         interval_condition = edge.variable + ".interval_from <= " + str(time_window.interval_from.timestamp())
-        #         interval_conditions.append(interval_condition)
-        #         interval_condition = edge.variable + ".interval_to >= " + str(time_window.interval_to.timestamp())
-        #         interval_conditions.append(interval_condition)
-        return edge_pattern, interval_conditions
+        if edge.interval is None and time_window is None:
+            interval_condition = "scypher.limitInterval(" + edge.variable + ")"
+        elif edge.interval is not None and time_window is None:
+            interval_condition = "scypher.limitInterval(" + edge.variable + ", scypher.interval(" + \
+                                 edge.interval.interval_from.convert() + "," + edge.interval.interval_to.convert() + "))"
+        elif edge.interval is None and time_window is not None:
+            interval_condition = "scypher.limitInterval(" + edge.variable + ", null, " + time_window.convert() + ")"
+        else:
+            interval_condition = "scypher.limitInterval(" + edge.variable + ", scypher.interval(" + \
+                                 edge.interval.interval_from.convert() + "," + edge.interval.interval_to.convert() + "), " + time_window.convert() + ")"
+
+        return edge_pattern, interval_condition
 
     def convert_node(self, node: SNode, time_window: Expression = None) -> (str, List[str]):
-        # 若节点没有变量名，但却有时态限制，那么为它赋一个变量名
-        if (node.interval and node.variable is None) or time_window:
+        if node.variable is None:
             node.variable = self.get_random_variable()
         node_pattern = ""
         if node.variable:
@@ -257,44 +249,38 @@ class CypherGenerator:
         node_pattern = '(' + node_pattern + ')'
 
         # 节点的有效时间限制
-        interval_conditions = []
-        # if node.interval:
-        #     interval_condition = node.variable + ".interval_from <= " + str(node.interval.interval_from.timestamp())
-        #     interval_conditions.append(interval_condition)
-        #     interval_condition = node.variable + ".interval_to >= " + str(node.interval.interval_to.timestamp())
-        #     interval_conditions.append(interval_condition)
-        #
-        # if time_window:
-        #     if time_window.__class__ == TimePoint:
-        #         interval_condition = node.variable + ".interval_from <= " + str(time_window.timestamp())
-        #         interval_conditions.append(interval_condition)
-        #         interval_condition = node.variable + ".interval_to >= " + str(time_window.timestamp())
-        #         interval_conditions.append(interval_condition)
-        #     else:
-        #         interval_condition = node.variable + ".interval_from <= " + str(time_window.interval_from.timestamp())
-        #         interval_conditions.append(interval_condition)
-        #         interval_condition = node.variable + ".interval_to >= " + str(time_window.interval_to.timestamp())
-        #         interval_conditions.append(interval_condition)
+        if node.interval is None and time_window is None:
+            interval_condition = "scypher.limitInterval(" + node.variable + ")"
+        elif node.interval is not None and time_window is None:
+            interval_condition = "scypher.limitInterval(" + node.variable + ", scypher.interval(" + \
+                                 node.interval.interval_from.convert() + "," + node.interval.interval_to.convert() + "))"
+        elif node.interval is None and time_window is not None:
+            interval_condition = "scypher.limitInterval(" + node.variable + ", null, " + time_window.convert() + ")"
+        else:
+            interval_condition = "scypher.limitInterval(" + node.variable + ", scypher.interval(" + \
+                                 node.interval.interval_from.convert() + "," + node.interval.interval_to.convert() + "), " + time_window.convert() + ")"
 
-        return node_pattern, interval_conditions
+        return node_pattern, interval_condition
 
-    def convert_object_node(self, node: ObjectNode, time_window: Expression = None) -> (str, List[str], List[str]):
+    def convert_object_node(self, object_node: ObjectNode, time_window: Expression = None) -> (
+            str, List[str], List[str]):
         # 对象节点模式, 对象节点的有效时间限制
-        node_pattern, interval_conditions = self.convert_node(node, time_window)
+        object_pattern, object_interval_condition = self.convert_node(object_node, time_window)
+        interval_conditions = [object_interval_condition]
 
         # 对象节点属性模式
         property_patterns = []
-        for key, value in node.properties.items():
-            property_pattern, property_interval_conditions = self.convert_node(key)
-            value_pattern, value_interval_conditions = self.convert_node(value)
+        for key, value in object_node.properties.items():
+            property_pattern, property_interval_condition = self.convert_node(key)
+            value_pattern, value_interval_condition = self.convert_node(value)
             property_patterns.append(
-                node_pattern + '-[OBJECT_PROPERTY]->' + property_pattern + '-[PROPERTY_VALUE]->' + value_pattern)
+                object_pattern + '-[OBJECT_PROPERTY]->' + property_pattern + '-[PROPERTY_VALUE]->' + value_pattern)
             # 属性节点的有效时间限制
-            interval_conditions.extend(property_interval_conditions)
+            interval_conditions.append(property_interval_condition)
             # 值节点的有效时间限制
-            interval_conditions.extend(value_interval_conditions)
+            interval_conditions.append(value_interval_condition)
 
-        return node_pattern, property_patterns, interval_conditions
+        return object_pattern, property_patterns, interval_conditions
 
     def convert_path(self, path: SPath, time_window: Expression = None) -> (str, List[str], List[str]):
         # 路径模式，属性节点和值节点的模式，路径有效时间限制
@@ -302,9 +288,9 @@ class CypherGenerator:
         index = 1
         while index < len(path.nodes):
             # 生成边模式
-            edge_pattern, edge_interval_conditions = self.convert_edge(path.edges[index - 1], time_window)
+            edge_pattern, edge_interval_condition = self.convert_edge(path.edges[index - 1], time_window)
             path_pattern = path_pattern + edge_pattern
-            interval_conditions.extend(edge_interval_conditions)
+            interval_conditions.append(edge_interval_condition)
             # 生成节点模式
             node_pattern, node_property_patterns, node_interval_conditions = self.convert_object_node(path.nodes[index],
                                                                                                       time_window)

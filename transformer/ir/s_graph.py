@@ -8,11 +8,22 @@ class TimePointLiteral:
     def __init__(self, time_point: str | MapLiteral):
         self.time_point = time_point
 
+    def convert(self):
+        if self.time_point.__class__ == str:
+            if self.time_point.upper() == "NOW":
+                return "\"NOW\""
+            return self.time_point
+        else:
+            return self.time_point.convert()
+
 
 class AtTElement:
     def __init__(self, interval_from: TimePointLiteral, interval_to: TimePointLiteral):
+        if interval_from is None or interval_to is None:
+            raise ValueError("The interval_from and interval_to can't be None.")
         self.interval_from = interval_from
         self.interval_to = interval_to
+
 
 class SNode:
     def __init__(self, labels: List[str], content: str | Expression = None, variable: str = None,
