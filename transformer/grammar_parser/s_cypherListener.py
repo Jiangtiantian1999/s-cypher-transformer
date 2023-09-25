@@ -44,6 +44,42 @@ class s_cypherListener(ParseTreeListener):
         pass
 
 
+    # Enter a parse tree produced by s_cypherParser#s_SetPropertyItemOne.
+    def enterS_SetPropertyItemOne(self, ctx:s_cypherParser.S_SetPropertyItemOneContext):
+        pass
+
+    # Exit a parse tree produced by s_cypherParser#s_SetPropertyItemOne.
+    def exitS_SetPropertyItemOne(self, ctx:s_cypherParser.S_SetPropertyItemOneContext):
+        pass
+
+
+    # Enter a parse tree produced by s_cypherParser#s_SetPropertyItemTwo.
+    def enterS_SetPropertyItemTwo(self, ctx:s_cypherParser.S_SetPropertyItemTwoContext):
+        pass
+
+    # Exit a parse tree produced by s_cypherParser#s_SetPropertyItemTwo.
+    def exitS_SetPropertyItemTwo(self, ctx:s_cypherParser.S_SetPropertyItemTwoContext):
+        pass
+
+
+    # Enter a parse tree produced by s_cypherParser#s_SetValueItem.
+    def enterS_SetValueItem(self, ctx:s_cypherParser.S_SetValueItemContext):
+        pass
+
+    # Exit a parse tree produced by s_cypherParser#s_SetValueItem.
+    def exitS_SetValueItem(self, ctx:s_cypherParser.S_SetValueItemContext):
+        pass
+
+
+    # Enter a parse tree produced by s_cypherParser#s_SetValueItemExpression.
+    def enterS_SetValueItemExpression(self, ctx:s_cypherParser.S_SetValueItemExpressionContext):
+        pass
+
+    # Exit a parse tree produced by s_cypherParser#s_SetValueItemExpression.
+    def exitS_SetValueItemExpression(self, ctx:s_cypherParser.S_SetValueItemExpressionContext):
+        pass
+
+
     # Enter a parse tree produced by s_cypherParser#s_Stale.
     def enterS_Stale(self, ctx:s_cypherParser.S_StaleContext):
         pass

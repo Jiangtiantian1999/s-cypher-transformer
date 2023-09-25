@@ -11,14 +11,23 @@ oC_Match : ( OPTIONAL SP )? MATCH SP? oC_Pattern ( SP? ( s_AtTime | s_Between ) 
 oC_UpdatingClause : ( oC_Create | oC_Merge | oC_Delete | oC_Set | oC_Remove | s_Stale) ( SP? s_AtTime )? ;
 
 oC_SetItem : ( oC_Variable SP? s_AtTElement )
-           | ( oC_Variable ( SP? s_AtTElement )? '.' oC_PropertyKeyName SP? s_AtTElement )
-           | ( oC_Variable ( SP? s_AtTElement )? '.' oC_PropertyKeyName ( SP? s_AtTElement )? SP? PoundValue SP? s_AtTElement )
-           | ( oC_Variable ( SP? s_AtTElement )? '.' oC_PropertyKeyName ( SP? s_AtTElement )? SP? '=' SP? oC_Expression ( SP? s_AtTElement )? )
+           | ( oC_Variable ( SP? s_AtTElement )? '.' s_SetPropertyItemOne )
+           | ( oC_Variable ( SP? s_AtTElement )? '.' s_SetPropertyItemTwo SP? s_SetValueItem )
+           | ( oC_Variable ( SP? s_AtTElement )? '.' s_SetPropertyItemTwo SP? '=' SP? s_SetValueItemExpression )
            | ( oC_PropertyExpression SP? '=' SP? oC_Expression )
            | ( oC_Variable SP? '=' SP? oC_Expression )
            | ( oC_Variable SP? '+=' SP? oC_Expression )
            | ( oC_Variable SP? oC_NodeLabels )
            ;
+
+s_SetPropertyItemOne : oC_PropertyKeyName SP? s_AtTElement ;
+
+s_SetPropertyItemTwo : oC_PropertyKeyName ( SP? s_AtTElement )? ;
+
+s_SetValueItem : PoundValue SP? s_AtTElement ;
+
+s_SetValueItemExpression : oC_Expression ( SP? s_AtTElement )? ;
+
 
 s_Stale : STALE SP? s_StaleItem ( SP? ',' SP? s_StaleItem )* ;
 

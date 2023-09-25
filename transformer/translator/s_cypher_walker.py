@@ -16,6 +16,7 @@ class SCypherWalker(s_cypherListener):
         self.properties = dict()  # 对象节点的属性 dict[PropertyNode, ValueNode]
         self.property_node_list = []  # 属性节点列表
         self.value_node_list = []  # 值节点列表
+        self.node_labels = []
 
         # time
         self.at_time_clause = None
@@ -94,6 +95,10 @@ class SCypherWalker(s_cypherListener):
         self.explicit_input_items = []  # 带参程序调用
         self.left_index_expression = None
         self.delete_items = []
+        self.merge_actions = dict()
+        self.set_items = []
+        self.remove_items = []
+        self.stale_items = []
 
     # 多个SingleQuery，用UNION/UNION ALL连接，其中SingleQuery有可能是单个SinglePartQuery，也有可能是MultiPartQuery_clauses
     def exitOC_RegularQuery(self, ctx: s_cypherParser.OC_RegularQueryContext):
@@ -297,19 +302,13 @@ class SCypherWalker(s_cypherListener):
     # 获取对象节点
     def exitOC_NodePattern(self, ctx: s_cypherParser.OC_NodePatternContext):
         # node_content = ""  # 对象节点内容
-        node_label_list = []  # 对象节点标签
+        node_label_list = self.node_labels  # 对象节点标签
+        self.node_labels = []  # 退出清空
         interval = None  # 对象节点时间
         properties = dict()  # 对象节点属性
         variable = None
         if ctx.oC_Variable() is not None:
             variable = ctx.oC_Variable().getText()
-        if ctx.oC_NodeLabels() is not None:
-            node_labels = ctx.oC_NodeLabels()
-            if isinstance(node_labels, list):
-                for node_label in node_labels:
-                    node_label_list.append(node_label.getText().strip(':'))
-            else:
-                node_label_list.append(node_labels.getText().strip(':'))
         if ctx.s_AtTElement() is not None:
             n_interval = ctx.s_AtTElement()
             interval_str = n_interval.getText()
@@ -318,6 +317,9 @@ class SCypherWalker(s_cypherListener):
             properties = self.properties
         self.properties = dict()  # 退出清空
         self.object_node_list.append(ObjectNode(node_label_list, variable, interval, properties))
+
+    def exitOC_NodeLabel(self, ctx: s_cypherParser.OC_NodeLabelContext):
+        self.node_labels.append(ctx.getText().strip(':'))
 
     def exitS_PropertiesPattern(self, ctx: s_cypherParser.S_PropertiesPatternContext):
         # 将属性节点和值节点组合成对象节点的属性
@@ -722,10 +724,16 @@ class SCypherWalker(s_cypherListener):
         # patterns: List[Pattern],
         # actions: dict[str, SetClause] = None
         patterns = self.patterns
-        pass
+        actions = self.merge_actions
+        self.merge_clause = MergeClause(patterns, actions)
+        self.patterns = []  # 退出时清空
+        self.merge_actions = dict()
 
     def exitOC_MergeAction(self, ctx: s_cypherParser.OC_MergeActionContext):
-        pass
+        merge_flag = 'CREATE'
+        if 'MATCH' in ctx.getText():
+            merge_flag = 'MATCH'
+        self.merge_actions[merge_flag] = self.set_clause
 
     def exitOC_Delete(self, ctx: s_cypherParser.OC_DeleteContext):
         # delete_items: List[DeleteItem]
@@ -746,13 +754,97 @@ class SCypherWalker(s_cypherListener):
         self.delete_items.append(DeleteItem(expression, property_name, is_value))
 
     def exitOC_Set(self, ctx: s_cypherParser.OC_SetContext):
-        pass
+        # set_items: List[SetItem]
+        self.set_clause = SetClause(self.set_items)
+        self.set_items = []  # 退出清空
+
+    def exitOC_SetItem(self, ctx:s_cypherParser.OC_SetItemContext):
+        # 设置运算符
+        set_item_str = ctx.getText()
+        if '=' in set_item_str:
+            operator = '='
+        elif '+=' in set_item_str:
+            operator = '+='
+        elif '@T' in set_item_str:
+            operator = '@T'
+        elif ':' in set_item_str:
+            operator = ':'
+        else:
+            operator = ''
+        # object为对象节点变量名或者Atom表达式
+        if ctx.oC_Variable() is not None:
+            object_ = ctx.oC_Variable()
+        else:
+            object_ = ctx.oC_PropertyExpression().oC_Atom.getText()
+        # 设置对象节点的label
+        labels = None
+        if ctx.oC_NodeLabels() is not None:
+            labels = self.node_labels
+            self.node_labels = []  # 退出清空
+        # 设置值节点的值，或者表达式赋值
+        value_expression = None
+        if ctx.oC_Expression() is not None:
+            value_expression = self.expression
+        # 设置对象节点的有效时间
+        object_interval = None
+        if ctx.s_AtTElement() is not None:
+            object_interval = self.getAtTElement(ctx.s_AtTElement().getText())
+        # 设置属性节点的有效时间
+        property_interval = None
+        if ctx.s_SetPropertyItemOne().s_AtTElement() is not None:
+            property_interval = self.getAtTElement(ctx.s_SetPropertyItemOne().s_AtTElement().getText())
+        elif ctx.s_SetPropertyItemTwo().s_AtTElement() is not None:
+            property_interval = self.getAtTElement(ctx.s_SetPropertyItemTwo().s_AtTElement().getText())
+        # 设置值节点的有效时间
+        value_interval = None
+        if ctx.s_SetValueItem().s_AtTElement() is not None:
+            value_interval = self.getAtTElement(ctx.s_SetValueItem().s_AtTElement().getText())
+        elif ctx.s_SetValueItemExpression().s_AtTElement() is not None:
+            value_interval = self.getAtTElement(ctx.s_SetValueItemExpression().s_AtTElement().getText())
+        # 为属性节点名称，或者( SP? oC_PropertyLookup )+的字符串表示
+        property_variable = None
+        if ctx.s_SetPropertyItemTwo().oC_PropertyKeyName() is not None:
+            property_variable = ctx.s_SetPropertyItemTwo().oC_PropertyKeyName().getText()
+        elif ctx.oC_PropertyExpression().oC_PropertyLookup() is not None:
+            property_variable = ' '.join(self.property_look_up_list)
+            self.property_look_up_list = []  # 退出清空
+        self.set_items.append(SetItem(operator, object_, labels, object_interval, property_variable, property_interval, value_interval, value_expression))
 
     def exitOC_Remove(self, ctx: s_cypherParser.OC_RemoveContext):
-        pass
+        # object_variable: str | Atom,
+        # property_variable: str = None,
+        # labels: List[str] = None
+        object_variable = None
+        if ctx.oC_RemoveItem().oC_Variable() is not None:
+            object_variable = ctx.oC_RemoveItem().oC_Variable().getText()
+        elif ctx.oC_RemoveItem().oC_PropertyExpression() is not None:
+            object_variable = ctx.oC_RemoveItem().oC_PropertyExpression().oC_Atom.getText()
+        # 为(SP? oC_PropertyLookup) + 的字符串表示
+        property_variable = None
+        if ctx.oC_RemoveItem().oC_PropertyExpression().oC_PropertyLookup() is not None:
+            property_variable = ' '.join(self.property_look_up_list)
+            self.property_look_up_list = []  # 退出清空
+        labels = None
+        if ctx.oC_RemoveItem().oC_NodeLabels() is not None:
+            labels = self.node_labels
+            self.node_labels = []  # 退出清空
+        self.remove_clause = RemoveClause(object_variable, property_variable, labels)
 
     def exitS_Stale(self, ctx: s_cypherParser.S_StaleContext):
-        pass
+        # stale_items: List[DeleteItem]
+        stale_items = self.stale_items
+        self.stale_clause = StaleClause(stale_items)
+        self.stale_items = []  # 退出清空
+
+    def exitS_StaleItem(self, ctx: s_cypherParser.S_StaleItemContext):
+        expression = self.expression
+        property_name = None
+        if ctx.oC_PropertyKeyName() is not None:
+            property_name = ctx.oC_PropertyKeyName().getText()
+        is_value = False
+        if ctx.PoundValue() is not None:
+            is_value = True
+        self.stale_items.append(DeleteItem(expression, property_name, is_value))
 
     # 时间窗口限定
     def exitS_TimeWindowLimit(self, ctx: s_cypherParser.S_TimeWindowLimitContext):
