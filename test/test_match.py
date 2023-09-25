@@ -28,11 +28,11 @@ class TestMatch(TestCase):
         cypher_query = transform_to_cypher(s_cypher)
         print(cypher_query, "\n")
 
-# if __name__ == '__main__':
-#     suite = TestSuite()
-#     suite.addTest(TestMatch("test_match_1"))
-#     suite.addTest(TestMatch("test_match_2"))
-#     suite.addTest(TestMatch("test_match_3"))
-#
-#     runner = TextTestRunner()
-#     runner.run(suite)
+    def test_match_4(self):
+        s_cypher = 'MATCH (n:City)-->(m:City)' \
+                   '\nRETURN n, m'
+        print("test_match_4:")
+        print(s_cypher)
+        cypher_query = transform_to_cypher(s_cypher)
+        print(cypher_query, "\n")
+
