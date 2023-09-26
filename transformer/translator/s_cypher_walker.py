@@ -367,7 +367,7 @@ class SCypherWalker(s_cypherListener):
         else:
             self.at_t_element = AtTElement(TimePointLiteral(interval_from), TimePointLiteral(interval_to))
 
-    def enterOC_RelationshipDetail(self, ctx: s_cypherParser.OC_RelationshipDetailContext):
+    def exitOC_RelationshipDetail(self, ctx: s_cypherParser.OC_RelationshipDetailContext):
         variable = ""
         if ctx.oC_Variable() is not None:
             variable = ctx.oC_Variable().getText()
@@ -392,8 +392,11 @@ class SCypherWalker(s_cypherListener):
             direction = 'LEFT'
         elif ctx.oC_LeftArrowHead() is None and ctx.oC_RightArrowHead() is not None:
             direction = 'RIGHT'
-        self.relationship_pattern.direction = direction
-        self.edge_list.append(self.relationship_pattern)
+        if self.relationship_pattern is not None:
+            self.relationship_pattern.direction = direction
+            self.edge_list.append(self.relationship_pattern)
+        else:
+            self.edge_list.append(SEdge(direction))
 
     def exitS_PathFunctionPattern(self, ctx: s_cypherParser.S_PathFunctionPatternContext):
         # variable: str,
@@ -409,6 +412,8 @@ class SCypherWalker(s_cypherListener):
         # variable: str = None
         nodes = self.object_node_list
         edges = self.edge_list
+        self.object_node_list = []  # 退出清空
+        self.edge_list = []  # 退出清空
         self.pattern_element = SPath(nodes, edges)
 
     def exitOC_Pattern(self, ctx: s_cypherParser.OC_PatternContext):
