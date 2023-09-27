@@ -231,18 +231,15 @@ class AddSubtractExpression:
 
 
 class TimePredicateExpression:
-    def __init__(self, time_operation: str, add_or_subtract_expression: AddSubtractExpression = None):
+    def __init__(self, time_operation: str, add_or_subtract_expression: AddSubtractExpression):
         if time_operation.lower() not in ['during', 'overlaps']:
             raise ValueError("The time operation must be 'during' or 'overlaps'.")
         self.time_operation = time_operation
         self.add_or_subtract_expression = add_or_subtract_expression
 
-    def convert(self):
-        pass
-
 
 class StringPredicateExpression:
-    def __init__(self, string_operation: str, add_or_subtract_expression: AddSubtractExpression = None):
+    def __init__(self, string_operation: str, add_or_subtract_expression: AddSubtractExpression):
         if string_operation.lower() not in ['starts with', 'ends with', 'contains']:
             raise ValueError("The string operation must in 'starts with', 'ends with' and 'contains'.")
         self.string_operation = string_operation
@@ -253,7 +250,7 @@ class StringPredicateExpression:
 
 
 class ListPredicateExpression:
-    def __init__(self, add_or_subtract_expression: AddSubtractExpression = None):
+    def __init__(self, add_or_subtract_expression: AddSubtractExpression):
         self.add_or_subtract_expression = add_or_subtract_expression
 
     def convert(self):
@@ -281,14 +278,12 @@ class SubjectExpression:
     def convert(self):
         subject_string = self.add_or_subtract_expression.convert()
         if self.predicate_expression:
-            predicate_string = ""
             if self.predicate_expression.__class__ == TimePredicateExpression:
+                predicate_string = self.predicate_expression.add_or_subtract_expression.convert()
+                return "scypher." + self.predicate_expression.time_operation.lower() + "(" + subject_string + "," + predicate_string + ")"
+            else:
                 predicate_string = self.predicate_expression.convert()
-            elif self.predicate_expression.__class__ == StringPredicateExpression:
-                predicate_string = self.predicate_expression.convert()
-            elif self.predicate_expression.__class__ == ListPredicateExpression:
-                predicate_string = self.predicate_expression.convert()
-            return subject_string + ' ' + predicate_string
+                return subject_string + ' ' + predicate_string
         return subject_string
 
 

@@ -47,6 +47,15 @@ class ProjectionItem:
         self.variable = variable
 
 
+class YieldItem:
+
+    def __init__(self, procedure_result: str, variable: str = None):
+        # 返回结果
+        self.procedure_result = procedure_result
+        # 别名
+        self.variable = variable
+
+
 class DeleteItem:
     def __init__(self, expression: Expression, property_name: str = None, is_value=False):
         self.expression = expression

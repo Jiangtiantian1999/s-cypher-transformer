@@ -91,7 +91,7 @@ class SEdge:
         self.length = length
         self.interval = interval
         if properties is None:
-            properties = []
+            properties = {}
         self.properties = properties
 
     def get_variables_dict(self) -> dict:

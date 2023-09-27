@@ -65,17 +65,17 @@ class UnwindClause:
 
 
 class YieldClause:
-    def __init__(self, yield_items: dict[str, str], where_expression: Expression = None):
+    def __init__(self, yield_items: List[YieldItem], where_expression: Expression = None):
         self.yield_items = yield_items
         self.where_expression = where_expression
 
     def get_variables_dict(self) -> dict:
         variables_dict = {}
-        for key, value in self.yield_items:
-            if value:
-                variables_dict[value] = YieldClause
+        for yield_item in self.yield_items:
+            if yield_item.variable:
+                variables_dict[yield_item.variable] = YieldClause
             else:
-                variables_dict[key] = YieldClause
+                variables_dict[yield_item.procedure_result] = YieldClause
         return variables_dict
 
 
@@ -83,6 +83,8 @@ class CallClause:
 
     def __init__(self, procedure_name: str, input_items: List[Expression] = None, yield_clause: YieldClause = None):
         self.procedure_name = procedure_name
+        if input_items is None:
+            input_items = []
         self.input_items = input_items
         self.yield_clause = yield_clause
 
