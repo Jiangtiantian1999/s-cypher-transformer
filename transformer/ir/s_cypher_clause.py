@@ -9,7 +9,7 @@ class OrderByClause:
         if len(sort_items) == 0:
             raise ValueError("The sort_items can't be empty.")
         for item in sort_items.values():
-            if item.upper() not in ['', 'ASCENDING', 'ASC', 'DESCENDING', 'DESC']:
+            if item.upper() not in ["", "ASCENDING", "ASC", "DESCENDING", "DESC"]:
                 raise ValueError("Uncertain sorting method.")
         self.sort_items = sort_items
 
@@ -276,7 +276,7 @@ class SnapshotClause:
         self.time_point = time_point
 
     def convert(self) -> str:
-        return "CALL scypher.snapshot(" + self.time_point.convert() + ")"
+        return "CALL scypher.snapshot( " + self.time_point.convert() + " )"
 
 
 class ScopeClause:
@@ -284,7 +284,7 @@ class ScopeClause:
         self.interval = interval
 
     def convert(self) -> str:
-        return "CALL scypher.scope(" + self.interval.convert() + ")"
+        return "CALL scypher.scope( " + self.interval.convert() + " )"
 
 
 # 时间窗口限定

@@ -74,10 +74,10 @@ class SetItem:
         if operator == '=':
             if value_expression is None or labels:
                 raise ValueError("The combination of the set item is incorrect.")
-        elif operator == '+=':
+        elif operator == "+=":
             if value_expression is None or labels or object_interval or property_variable or property_interval or value_interval:
                 raise ValueError("The combination of the set item is incorrect.")
-        elif operator == '@T':
+        elif operator == "@T":
             if value_expression or labels or (property_variable is None and property_interval):
                 raise ValueError("The combination of the set item is incorrect.")
         elif operator == ':':

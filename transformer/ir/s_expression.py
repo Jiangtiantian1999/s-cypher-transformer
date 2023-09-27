@@ -10,7 +10,7 @@ class ListLiteral:
         list_string = ""
         for index, expression in enumerate(self.expressions):
             if index != 0:
-                list_string = list_string + ', '
+                list_string = list_string + ", "
             list_string = list_string + expression.convert()
         list_string = '[' + list_string + ']'
         return list_string
@@ -25,7 +25,7 @@ class MapLiteral:
         map_string = ""
         for index, (key, value) in enumerate(self.keys_values.items()):
             if index != 0:
-                map_string = map_string + ', '
+                map_string = map_string + ", "
             map_string = map_string + key + ': ' + value.convert()
         map_string = '{' + map_string + '}'
         return map_string
@@ -57,7 +57,7 @@ class ParenthesizedExpression:
         self.expression = expression
 
     def convert(self):
-        return '( ' + self.expression.convert() + ' )'
+        return "( " + self.expression.convert() + " )"
 
 
 class FunctionInvocation:
@@ -75,9 +75,9 @@ class FunctionInvocation:
             function_invocation_string = function_invocation_string + 'DISTINCT '
         for index, expression in self.expressions:
             if index != 0:
-                function_invocation_string = function_invocation_string + ','
+                function_invocation_string = function_invocation_string + ", "
             function_invocation_string = function_invocation_string + expression.convert()
-        function_invocation_string = self.function_name + '( ' + function_invocation_string + ' )'
+        function_invocation_string = self.function_name + "( " + function_invocation_string + " )"
         return function_invocation_string
 
 
@@ -179,7 +179,7 @@ class PowerExpression:
             if index == 0:
                 power_string = list_expression.convert()
             else:
-                power_string = power_string + '^' + list_expression.convert() + ''
+                power_string = power_string + '^' + list_expression.convert()
         return power_string
 
 
@@ -223,8 +223,7 @@ class AddSubtractExpression:
         add_subtract_string = self.multiply_divide_expressions[0].convert()
         index = 0
         if index < len(self.add_subtract_operations):
-            add_subtract_string = add_subtract_string + ' ' + self.add_subtract_operations[
-                index] + ' '
+            add_subtract_string = add_subtract_string + ' ' + self.add_subtract_operations[index] + ' '
             add_subtract_string = add_subtract_string + self.multiply_divide_expressions[index + 1].convert()
             index = index + 1
         return add_subtract_string
@@ -232,7 +231,7 @@ class AddSubtractExpression:
 
 class TimePredicateExpression:
     def __init__(self, time_operation: str, add_or_subtract_expression: AddSubtractExpression):
-        if time_operation.lower() not in ['during', 'overlaps']:
+        if time_operation.lower() not in ["during", "overlaps"]:
             raise ValueError("The time operation must be 'during' or 'overlaps'.")
         self.time_operation = time_operation
         self.add_or_subtract_expression = add_or_subtract_expression
@@ -240,7 +239,7 @@ class TimePredicateExpression:
 
 class StringPredicateExpression:
     def __init__(self, string_operation: str, add_or_subtract_expression: AddSubtractExpression):
-        if string_operation.lower() not in ['starts with', 'ends with', 'contains']:
+        if string_operation.lower() not in ["starts with", "ends with", "contains"]:
             raise ValueError("The string operation must in 'starts with', 'ends with' and 'contains'.")
         self.string_operation = string_operation
         self.add_or_subtract_expression = add_or_subtract_expression
@@ -264,8 +263,8 @@ class NullPredicateExpression:
 
     def convert(self):
         if self.is_null:
-            return 'IS NULL'
-        return 'IS NOT NULL'
+            return "IS NULL"
+        return "IS NOT NULL"
 
 
 # 相当于StringListNullPredicateExpression
@@ -280,7 +279,7 @@ class SubjectExpression:
         if self.predicate_expression:
             if self.predicate_expression.__class__ == TimePredicateExpression:
                 predicate_string = self.predicate_expression.add_or_subtract_expression.convert()
-                return "scypher." + self.predicate_expression.time_operation.lower() + "(" + subject_string + "," + predicate_string + ")"
+                return "scypher." + self.predicate_expression.time_operation.lower() + "( " + subject_string + ", " + predicate_string + " )"
             else:
                 predicate_string = self.predicate_expression.convert()
                 return subject_string + ' ' + predicate_string
@@ -295,7 +294,7 @@ class ComparisonExpression:
         if len(subject_expressions) != len(comparison_operations) + 1:
             raise ValueError("The numbers of the subject expressions and comparison operations are not matched.")
         for comparison_operation in comparison_operations:
-            if comparison_operation not in ['=', '<>', '<', '>', '<=', '>=']:
+            if comparison_operation not in ['=', "<>", '<', '>', "<=", ">="]:
                 raise ValueError("The comparison operation must be '=', '<>', '<', '>', '<=' or '>='.")
         self.comparison_operations = comparison_operations
 
@@ -330,7 +329,7 @@ class AndExpression:
         and_expression_string = ""
         for index, not_expression in enumerate(self.not_expressions):
             if index != 0:
-                and_expression_string = and_expression_string + ' OR '
+                and_expression_string = and_expression_string + " OR "
             and_expression_string = and_expression_string + not_expression.convert()
         return and_expression_string
 
@@ -343,7 +342,7 @@ class XorExpression:
         xor_expression_string = ""
         for index, and_expression in enumerate(self.and_expressions):
             if index != 0:
-                xor_expression_string = xor_expression_string + ' XOR '
+                xor_expression_string = xor_expression_string + " XOR "
             xor_expression_string = xor_expression_string + and_expression.convert()
         return xor_expression_string
 
@@ -356,7 +355,7 @@ class OrExpression:
         or_expression_string = ""
         for index, xor_expression in enumerate(self.xor_expressions):
             if index != 0:
-                or_expression_string = or_expression_string + ' OR '
+                or_expression_string = or_expression_string + " OR "
             or_expression_string = or_expression_string + xor_expression.convert()
         return or_expression_string
 

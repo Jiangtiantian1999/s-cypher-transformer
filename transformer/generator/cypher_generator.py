@@ -12,9 +12,9 @@ class CypherGenerator:
     # 获取新的变量名
     def get_random_variable(self) -> str:
         self.count_num = self.count_num + 1
-        while 'var' + str(self.count_num) in self.variables_dict.keys():
+        while "var" + str(self.count_num) in self.variables_dict.keys():
             self.count_num = self.count_num + 1
-        return 'var' + str(self.count_num)
+        return "var" + str(self.count_num)
 
     def generate_cypher_query(self, s_cypher_clause: SCypherClause) -> str:
         self.count_num = 999
@@ -45,7 +45,7 @@ class CypherGenerator:
         for input_item in call_clause.input_items:
             input_string = input_string + input_item.convert()
         if input_string != "":
-            call_string = call_string + '(' + input_string + ")"
+            call_string = call_string + '(' + input_string + ')'
         if call_clause.yield_clause:
             call_string = call_string + self.convert_yield_clause(call_clause.yield_clause)
         return call_string
@@ -54,12 +54,12 @@ class CypherGenerator:
         yield_clause_string = "YIELD "
         for yield_item in yield_clause.yield_items:
             if yield_clause_string != "YIELD ":
-                yield_clause_string = yield_clause_string + ', '
+                yield_clause_string = yield_clause_string + ", "
             yield_clause_string = yield_clause_string + yield_item.procedure_result
             if yield_item.variable:
-                yield_clause_string = yield_clause_string + ' AS ' + yield_item.variable
+                yield_clause_string = yield_clause_string + " AS " + yield_item.variable
         if yield_clause.where_expression:
-            yield_clause_string = yield_clause_string + "\nWHERE" + yield_clause.where_expression.convert()
+            yield_clause_string = yield_clause_string + "\nWHERE " + yield_clause.where_expression.convert()
         return yield_clause_string
 
     def convert_multi_query_clause(self, multi_query_clause: MultiQueryClause) -> str:
@@ -134,14 +134,14 @@ class CypherGenerator:
                 path_pattern, property_patterns, path_interval_conditions = self.convert_path(pattern,
                                                                                               match_clause.time_window)
                 if match_string not in ["MATCH ", "OPTIONAL MATCH "]:
-                    match_string = match_string + ', '
+                    match_string = match_string + ", "
                 if pattern.variable:
-                    match_string = match_string + pattern.variable + ' = ' + path_pattern
+                    match_string = match_string + pattern.variable + " = " + path_pattern
                 else:
                     match_string = match_string + path_pattern
                 # 添加节点属性模式的匹配
                 for property_pattern in property_patterns:
-                    match_string = match_string + ', ' + property_pattern
+                    match_string = match_string + ", " + property_pattern
                 interval_conditions.extend(path_interval_conditions)
             elif pattern.__class__ == TemporalPathCall:
                 if pattern.start_node.variable is None:
@@ -154,21 +154,21 @@ class CypherGenerator:
                     pattern.path, match_clause.time_window)
                 if call_string != "":
                     call_string = call_string + '\n'
-                call_string = call_string + 'MATCH ' + + path_pattern
+                call_string = call_string + "MATCH " + + path_pattern
                 # 添加节点属性模式的匹配
                 for property_pattern in property_patterns:
-                    call_string = call_string + ', ' + property_pattern
+                    call_string = call_string + ", " + property_pattern
                 # 添加时态路径的时态条件限制
                 if len(path_interval_conditions) != 0:
-                    call_string = call_string + '\nWHERE '
+                    call_string = call_string + "\nWHERE "
                     for index, interval_condition in enumerate(path_interval_conditions):
                         if index == 0:
                             call_string = call_string + interval_condition
                         else:
-                            call_string = call_string + ' and ' + interval_condition
-                call_string = call_string + '\nCALL ' + pattern.function_name + '( start: ' + pattern.start_node.variable + \
-                              ', edge: ' + pattern.edge.variable + ', end: ' + pattern.end_node.variable + \
-                              ' )\nYIELD ' + pattern.path.variable
+                            call_string = call_string + " and " + interval_condition
+                call_string = call_string + "\nCALL " + pattern.function_name + "( start: " + pattern.start_node.variable + \
+                              ", edge: " + pattern.edge.variable + ", end: " + pattern.end_node.variable + \
+                              " )\nYIELD " + pattern.path.variable
         if call_string != "":
             match_string = call_string + '\n' + match_string
         if match_clause.where_expression or len(interval_conditions) != 0:
@@ -186,7 +186,7 @@ class CypherGenerator:
         if interval_conditions:
             for interval_condition in interval_conditions:
                 if where_string != "WHERE ":
-                    where_string = where_string + ' and '
+                    where_string = where_string + " and "
                 where_string = where_string + interval_condition
         return where_string
 
@@ -199,14 +199,14 @@ class CypherGenerator:
             if projection_item.is_all:
                 for variable in self.variables_dict.keys():
                     if return_string != "RETURN ":
-                        return_string = return_string + ', '
+                        return_string = return_string + ", "
                     return_string = return_string + variable
             elif projection_item.expression:
                 if return_string != "RETURN ":
-                    return_string = return_string + ', '
+                    return_string = return_string + ", "
                 return_string = return_string + projection_item.expression.convert()
                 if projection_item.variable:
-                    return_string = return_string + ' AS ' + projection_item.variable
+                    return_string = return_string + " AS " + projection_item.variable
         return return_string
 
     def convert_object_node(self, object_node: ObjectNode, time_window: Expression = None) -> (
@@ -221,7 +221,7 @@ class CypherGenerator:
             property_pattern, property_interval_condition = self.convert_node(key)
             value_pattern, value_interval_condition = self.convert_node(value)
             property_patterns.append(
-                object_pattern + '-[OBJECT_PROPERTY]->' + property_pattern + '-[PROPERTY_VALUE]->' + value_pattern)
+                object_pattern + "-[OBJECT_PROPERTY]->" + property_pattern + "-[PROPERTY_VALUE]->" + value_pattern)
             # 属性节点的有效时间限制
             interval_conditions.append(property_interval_condition)
             # 值节点的有效时间限制
@@ -270,16 +270,16 @@ class CypherGenerator:
             if edge.length[0] == edge.length[1]:
                 edge_pattern = edge_pattern + '*' + str(edge.length[0])
             else:
-                edge_pattern = edge_pattern + '*' + str(edge.length[0]) + '..' + str(edge.length[1])
+                edge_pattern = edge_pattern + '*' + str(edge.length[0]) + ".." + str(edge.length[1])
         if len(edge.properties) != 0:
             edge_pattern = edge_pattern + '{'
             for index, (key, value) in enumerate(edge.properties.items()):
                 if index != 0:
-                    edge_pattern = edge_pattern + ', '
+                    edge_pattern = edge_pattern + ", "
                 edge_pattern = edge_pattern + key + " : " + str(value)
             edge_pattern = edge_pattern + '}'
         if edge.variable or edge.labels or edge.length[0] != 1 or edge.length[1] != 1 or edge.properties:
-            edge_pattern = '-[' + edge_pattern + ']-'
+            edge_pattern = "-[" + edge_pattern + "]-"
         else:
             edge_pattern = '-' + edge_pattern + '-'
         if edge.direction == edge.LEFT:
@@ -289,15 +289,15 @@ class CypherGenerator:
 
         # 边的有效时间限制
         if edge.interval is None and time_window is None:
-            interval_condition = "scypher.limitInterval(" + edge.variable + ")"
+            interval_condition = "scypher.limitInterval(" + edge.variable + ')'
         elif edge.interval is not None and time_window is None:
             interval_condition = "scypher.limitInterval(" + edge.variable + ", scypher.interval(" + \
                                  edge.interval.interval_from.convert() + "," + edge.interval.interval_to.convert() + "))"
         elif edge.interval is None and time_window is not None:
-            interval_condition = "scypher.limitInterval(" + edge.variable + ", null, " + time_window.convert() + ")"
+            interval_condition = "scypher.limitInterval(" + edge.variable + ", null, " + time_window.convert() + ')'
         else:
             interval_condition = "scypher.limitInterval(" + edge.variable + ", scypher.interval(" + \
-                                 edge.interval.interval_from.convert() + "," + edge.interval.interval_to.convert() + "), " + time_window.convert() + ")"
+                                 edge.interval.interval_from.convert() + ',' + edge.interval.interval_to.convert() + "), " + time_window.convert() + ')'
 
         return edge_pattern, interval_condition
 
