@@ -36,3 +36,20 @@ class TestMatch(TestCase):
         cypher_query = transform_to_cypher(s_cypher)
         print(cypher_query, "\n")
 
+    def test_match_5(self):
+        s_cypher = 'MATCH (n1:Person)-[e:FRIEND]->(n2:Person)' \
+                   'WHERE n1.name STARTS WITH "Mary"' \
+                   'RETURN e'
+        print("test_match_5:")
+        print(s_cypher)
+        cypher_query = transform_to_cypher(s_cypher)
+        print(cypher_query, "\n")
+
+    # def test_match_6(self):
+    #     s_cypher = 'MATCH (n1:Person)-[e:FRIEND]->(n2:Person)' \
+    #                'WHERE n1.name STARTS WITH "Mary" AND (e@T.to - e@T.from) >= duration({years: 20})' \
+    #                'RETURN e'
+    #     print("test_match_6:")
+    #     print(s_cypher)
+    #     cypher_query = transform_to_cypher(s_cypher)
+    #     print(cypher_query, "\n")

@@ -30,6 +30,8 @@ class SCypherWalker(s_cypherListener):
         self.relationship_pattern = None  # 边模式SEdge
         self.pattern_element = None  # SPath
         self.path_function_pattern = None  # TemporalPathCall
+        self.rel_type_names = []  # 边标签
+        self.rel_length_range = None  # 边长度区间
 
         # clauses
         self.single_query_clauses = []
@@ -372,19 +374,41 @@ class SCypherWalker(s_cypherListener):
         if ctx.oC_Variable() is not None:
             variable = ctx.oC_Variable().getText()
         interval = self.at_t_element
-        lengths = ctx.oC_RangeLiteral().oC_IntegerLiteral()
-        length_tuple = tuple()
-        for length in lengths:
-            length_tuple.__add__(length)
-        labels = ctx.oC_RelationshipTypes()
-        labels_list = []
-        for label in labels:
-            labels_list.append(label.getText())
-        properties = ctx.oC_Properties()
-        property_list = []
-        for property_ in property_list:
-            property_list.append(property_.getText())
+        if ctx.oC_RangeLiteral() is not None:
+            length_tuple = self.rel_length_range
+            self.rel_length_range = None  # 退出清空
+        else:
+            length_tuple = (1, 1)
+        # labels = ctx.oC_RelationshipTypes()
+        labels = self.rel_type_names
+        self.rel_type_names = []  # 退出清空
+        # for label in labels:
+        #     labels_list.append(label.getText())
+        # properties = ctx.oC_Properties()
+        properties = self.properties
+        self.properties = []  # 退出清空
+        # for property_ in property_list:
+        #     property_list.append(property_.getText())
         self.relationship_pattern = SEdge('UNDIRECTED', variable, labels, length_tuple, interval, properties)
+
+    def exitOC_RangeLiteral(self, ctx: s_cypherParser.OC_RangeLiteralContext):
+        length_tuple = tuple()
+        if ctx.oC_IntegerLiteral() is not None:
+            # '*' SP? ( oC_IntegerLiteral SP? )? ( '..' SP? ( oC_IntegerLiteral SP? )? )?
+            lengths = ctx.oC_IntegerLiteral()
+            # 左右区间都有
+            if len(lengths) == 2:
+                for length in lengths:
+                    length_tuple.__add__(length)
+            # 只有左边有，并且右边不能小于左边，设置左右相等
+            else:
+                length_tuple = (lengths[0], lengths[0])
+        else:
+            length_tuple = (1, 1)
+        self.rel_length_range = length_tuple
+
+    def exitOC_RelTypeName(self, ctx: s_cypherParser.OC_RelTypeNameContext):
+        self.rel_type_names.append(ctx.getText())
 
     def exitOC_RelationshipPattern(self, ctx: s_cypherParser.OC_RelationshipPatternContext):
         direction = 'UNDIRECTED'
@@ -683,9 +707,9 @@ class SCypherWalker(s_cypherListener):
         property_chains_list = []
         if isinstance(property_chains, list):
             for property_chain in property_chains:
-                property_chains_list.append(property_chain.getText())
+                property_chains_list.append(property_chain.getText().lstrip('.'))
         else:
-            property_chains_list.append(property_chains.getText())
+            property_chains_list.append(property_chains.getText().lstrip('.'))
         labels = ctx.oC_NodeLabels()
         labels_list = []
         if labels is not None:
@@ -713,11 +737,12 @@ class SCypherWalker(s_cypherListener):
         self.property_look_up_time_list = []  # 退出清空
         self.AtT_expression = AtTExpression(atom, property_chains, is_value, time_property_chains)
 
-    def enterOC_PropertyLookup(self, ctx: s_cypherParser.OC_PropertyLookupContext):
-        self.property_look_up_list.append(ctx.getText())
+    def exitOC_PropertyLookup(self, ctx: s_cypherParser.OC_PropertyLookupContext):
+        self.property_look_up_list.append(ctx.oC_PropertyKeyName().getText())
 
     def enterOC_PropertyLookupTime(self, ctx: s_cypherParser.OC_PropertyLookupTimeContext):
-        self.property_look_up_time_list.append(ctx.oC_PropertyLookup().getText())
+        self.property_look_up_time_list = self.property_look_up_list
+        self.property_look_up_list = []  # 退出清空
 
     # 更新语句
     def exitOC_Create(self, ctx: s_cypherParser.OC_CreateContext):
@@ -763,7 +788,7 @@ class SCypherWalker(s_cypherListener):
         self.set_clause = SetClause(self.set_items)
         self.set_items = []  # 退出清空
 
-    def exitOC_SetItem(self, ctx:s_cypherParser.OC_SetItemContext):
+    def exitOC_SetItem(self, ctx: s_cypherParser.OC_SetItemContext):
         # 设置运算符
         set_item_str = ctx.getText()
         if '=' in set_item_str:
@@ -813,7 +838,9 @@ class SCypherWalker(s_cypherListener):
         elif ctx.oC_PropertyExpression().oC_PropertyLookup() is not None:
             property_variable = ' '.join(self.property_look_up_list)
             self.property_look_up_list = []  # 退出清空
-        self.set_items.append(SetItem(operator, object_, labels, object_interval, property_variable, property_interval, value_interval, value_expression))
+        self.set_items.append(
+            SetItem(operator, object_, labels, object_interval, property_variable, property_interval, value_interval,
+                    value_expression))
 
     def exitOC_Remove(self, ctx: s_cypherParser.OC_RemoveContext):
         # object_variable: str | Atom,
@@ -866,3 +893,6 @@ class SCypherWalker(s_cypherListener):
     def enterS_Scope(self, ctx: s_cypherParser.S_ScopeContext):
         # interval: Expression
         self.scope_clause = ScopeClause(self.expression)
+
+    def exitOC_Atom(self, ctx: s_cypherParser.OC_AtomContext):
+        pass
