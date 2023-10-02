@@ -1,9 +1,9 @@
 from transformer.grammar_parser.s_cypherListener import s_cypherListener
 from transformer.grammar_parser.s_cypherParser import s_cypherParser
 from transformer.ir.s_cypher_clause import *
-from transformer.ir.s_datetime import *
 from transformer.ir.s_graph import *
 from transformer.ir.s_expression import *
+from transformer.exceptions.s_exception import *
 import re
 
 
@@ -92,7 +92,7 @@ class SCypherWalker(s_cypherListener):
         self.property_look_up_list = []
         self.property_look_up_time_list = []
         self.sort_items = dict()
-        self.yield_items = dict()
+        self.yield_items = []
         self.procedure_name = None
         self.explicit_input_items = []  # 带参程序调用
         self.left_index_expression = None
@@ -252,16 +252,24 @@ class SCypherWalker(s_cypherListener):
         self.procedure_name = ctx.getText()
 
     def exitOC_YieldItems(self, ctx: s_cypherParser.OC_YieldItemsContext):
-        # yield_items: dict[str, str],
+        # yield_items: List[YieldItem],
         # where_expression: Expression = None
         self.yield_clause = YieldClause(self.yield_items, self.where_expression)
-        self.yield_items = dict()  # 退出清空
+        self.yield_items = []  # 退出清空
 
     def enterOC_YieldItem(self, ctx: s_cypherParser.OC_YieldItemContext):
+        # procedure_result: str,
+        # variable: str = None
         if ctx.oC_ProcedureResultField() is not None:
-            self.yield_items[ctx.oC_ProcedureResultField().getText()] = ctx.oC_Variable().getText()
+            procedure_result = ctx.oC_ProcedureResultField().getText()
         else:
-            self.yield_items[None] = ctx.oC_Variable().getText()
+            procedure_result = None
+        if ctx.oC_Variable() is not None:
+            variable = ctx.oC_Variable().getText()
+        else:
+            variable = None
+        self.yield_items.append(YieldItem(procedure_result, variable))
+
 
     # CALL查询
     def exitOC_StandaloneCall(self, ctx: s_cypherParser.OC_StandaloneCallContext):
@@ -295,7 +303,7 @@ class SCypherWalker(s_cypherListener):
                 interval_to += interval_str[index]
             index = index + 1
         if interval_to == "NOW":
-            at_t_element = AtTElement(TimePointLiteral(interval_from.strip('"')), TimePointLiteral(TimePoint.NOW))
+            at_t_element = AtTElement(TimePointLiteral(interval_from.strip('"')), TimePointLiteral("NOW"))
         else:
             at_t_element = AtTElement(TimePointLiteral(interval_from.strip('"')),
                                       TimePointLiteral(interval_to.strip('"')))
@@ -365,7 +373,7 @@ class SCypherWalker(s_cypherListener):
         else:
             raise FormatError("Invalid time format!")
         if interval_to == "NOW":
-            self.at_t_element = AtTElement(TimePointLiteral(interval_from), TimePointLiteral(TimePoint.NOW))
+            self.at_t_element = AtTElement(TimePointLiteral(interval_from), TimePointLiteral("NOW"))
         else:
             self.at_t_element = AtTElement(TimePointLiteral(interval_from), TimePointLiteral(interval_to))
 
