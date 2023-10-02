@@ -53,3 +53,29 @@ class TestMatch(TestCase):
     #     print(s_cypher)
     #     cypher_query = transform_to_cypher(s_cypher)
     #     print(cypher_query, "\n")
+
+    def test_match_7(self):
+        s_cypher = "MATCH (n:Person{name: 'Pauline Boutler'})" \
+                   "\nWITH n AS person" \
+                   "\nRETURN person.name@T;"
+        print("test_match_7:")
+        print(s_cypher)
+        cypher_query = transform_to_cypher(s_cypher)
+        print(cypher_query, "\n")
+
+    def test_match_8(self):
+        s_cypher = "MATCH path = cPath((n1:Person)-[:FRIEND*2]->(n2:Person))" \
+                   "\nRETURN path;"
+        print("test_match_8:")
+        print(s_cypher)
+        cypher_query = transform_to_cypher(s_cypher)
+        print(cypher_query, "\n")
+
+    def test_match_9(self):
+        s_cypher = "MATCH path = pairCPath((n1:Person)-[:FRIEND*2..3]->(n2:Person))" \
+                   "\nRETURN path;"
+        print("test_match_9:")
+        print(s_cypher)
+        cypher_query = transform_to_cypher(s_cypher)
+        print(cypher_query, "\n")
+

@@ -407,10 +407,10 @@ class SCypherWalker(s_cypherListener):
             # 左右区间都有
             if len(lengths) == 2:
                 for length in lengths:
-                    length_tuple.__add__(length)
+                    length_tuple = length_tuple + (int(length.getText()),)
             # 只有左边有，并且右边不能小于左边，设置左右相等
             else:
-                length_tuple = (lengths[0], lengths[0])
+                length_tuple = (int(lengths[0].getText()), int(lengths[0].getText()))
         else:
             length_tuple = (1, 1)
         self.rel_length_range = length_tuple
