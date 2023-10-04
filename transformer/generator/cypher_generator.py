@@ -4,7 +4,7 @@ from transformer.ir.s_graph import *
 
 
 class CypherGenerator:
-    count_num = 999
+    count_num = 99
     # 原句里自带的变量名
     variables_dict = []
     s_cypher_clause = None
@@ -16,8 +16,16 @@ class CypherGenerator:
             self.count_num = self.count_num + 1
         return "var" + str(self.count_num)
 
+    def get_effective_variables(self) -> str:
+        result = ""
+        for index, variable in enumerate(self.variables_dict.keys()):
+            if index != 0:
+                result = result + ", "
+            result = result + variable
+        return result
+
     def generate_cypher_query(self, s_cypher_clause: SCypherClause) -> str:
-        self.count_num = 999
+        self.count_num = 99
         self.variables_dict = s_cypher_clause.get_variables_dict()
         self.s_cypher_clause = s_cypher_clause
         if s_cypher_clause.query_clause.__class__ == UnionQueryClause:
@@ -135,26 +143,18 @@ class CypherGenerator:
                                                                                               match_clause.time_window)
                 if match_string not in ["MATCH ", "OPTIONAL MATCH "]:
                     match_string = match_string + ", "
-                if pattern.variable:
-                    match_string = match_string + pattern.variable + " = " + path_pattern
-                else:
-                    match_string = match_string + path_pattern
+                match_string = match_string + path_pattern
                 # 添加节点属性模式的匹配
                 for property_pattern in property_patterns:
                     match_string = match_string + ", " + property_pattern
                 interval_conditions.extend(path_interval_conditions)
             elif pattern.__class__ == TemporalPathCall:
-                if pattern.start_node.variable is None:
-                    pattern.start_node.variable = self.get_random_variable()
-                if pattern.edge.variable is None:
-                    pattern.edge.variable = self.get_random_variable()
-                if pattern.end_node.variable is None:
-                    pattern.end_node.variable = self.get_random_variable()
-                path_pattern, property_patterns, path_interval_conditions = self.convert_path(
-                    pattern.path, match_clause.time_window)
                 if call_string != "":
                     call_string = call_string + '\n'
-                call_string = call_string + "MATCH " + + path_pattern
+                pattern.path.variable = self.get_random_variable()
+                path_pattern, property_patterns, path_interval_conditions = self.convert_path(
+                    pattern.path, match_clause.time_window)
+                call_string = call_string + "MATCH " + path_pattern
                 # 添加节点属性模式的匹配
                 for property_pattern in property_patterns:
                     call_string = call_string + ", " + property_pattern
@@ -162,19 +162,20 @@ class CypherGenerator:
                 if len(path_interval_conditions) != 0:
                     call_string = call_string + "\nWHERE "
                     for index, interval_condition in enumerate(path_interval_conditions):
-                        if index == 0:
-                            call_string = call_string + interval_condition
-                        else:
-                            call_string = call_string + " and " + interval_condition
-                call_string = call_string + "\nCALL " + pattern.function_name + "( start: " + pattern.start_node.variable + \
-                              ", edge: " + pattern.edge.variable + ", end: " + pattern.end_node.variable + \
-                              " )\nYIELD " + pattern.path.variable
-        if call_string != "":
-            match_string = call_string + '\n' + match_string
-        if match_clause.where_expression or len(interval_conditions) != 0:
-            where_string = self.convert_where_clause(match_clause.where_expression, interval_conditions)
-            match_string = match_string + '\n' + where_string
-        return match_string
+                        if index != 0:
+                            call_string = call_string + " and "
+                        call_string = call_string + interval_condition
+                call_string = call_string + "\nCALL " + pattern.function_name + '(' + pattern.path.variable + ')' + \
+                              "\nYIELD " + self.get_effective_variables()
+        if match_string not in ["MATCH ", "OPTIONAL MATCH "]:
+            if call_string != "":
+                match_string = call_string + '\n' + match_string
+            if match_clause.where_expression or len(interval_conditions) != 0:
+                where_string = self.convert_where_clause(match_clause.where_expression, interval_conditions)
+                match_string = match_string + '\n' + where_string
+            return match_string
+        else:
+            return call_string
 
     def convert_where_clause(self, where_expression: Expression = None, interval_conditions: List[str] = None) -> str:
         if where_expression is None and (interval_conditions is None or len(interval_conditions) == 0):
@@ -221,7 +222,7 @@ class CypherGenerator:
             property_pattern, property_interval_condition = self.convert_node(key)
             value_pattern, value_interval_condition = self.convert_node(value)
             property_patterns.append(
-                object_pattern + "-[OBJECT_PROPERTY]->" + property_pattern + "-[PROPERTY_VALUE]->" + value_pattern)
+                object_pattern + "-[:OBJECT_PROPERTY]->" + property_pattern + "-[:PROPERTY_VALUE]->" + value_pattern)
             # 属性节点的有效时间限制
             interval_conditions.append(property_interval_condition)
             # 值节点的有效时间限制
@@ -318,4 +319,6 @@ class CypherGenerator:
             interval_conditions.extend(node_interval_conditions)
 
             index = index + 1
+        if path.variable:
+            path_pattern = path.variable + " = " + path_pattern
         return path_pattern, property_patterns, interval_conditions

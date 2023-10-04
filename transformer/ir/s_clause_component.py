@@ -6,21 +6,16 @@ from transformer.ir.s_graph import SPath, AtTElement
 
 class TemporalPathCall:
     def __init__(self, variable: str, function_name: str, path: SPath):
-        # 时态路径变量名
+        # 返回的时态路径变量名
         self.variable = variable
         self.function_name = function_name
         if len(path.nodes) != 2:
-            raise ValueError("The length of the temporal path  are not matched.")
+            raise ValueError("The length of the temporal path are not matched.")
         self.path = path
-        self.start_node = path.nodes[0]
-        self.edge = path.edges[0]
-        self.end_node = path.nodes[1]
 
     def get_variables_dict(self):
         variables_dict = {self.variable: self}
-        variables_dict.update(self.start_node.get_variables_dict())
-        variables_dict.update(self.edge.get_variables_dict())
-        variables_dict.update(self.end_node.get_variables_dict())
+        variables_dict.update(self.path.get_variables_dict())
         return variables_dict
 
 
