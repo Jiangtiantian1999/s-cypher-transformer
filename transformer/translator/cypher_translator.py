@@ -18,20 +18,6 @@ class CypherTranslator:
         extractor = SCypherWalker(self.parser)
         tree = self.parser.oC_Query()
         walker.walk(extractor, tree)
-        if self.parser.oC_RegularQuery() is not None:
-            # print(Trees.toStringTree(tree, None, self.parser))
-            clause = extractor.union_query_clause
-        elif self.parser.oC_StandaloneCall() is not None:
-            clause = extractor.stand_alone_call_clause
-        elif self.parser.oC_Unwind() is not None:
-            clause = extractor.unwind_clause
+        clause = extractor.query_clause
         return SCypherClause(clause)
-        # --------test match--------
-        # match_clause = self.translate_match_clause()
-        # reading_clause = ReadingClause(match_clause)
-        # return_clause = self.translate_return_clause()
-        # single_query_clause = SingleQueryClause(reading_clauses=[reading_clause], return_clause=return_clause)
-        # multi_query_clause = MultiQueryClause(single_query_clause)
-        # union_query_clause = UnionQueryClause([multi_query_clause])
-        # s_query_clause = SCypherClause(union_query_clause)
-        # return s_query_clause
+

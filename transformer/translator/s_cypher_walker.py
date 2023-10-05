@@ -35,6 +35,7 @@ class SCypherWalker(s_cypherListener):
         self.pattern_part_list = []
 
         # clauses
+        self.query_clause = None
         self.single_query_clauses = []
         self.multi_part_query_clauses = []
         self.single_part_query_clause = None
@@ -96,6 +97,7 @@ class SCypherWalker(s_cypherListener):
         self.yield_items = []
         self.procedure_name = None
         self.explicit_input_items = []  # 带参程序调用
+        self.implicit_input_items = None  # 不带参程序调用
         self.left_index_expression = None
         self.delete_items = []
         self.merge_actions = dict()
@@ -103,6 +105,15 @@ class SCypherWalker(s_cypherListener):
         self.remove_items = []
         self.stale_items = []
         self.operations = []
+
+    def exitOC_Query(self, ctx:s_cypherParser.OC_QueryContext):
+        if ctx.oC_RegularQuery():
+            # print(Trees.toStringTree(tree, None, self.parser))
+            self.query_clause = self.union_query_clause
+        elif ctx.oC_StandaloneCall() is not None:
+            self.query_clause = self.stand_alone_call_clause
+        elif ctx.s_TimeWindowLimit() is not None:
+            self.query_clause = self.time_window_limit_clause
 
     # 多个SingleQuery，用UNION/UNION ALL连接，其中SingleQuery有可能是单个SinglePartQuery，也有可能是MultiPartQuery_clauses
     def exitOC_RegularQuery(self, ctx: s_cypherParser.OC_RegularQueryContext):
@@ -243,6 +254,9 @@ class SCypherWalker(s_cypherListener):
         variable = ctx.oC_Variable().getText()
         self.unwind_clause = UnwindClause(expression, variable)
 
+    def enterOC_Unwind(self, ctx:s_cypherParser.OC_UnwindContext):
+        print("enter unwind")
+
     def exitOC_InQueryCall(self, ctx: s_cypherParser.OC_InQueryCallContext):
         # procedure_name: str,
         # input_items: List[Expression] = None,
@@ -281,6 +295,9 @@ class SCypherWalker(s_cypherListener):
         input_items = None
         if ctx.oC_ExplicitProcedureInvocation() is not None:
             input_items = self.explicit_input_items
+            self.explicit_input_items = []  # 退出清空
+        elif ctx.oC_ImplicitProcedureInvocation() is not None:
+            input_items = self.implicit_input_items
         self.stand_alone_call_clause = CallClause(self.procedure_name, input_items, self.yield_clause)
 
     @staticmethod
@@ -412,11 +429,14 @@ class SCypherWalker(s_cypherListener):
                     length_tuple = length_tuple + (int(length.getText()),)
             # 只有左边有，并且右边不能小于左边，设置左右相等
             elif len(lengths) == 1:
-                length_tuple = (int(lengths[0].getText()), int(lengths[0].getText()))
+                if '*..'  or '* ..' in ctx.getText():
+                    length_tuple = (None, int(lengths[0].getText()))
+                else:
+                    length_tuple = (int(lengths[0].getText()), None)
             else:
-                length_tuple = (1, 1)
+                length_tuple = (None, None)
         else:
-            length_tuple = (1, 1)
+            length_tuple = (None, None)
         self.rel_length_range = length_tuple
 
     def exitOC_RelTypeName(self, ctx: s_cypherParser.OC_RelTypeNameContext):
