@@ -394,7 +394,7 @@ class SCypherWalker(s_cypherListener):
         #     labels_list.append(label.getText())
         # properties = ctx.oC_Properties()
         properties = self.properties
-        self.properties = []  # 退出清空
+        self.properties = dict()  # 退出清空
         # for property_ in property_list:
         #     property_list.append(property_.getText())
         self.relationship_pattern = SEdge('UNDIRECTED', variable, labels, length_tuple, interval, properties)
@@ -409,8 +409,10 @@ class SCypherWalker(s_cypherListener):
                 for length in lengths:
                     length_tuple = length_tuple + (int(length.getText()),)
             # 只有左边有，并且右边不能小于左边，设置左右相等
-            else:
+            elif len(lengths) == 1:
                 length_tuple = (int(lengths[0].getText()), int(lengths[0].getText()))
+            else:
+                length_tuple = (1, 1)
         else:
             length_tuple = (1, 1)
         self.rel_length_range = length_tuple
