@@ -190,6 +190,7 @@ class SCypherWalker(s_cypherListener):
 
     def exitOC_ReadingClause(self, ctx: s_cypherParser.OC_ReadingClauseContext):
         # reading_clause: MatchClause | UnwindClause | CallClause
+        print("exit readingClause")
         reading_clause = None
         if self.match_clause is not None:
             reading_clause = ReadingClause(self.match_clause)
@@ -381,7 +382,7 @@ class SCypherWalker(s_cypherListener):
             self.at_t_element = AtTElement(TimePointLiteral(interval_from), TimePointLiteral(interval_to))
 
     def exitOC_RelationshipDetail(self, ctx: s_cypherParser.OC_RelationshipDetailContext):
-        variable = ""
+        variable = None
         if ctx.oC_Variable() is not None:
             variable = ctx.oC_Variable().getText()
         interval = self.at_t_element
