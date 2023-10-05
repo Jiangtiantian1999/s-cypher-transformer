@@ -8,7 +8,7 @@ class TestUnwind(TestCase):
         s_cypher = 'UNWIND [1, 2, 3] AS x' \
                    'RETURN x'
         cypher_query = transform_to_cypher(s_cypher)
-        print("test_unwind_1:", '\n', s_cypher, '\n', cypher_query, '\n')
+        print("test_unwind_1:", '\n', s_cypher, '\n\n', cypher_query, '\n\n')
 
     def test_unwind_2(self):
         s_cypher = 'WITH [1, 1, 2, 2] AS coll' \
@@ -16,4 +16,4 @@ class TestUnwind(TestCase):
                    'WITH DISTINCT x' \
                    'RETURN collect(x) AS SET'
         cypher_query = transform_to_cypher(s_cypher)
-        print("test_unwind_2:", '\n', s_cypher, '\n', cypher_query, '\n')
+        print("test_unwind_2:", '\n', s_cypher, '\n\n', cypher_query, '\n\n')

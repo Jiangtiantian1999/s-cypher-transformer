@@ -10,7 +10,7 @@ class TestTimeWindow(TestCase):
                    '\nWHERE n.name STARTS WITH "Mary"' \
                    '\nRETURN n.name'
         cypher_query = transform_to_cypher(s_cypher)
-        print("test_at_time_1:", '\n', s_cypher, '\n', cypher_query, '\n')
+        print("test_at_time_1:", '\n', s_cypher, '\n\n', cypher_query, '\n\n')
 
     def test_between_1(self):
         s_cypher = 'MATCH (n:Person)' \
@@ -18,4 +18,4 @@ class TestTimeWindow(TestCase):
                    'WHERE n.name STARTS WITH "Mary"' \
                    'RETURN n.name'
         cypher_query = transform_to_cypher(s_cypher)
-        print("test_with_1:", '\n', s_cypher, '\n', cypher_query, '\n')
+        print("test_with_1:", '\n', s_cypher, '\n\n', cypher_query, '\n\n')

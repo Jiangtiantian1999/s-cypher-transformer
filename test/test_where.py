@@ -9,4 +9,4 @@ class TestWhere(TestCase):
                    '\nWHERE n1.name STARTS WITH "Mary" AND (e@T.to - e@T.from) >= duration({years: 20})' \
                    '\nRETURN e'
         cypher_query = transform_to_cypher(s_cypher)
-        print("test_where_1:", '\n', s_cypher, '\n', cypher_query, '\n')
+        print("test_where_1:", '\n', s_cypher, '\n\n', cypher_query, '\n\n')

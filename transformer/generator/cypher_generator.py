@@ -228,18 +228,27 @@ class CypherGenerator:
 
     def convert_return_clause(self, return_clause: ReturnClause) -> str:
         return_string = "RETURN "
+        if return_clause.is_distinct:
+            return_string = "RETURN DISTINCT "
         for projection_item in return_clause.projection_items:
             if projection_item.is_all:
+                # 返回所有用户最开始指定的变量
                 for variable in self.variables_dict.keys():
-                    if return_string != "RETURN ":
+                    if return_string not in ["RETURN ", "RETURN DISTINCT "]:
                         return_string = return_string + ", "
                     return_string = return_string + variable
             elif projection_item.expression:
-                if return_string != "RETURN ":
+                if return_string not in ["RETURN ", "RETURN DISTINCT "]:
                     return_string = return_string + ", "
                 return_string = return_string + projection_item.expression.convert()
                 if projection_item.variable:
                     return_string = return_string + " AS " + projection_item.variable
+        if return_clause.order_by_clause:
+            return_string = return_string + '\n' + return_clause.order_by_clause.convert()
+        if return_clause.skip_expression:
+            return_string = return_string + "\nSKIP " + return_clause.skip_expression.convert()
+        if return_clause.limit_expression:
+            return_string = return_string + "\nSKIP " + return_clause.limit_expression.convert()
         return return_string
 
     def convert_object_node(self, object_node: ObjectNode, time_window: Expression = None) -> (

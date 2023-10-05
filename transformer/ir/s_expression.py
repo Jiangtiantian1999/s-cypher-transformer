@@ -21,7 +21,6 @@ class MapLiteral:
     def __init__(self, keys_values: dict):
         self.keys_values = keys_values
 
-
     def convert(self):
         map_string = ""
         for index, (key, value) in enumerate(self.keys_values.items()):
@@ -132,6 +131,17 @@ class AtTExpression:
             time_property_chains = []
         self.time_property_chains = time_property_chains
 
+    def convert(self):
+        at_t_expression_string = self.atom.convert()
+        for proprety in self.property_chains:
+            at_t_expression_string = at_t_expression_string + '.' + proprety
+        if self.is_value:
+            at_t_expression_string = at_t_expression_string + "#Value"
+        at_t_expression_string = at_t_expression_string + "@T"
+        for time_proprety in self.time_property_chains:
+            at_t_expression_string = at_t_expression_string + '.' + time_proprety
+        return at_t_expression_string
+
 
 class IndexExpression:
     # 注意：该处left_expression和right_expression为Expression类型，由于与Expression相互引用，故此处不写明类型。
@@ -176,11 +186,11 @@ class PowerExpression:
 
     def convert(self):
         power_string = ""
-        for index, list_expression in enumerate(self.list_index_expressions):
+        for index, list_index_expression in enumerate(self.list_index_expressions):
             if index == 0:
-                power_string = list_expression.convert()
+                power_string = list_index_expression.convert()
             else:
-                power_string = power_string + '^' + list_expression.convert()
+                power_string = power_string + '^' + list_index_expression.convert()
         return power_string
 
 
@@ -193,8 +203,8 @@ class MultiplyDivideExpression:
             raise ValueError(
                 "The numbers of the power expressions and multiply/divide operations are not matched.")
         for multiply_divide_operation in multiply_divide_operations:
-            if multiply_divide_operation not in ['*', '/']:
-                raise ValueError("The multiply/divide operation must be '*' or '/'.")
+            if multiply_divide_operation not in ['*', '/', '%']:
+                raise ValueError("The multiply/divide operation must be '*', '/' or '%' .")
         self.multiply_divide_operations = multiply_divide_operations
 
     def convert(self):
@@ -330,7 +340,7 @@ class AndExpression:
         and_expression_string = ""
         for index, not_expression in enumerate(self.not_expressions):
             if index != 0:
-                and_expression_string = and_expression_string + " OR "
+                and_expression_string = and_expression_string + " AND "
             and_expression_string = and_expression_string + not_expression.convert()
         return and_expression_string
 
