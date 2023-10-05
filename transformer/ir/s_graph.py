@@ -79,7 +79,7 @@ class SEdge:
                  interval: AtTElement = None, properties: dict = None):
         if direction not in [self.LEFT, self.RIGHT, self.UNDIRECTED]:
             raise ValueError("Direction of edges must be 'LEFT', 'RIGHT' or 'UNDIRECTED'.")
-        if length[0] < 0 or length[0] > length[1]:
+        if length[0] is not None and length[1] is not None and (length[0] < 0 or length[0] > length[1]):
             raise ValueError("The length range of edge is incorrect.")
         self.direction = direction
         self.variable = variable
