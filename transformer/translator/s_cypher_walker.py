@@ -190,7 +190,6 @@ class SCypherWalker(s_cypherListener):
 
     def exitOC_ReadingClause(self, ctx: s_cypherParser.OC_ReadingClauseContext):
         # reading_clause: MatchClause | UnwindClause | CallClause
-        print("exit readingClause")
         reading_clause = None
         if self.match_clause is not None:
             reading_clause = ReadingClause(self.match_clause)
@@ -240,7 +239,6 @@ class SCypherWalker(s_cypherListener):
     def exitOC_Unwind(self, ctx: s_cypherParser.OC_UnwindContext):
         # expression: Expression,
         # variable: str
-        print("exit unwind")
         expression = self.expression
         variable = ctx.oC_Variable().getText()
         self.unwind_clause = UnwindClause(expression, variable)
