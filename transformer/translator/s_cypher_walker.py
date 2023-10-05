@@ -32,6 +32,7 @@ class SCypherWalker(s_cypherListener):
         self.path_function_pattern = None  # TemporalPathCall
         self.rel_type_names = []  # 边标签
         self.rel_length_range = None  # 边长度区间
+        self.pattern_part_list = []
 
         # clauses
         self.single_query_clauses = []
@@ -450,10 +451,12 @@ class SCypherWalker(s_cypherListener):
         self.edge_list = []  # 退出清空
         self.pattern_element = SPath(nodes, edges)
 
-    def exitOC_Pattern(self, ctx: s_cypherParser.OC_PatternContext):
+    def exitOC_PatternPart(self, ctx:s_cypherParser.OC_PatternPartContext):
         # pattern: SPath | TemporalPathCall
         pattern = None
         if self.path_function_pattern is not None:
+            if self.path_function_pattern.__class__ == TemporalPathCall:
+                self.path_function_pattern.variable = ctx.oC_Variable().getText()
             pattern = Pattern(self.path_function_pattern)
         else:
             pattern = Pattern(self.pattern_element)
