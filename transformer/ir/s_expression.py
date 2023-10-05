@@ -21,6 +21,7 @@ class MapLiteral:
     def __init__(self, keys_values: dict):
         self.keys_values = keys_values
 
+
     def convert(self):
         map_string = ""
         for index, (key, value) in enumerate(self.keys_values.items()):

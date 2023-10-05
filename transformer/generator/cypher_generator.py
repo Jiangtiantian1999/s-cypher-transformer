@@ -151,22 +151,54 @@ class CypherGenerator:
             elif pattern.__class__ == TemporalPathCall:
                 if call_string != "":
                     call_string = call_string + '\n'
-                pattern.path.variable = self.get_random_variable()
-                path_pattern, property_patterns, path_interval_conditions = self.convert_path(
-                    pattern.path, match_clause.time_window)
-                call_string = call_string + "MATCH " + path_pattern
+                start_node_pattern, start_node_property_patterns, start_node_interval_conditions = self.convert_object_node(
+                    pattern.path.nodes[0], match_clause.time_window)
+                end_node_pattern, end_node_property_patterns, end_node_interval_conditions = self.convert_object_node(
+                    pattern.path.nodes[1], match_clause.time_window)
+                call_string = call_string + "MATCH " + start_node_pattern + ", " + end_node_pattern
                 # 添加节点属性模式的匹配
+                property_patterns, interval_conditions = start_node_property_patterns, start_node_interval_conditions
+                property_patterns.extend(end_node_property_patterns)
+                interval_conditions.extend(end_node_interval_conditions)
                 for property_pattern in property_patterns:
                     call_string = call_string + ", " + property_pattern
                 # 添加时态路径的时态条件限制
-                if len(path_interval_conditions) != 0:
+                if len(interval_conditions) != 0:
                     call_string = call_string + "\nWHERE "
-                    for index, interval_condition in enumerate(path_interval_conditions):
+                    for index, interval_condition in enumerate(interval_conditions):
                         if index != 0:
                             call_string = call_string + " and "
                         call_string = call_string + interval_condition
-                call_string = call_string + "\nCALL " + pattern.function_name + '(' + pattern.path.variable + ')' + \
-                              "\nYIELD " + self.get_effective_variables()
+                # 限制路径的开始节点和结束节点
+                parameters_string = pattern.path.nodes[0].variable + ", " + pattern.path.nodes[1].variable
+                # 限制路径的标签
+                if len(pattern.path.edges[0].labels) != 0:
+                    parameters_string = parameters_string + ", " + str(pattern.path.edges[0].labels)
+                else:
+                    parameters_string = parameters_string + ", NULL"
+                # 限制路径的长度
+                if pattern.path.edges[0].length[0] is not None:
+                    parameters_string = parameters_string + ", " + str(pattern.path.edges[0].length[0])
+                else:
+                    parameters_string = parameters_string + ", NULL"
+                if pattern.path.edges[0].length[1] is not None:
+                    parameters_string = parameters_string + ", " + str(pattern.path.edges[0].length[1])
+                else:
+                    parameters_string = parameters_string + ", NULL"
+                # 限制路径的有效时间
+                if pattern.path.edges[0].interval:
+                    parameters_string = parameters_string + ", scypher.interval(" + pattern.path.edges[
+                        0].interval.interval_from.convert() + \
+                                        ", " + pattern.path.edges[0].interval.interval_to.convert() + ")"
+                else:
+                    parameters_string = parameters_string + ", NULL"
+                # 限制路径的属性
+                if len(pattern.path.edges[0].properties) != 0:
+                    parameters_string = parameters_string + ", " + str(pattern.path.edges[0].properties)
+                else:
+                    parameters_string = parameters_string + ", NULL"
+                call_string = call_string + "\nCALL scypher." + pattern.function_name + '(' + parameters_string + ')' + \
+                              "\nYIELD " + pattern.variable
         if match_string not in ["MATCH ", "OPTIONAL MATCH "]:
             if call_string != "":
                 match_string = call_string + '\n' + match_string
@@ -262,16 +294,21 @@ class CypherGenerator:
         if edge.variable is None:
             edge.variable = self.get_random_variable()
         # 边模式
-        edge_pattern = ""
-        if edge.variable:
-            edge_pattern = edge.variable
+        edge_pattern = edge.variable
         for label in edge.labels:
             edge_pattern = edge_pattern + ':' + label
         if edge.length[0] != 1 or edge.length[1] != 1:
-            if edge.length[0] == edge.length[1]:
-                edge_pattern = edge_pattern + '*' + str(edge.length[0])
+            if edge.length[0] is None and edge.length[1] is None:
+                edge_pattern = edge_pattern + '*'
             else:
-                edge_pattern = edge_pattern + '*' + str(edge.length[0]) + ".." + str(edge.length[1])
+                if edge.length[0] == edge.length[1]:
+                    edge_pattern = edge_pattern + str(edge.length[0])
+                else:
+                    if edge.length[0]:
+                        edge_pattern = edge_pattern + str(edge.length[0])
+                    edge_pattern = edge_pattern + ".."
+                    if edge.length[1]:
+                        edge_pattern = edge_pattern + str(edge.length[1])
         if len(edge.properties) != 0:
             edge_pattern = edge_pattern + '{'
             for index, (key, value) in enumerate(edge.properties.items()):

@@ -10,9 +10,7 @@ class TimePointLiteral:
 
     def convert(self):
         if self.time_point.__class__ == str:
-            if self.time_point.upper() == "NOW":
-                return "\"NOW\""
-            return self.time_point
+            return '\"' + self.time_point + '\"'
         else:
             return self.time_point.convert()
 
@@ -88,6 +86,7 @@ class SEdge:
         if labels is None:
             labels = []
         self.labels = labels  # 相当于content
+        # 没有指名长度时设为None，例如，*2.. -> (2, None)， * -> (None, None) *..2 -> (None, 2)
         self.length = length
         self.interval = interval
         if properties is None:
