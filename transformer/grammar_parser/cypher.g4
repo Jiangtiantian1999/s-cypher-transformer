@@ -302,12 +302,12 @@ oC_ComparisonExpression
                     :  oC_StringListNullPredicateExpression ( SP? oC_PartialComparisonExpression )* ;
 
 oC_PartialComparisonExpression
-                           :  ( '=' SP? oC_StringListNullPredicateExpression )
-                               | ( '<>' SP? oC_StringListNullPredicateExpression )
-                               | ( '<' SP? oC_StringListNullPredicateExpression )
-                               | ( '>' SP? oC_StringListNullPredicateExpression )
-                               | ( '<=' SP? oC_StringListNullPredicateExpression )
-                               | ( '>=' SP? oC_StringListNullPredicateExpression )
+                           :  ( s_operator SP? oC_StringListNullPredicateExpression )
+                               | ( s_operator SP? oC_StringListNullPredicateExpression )
+                               | ( s_operator SP? oC_StringListNullPredicateExpression )
+                               | ( s_operator SP? oC_StringListNullPredicateExpression )
+                               | ( s_operator SP? oC_StringListNullPredicateExpression )
+                               | ( s_operator SP? oC_StringListNullPredicateExpression )
                                ;
 
 oC_StringListNullPredicateExpression
@@ -337,13 +337,15 @@ IS : ( 'I' | 'i' ) ( 'S' | 's' ) ;
 NULL : ( 'N' | 'n' ) ( 'U' | 'u' ) ( 'L' | 'l' ) ( 'L' | 'l' ) ;
 
 oC_AddOrSubtractExpression
-                       :  oC_MultiplyDivideModuloExpression ( ( SP? '+' SP? oC_MultiplyDivideModuloExpression ) | ( SP? '-' SP? oC_MultiplyDivideModuloExpression ) )* ;
+                       :  oC_MultiplyDivideModuloExpression ( ( SP? s_operator SP? oC_MultiplyDivideModuloExpression ) | ( SP? s_operator SP? oC_MultiplyDivideModuloExpression ) )* ;
+
+s_operator : '+' | '-' | '*' | '/' | '%' | '^' | '=' | '<>' | '<' | '<=' | '>' | '>=';
 
 oC_MultiplyDivideModuloExpression
-                              :  oC_PowerOfExpression ( ( SP? '*' SP? oC_PowerOfExpression ) | ( SP? '/' SP? oC_PowerOfExpression ) | ( SP? '%' SP? oC_PowerOfExpression ) )* ;
+                              :  oC_PowerOfExpression ( ( SP? s_operator SP? oC_PowerOfExpression ) | ( SP? s_operator SP? oC_PowerOfExpression ) | ( SP? s_operator SP? oC_PowerOfExpression ) )* ;
 
 oC_PowerOfExpression
-                 :  oC_UnaryAddOrSubtractExpression ( SP? '^' SP? oC_UnaryAddOrSubtractExpression )* ;
+                 :  oC_UnaryAddOrSubtractExpression ( SP? s_operator SP? oC_UnaryAddOrSubtractExpression )* ;
 
 oC_UnaryAddOrSubtractExpression
                             :  oC_ListOperatorExpression

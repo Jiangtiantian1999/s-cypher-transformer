@@ -102,6 +102,7 @@ class SCypherWalker(s_cypherListener):
         self.set_items = []
         self.remove_items = []
         self.stale_items = []
+        self.operations = []
 
     # 多个SingleQuery，用UNION/UNION ALL连接，其中SingleQuery有可能是单个SinglePartQuery，也有可能是MultiPartQuery_clauses
     def exitOC_RegularQuery(self, ctx: s_cypherParser.OC_RegularQueryContext):
@@ -238,6 +239,7 @@ class SCypherWalker(s_cypherListener):
     def exitOC_Unwind(self, ctx: s_cypherParser.OC_UnwindContext):
         # expression: Expression,
         # variable: str
+        print("exit unwind")
         expression = self.expression
         variable = ctx.oC_Variable().getText()
         self.unwind_clause = UnwindClause(expression, variable)
@@ -577,19 +579,26 @@ class SCypherWalker(s_cypherListener):
                 i += 1
         return new_operations
 
+    # 语法树获取运算符
+    def exitS_operator(self, ctx:s_cypherParser.S_operatorContext):
+        self.operations.append(ctx.getText())
+
     def exitOC_ComparisonExpression(self, ctx: s_cypherParser.OC_ComparisonExpressionContext):
         # subject_expressions: List[SubjectExpression],
         # comparison_operations: List[str] = None
         # 第一个SubjectExpression不可少，后面每一个符号和一个SubjectExpression为一组合
         operations = ['=', '<>', '<', '>', '<=', '>=']
         # 获取比较运算符
-        comparison_operations = []
-        if isinstance(ctx.oC_PartialComparisonExpression(), list):
-            for partial_comparison in ctx.oC_PartialComparisonExpression():
-                comparison_operations.extend(self.get_operations(partial_comparison.getText(), operations))
-        else:
-            comparison_operations.extend(
-                self.get_operations(ctx.oC_PartialComparisonExpression().getText(), operations))
+        comparison_operations = self.operations
+        self.operations = []  # 退出清空
+        # if isinstance(ctx.oC_PartialComparisonExpression(), list):
+        #     for partial_comparison in ctx.oC_PartialComparisonExpression():
+        #         print(self.get_operations(partial_comparison.getText()))
+        #         comparison_operations.extend(self.get_operations(partial_comparison.getText(), operations))
+        # else:
+        #     print(ctx.oC_PartialComparisonExpression().getText())
+        #     comparison_operations.extend(
+        #         self.get_operations(ctx.oC_PartialComparisonExpression().getText(), operations))
         subject_expressions = self.subject_expressions
         self.subject_expressions = []  # 退出时清空，避免重复记录
         self.comparison_expression = ComparisonExpression(subject_expressions, comparison_operations)
@@ -654,8 +663,12 @@ class SCypherWalker(s_cypherListener):
         multiply_divide_expressions = self.multiply_divide_expressions
         self.multiply_divide_expressions = []  # 退出时清空，避免重复记录
         # 获取加减运算符
-        operations = ['+', '-']
-        add_subtract_operations = self.get_operations(ctx.getText(), operations)
+        add_subtract_operations = self.operations
+        self.operations = []  # 退出时清空
+        if '(' or ')' in ctx.getText():
+            new_operations_list = []
+        # operations = ['+', '-']
+        # add_subtract_operations = self.get_operations(ctx.getText(), operations)
         self.add_subtract_expression = AddSubtractExpression(multiply_divide_expressions, add_subtract_operations)
 
     def exitOC_MultiplyDivideModuloExpression(self, ctx: s_cypherParser.OC_MultiplyDivideModuloExpressionContext):
@@ -664,8 +677,12 @@ class SCypherWalker(s_cypherListener):
         power_expressions = self.power_expressions
         self.power_expressions = []  # 退出时清空，避免重复记录
         # 获取乘除模运算符
-        operations = ['*', '/', '%']
-        new_operations_list = self.get_operations(ctx.getText(), operations)
+        # operations = ['*', '/', '%']
+        # new_operations_list = self.get_operations(ctx.getText(), operations)
+        new_operations_list = self.operations
+        self.operations = []  # 退出时清空
+        if '(' or ')' in ctx.getText():
+            new_operations_list = []
         multiply_divide_operations = None
         if len(new_operations_list) > 0:
             multiply_divide_operations = new_operations_list
@@ -673,7 +690,9 @@ class SCypherWalker(s_cypherListener):
 
     def exitOC_PowerOfExpression(self, ctx: s_cypherParser.OC_PowerOfExpressionContext):
         # list_index_expressions: List[ListIndexExpression]
-        self.power_expressions.append(PowerExpression(self.list_index_expressions))
+        new_power_expression = PowerExpression(self.list_index_expressions)
+        # if new_power_expression not in self.power_expressions:
+        self.power_expressions.append(new_power_expression)
         self.list_index_expressions = []  # 退出时清空，避免重复记录
 
     def exitOC_UnaryAddOrSubtractExpression(self, ctx: s_cypherParser.OC_UnaryAddOrSubtractExpressionContext):
@@ -753,7 +772,7 @@ class SCypherWalker(s_cypherListener):
     def exitOC_PropertyLookup(self, ctx: s_cypherParser.OC_PropertyLookupContext):
         self.property_look_up_list.append(ctx.oC_PropertyKeyName().getText())
 
-    def enterOC_PropertyLookupTime(self, ctx: s_cypherParser.OC_PropertyLookupTimeContext):
+    def exitOC_PropertyLookupTime(self, ctx: s_cypherParser.OC_PropertyLookupTimeContext):
         self.property_look_up_time_list = self.property_look_up_list
         self.property_look_up_list = []  # 退出清空
 

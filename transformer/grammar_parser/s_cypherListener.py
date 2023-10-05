@@ -836,6 +836,15 @@ class s_cypherListener(ParseTreeListener):
         pass
 
 
+    # Enter a parse tree produced by s_cypherParser#s_operator.
+    def enterS_operator(self, ctx:s_cypherParser.S_operatorContext):
+        pass
+
+    # Exit a parse tree produced by s_cypherParser#s_operator.
+    def exitS_operator(self, ctx:s_cypherParser.S_operatorContext):
+        pass
+
+
     # Enter a parse tree produced by s_cypherParser#oC_MultiplyDivideModuloExpression.
     def enterOC_MultiplyDivideModuloExpression(self, ctx:s_cypherParser.OC_MultiplyDivideModuloExpressionContext):
         pass
