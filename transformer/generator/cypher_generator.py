@@ -50,7 +50,9 @@ class CypherGenerator:
     def convert_call_clause(self, call_clause: CallClause) -> str:
         call_string = "CALL " + call_clause.procedure_name
         input_string = ""
-        for input_item in call_clause.input_items:
+        for index, input_item in enumerate(call_clause.input_items):
+            if index != 0:
+                input_string = input_string + ", "
             input_string = input_string + input_item.convert()
         if input_string != "":
             call_string = call_string + '(' + input_string + ')'
@@ -307,9 +309,8 @@ class CypherGenerator:
         for label in edge.labels:
             edge_pattern = edge_pattern + ':' + label
         if edge.length[0] != 1 or edge.length[1] != 1:
-            if edge.length[0] is None and edge.length[1] is None:
-                edge_pattern = edge_pattern + '*'
-            else:
+            edge_pattern = edge_pattern + '*'
+            if edge.length[0] is not None or edge.length[1] is not None:
                 if edge.length[0] == edge.length[1]:
                     edge_pattern = edge_pattern + str(edge.length[0])
                 else:

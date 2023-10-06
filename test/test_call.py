@@ -23,9 +23,9 @@ class TestCall(TestCase):
         print("test_call_3:", '\n', s_cypher, '\n\n', cypher_query, '\n\n')
 
     def test_call_4(self):
-        s_cypher = 'MATCH path = (n1:Person)-[:FRIEND*2]->(n2:Person)' \
-                   '\nCALL cPath(path)' \
-                   '\nYIELD cpath' \
-                   '\nRETURN cpath'
+        s_cypher = 'MATCH (n1:Person {name: "Nick"})-[:FRIEND*2]->(n2:Person)' \
+                   '\nCALL max(n1.ege, n2.ege)' \
+                   '\nYIELD max_ege' \
+                   '\nRETURN n1.name, n2.name, max_edge'
         cypher_query = transform_to_cypher(s_cypher)
         print("test_call_4:", '\n', s_cypher, '\n\n', cypher_query, '\n\n')
