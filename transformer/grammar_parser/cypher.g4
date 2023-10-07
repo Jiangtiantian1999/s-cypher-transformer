@@ -210,10 +210,7 @@ DESCENDING : ( 'D' | 'd' ) ( 'E' | 'e' ) ( 'S' | 's' ) ( 'C' | 'c' ) ( 'E' | 'e'
 DESC : ( 'D' | 'd' ) ( 'E' | 'e' ) ( 'S' | 's' ) ( 'C' | 'c' ) ;
 
 oC_Where
-     :  WHERE SP s_WhereExpression ;
-
-s_WhereExpression
-          :  oC_OrExpression ;
+     :  WHERE SP oC_Expression ;
 
 WHERE : ( 'W' | 'w' ) ( 'H' | 'h' ) ( 'E' | 'e' ) ( 'R' | 'r' ) ( 'E' | 'e' ) ;
 
