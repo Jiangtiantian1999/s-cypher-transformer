@@ -305,12 +305,12 @@ class s_cypherListener(ParseTreeListener):
         pass
 
 
-    # Enter a parse tree produced by s_cypherParser#oC_PropertyLookupTime.
-    def enterOC_PropertyLookupTime(self, ctx:s_cypherParser.OC_PropertyLookupTimeContext):
+    # Enter a parse tree produced by s_cypherParser#s_PropertyLookupTime.
+    def enterS_PropertyLookupTime(self, ctx:s_cypherParser.S_PropertyLookupTimeContext):
         pass
 
-    # Exit a parse tree produced by s_cypherParser#oC_PropertyLookupTime.
-    def exitOC_PropertyLookupTime(self, ctx:s_cypherParser.OC_PropertyLookupTimeContext):
+    # Exit a parse tree produced by s_cypherParser#s_PropertyLookupTime.
+    def exitS_PropertyLookupTime(self, ctx:s_cypherParser.S_PropertyLookupTimeContext):
         pass
 
 

@@ -133,9 +133,8 @@ class SCypherWalker(s_cypherListener):
 
         self.where_operations = []
 
-    def exitOC_Query(self, ctx:s_cypherParser.OC_QueryContext):
+    def exitOC_Query(self, ctx: s_cypherParser.OC_QueryContext):
         if ctx.oC_RegularQuery():
-            # print(Trees.toStringTree(tree, None, self.parser))
             self.query_clause = self.union_query_clause
         elif ctx.oC_StandaloneCall() is not None:
             self.query_clause = self.stand_alone_call_clause
@@ -228,13 +227,15 @@ class SCypherWalker(s_cypherListener):
 
     def exitOC_ReadingClause(self, ctx: s_cypherParser.OC_ReadingClauseContext):
         # reading_clause: MatchClause | UnwindClause | CallClause
-        reading_clause = None
         if self.match_clause is not None:
             reading_clause = ReadingClause(self.match_clause)
+            self.match_clause = None  # 退出清空
         elif self.unwind_clause is not None:
             reading_clause = ReadingClause(self.unwind_clause)
+            self.unwind_clause = None  # 退出清空
         elif self.in_query_call_clause is not None:
             reading_clause = ReadingClause(self.in_query_call_clause)
+            self.in_query_call_clause = None  # 退出清空
         else:
             raise ValueError("The reading clause must have a clause which is not None among MatchClause, UnwindClause "
                              "and CallClause.")
@@ -265,7 +266,7 @@ class SCypherWalker(s_cypherListener):
     # def exitOC_Where(self, ctx: s_cypherParser.OC_WhereContext):
     #     self.where_expression = self.expression
 
-    def enterS_Between(self, ctx:s_cypherParser.S_BetweenContext):
+    def enterS_Between(self, ctx: s_cypherParser.S_BetweenContext):
         self.is_where_expression = False
 
     def exitS_Between(self, ctx: s_cypherParser.S_BetweenContext):
@@ -309,7 +310,7 @@ class SCypherWalker(s_cypherListener):
         self.yield_clause = YieldClause(self.yield_items, self.where_expression)
         self.yield_items = []  # 退出清空
 
-    def enterOC_YieldItem(self, ctx: s_cypherParser.OC_YieldItemContext):
+    def exitOC_YieldItem(self, ctx: s_cypherParser.OC_YieldItemContext):
         # procedure_result: str,
         # variable: str = None
         if ctx.oC_ProcedureResultField() is not None:
@@ -321,7 +322,6 @@ class SCypherWalker(s_cypherListener):
         else:
             variable = None
         self.yield_items.append(YieldItem(procedure_result, variable))
-
 
     # CALL查询
     def exitOC_StandaloneCall(self, ctx: s_cypherParser.OC_StandaloneCallContext):
@@ -469,7 +469,7 @@ class SCypherWalker(s_cypherListener):
                     length_tuple = length_tuple + (int(length.getText()),)
             # 只有左边有，并且右边不能小于左边，设置左右相等
             elif len(lengths) == 1:
-                if '*..'  or '* ..' in ctx.getText():
+                if '*..' or '* ..' in ctx.getText():
                     length_tuple = (None, int(lengths[0].getText()))
                 else:
                     length_tuple = (int(lengths[0].getText()), None)
@@ -512,9 +512,8 @@ class SCypherWalker(s_cypherListener):
         self.edge_list = []  # 退出清空
         self.pattern_element = SPath(nodes, edges)
 
-    def exitOC_PatternPart(self, ctx:s_cypherParser.OC_PatternPartContext):
+    def exitOC_PatternPart(self, ctx: s_cypherParser.OC_PatternPartContext):
         # pattern: SPath | TemporalPathCall
-        pattern = None
         if self.path_function_pattern is not None:
             if self.path_function_pattern.__class__ == TemporalPathCall:
                 self.path_function_pattern.variable = ctx.oC_Variable().getText()
@@ -599,7 +598,7 @@ class SCypherWalker(s_cypherListener):
         self.limit_expression = self.expression
         self.is_where_expression = True
 
-    def enterS_WhereExpression(self, ctx:s_cypherParser.S_WhereExpressionContext):
+    def enterS_WhereExpression(self, ctx: s_cypherParser.S_WhereExpressionContext):
         self.is_where_expression = True
 
     def exitS_WhereExpression(self, ctx: s_cypherParser.S_WhereExpressionContext):
@@ -684,9 +683,8 @@ class SCypherWalker(s_cypherListener):
         return new_operations
 
     # 语法树获取运算符
-    def exitS_operator(self, ctx:s_cypherParser.S_operatorContext):
+    def exitS_operator(self, ctx: s_cypherParser.S_operatorContext):
         if self.is_where_expression:
-            print("count where operations", ctx.getText())
             self.where_operations.append(ctx.getText())
         else:
             self.operations.append(ctx.getText())
@@ -709,7 +707,6 @@ class SCypherWalker(s_cypherListener):
             subject_expressions = self.subject_expressions
             self.subject_expressions = []  # 退出时清空，避免重复记录
             self.comparison_expression = ComparisonExpression(subject_expressions, comparison_operations)
-        print("11")
 
     # 处理subject_expression
     def exitOC_StringListNullPredicateExpression(self, ctx: s_cypherParser.OC_StringListNullPredicateExpressionContext):
@@ -974,7 +971,7 @@ class SCypherWalker(s_cypherListener):
     def exitOC_PropertyLookup(self, ctx: s_cypherParser.OC_PropertyLookupContext):
         self.property_look_up_list.append(ctx.oC_PropertyKeyName().getText())
 
-    def exitOC_PropertyLookupTime(self, ctx: s_cypherParser.OC_PropertyLookupTimeContext):
+    def exitS_PropertyLookupTime(self, ctx:s_cypherParser.S_PropertyLookupTimeContext):
         self.property_look_up_time_list = self.property_look_up_list
         self.property_look_up_list = []  # 退出清空
 

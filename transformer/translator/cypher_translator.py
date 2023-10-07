@@ -13,6 +13,7 @@ class CypherTranslator:
         walker = ParseTreeWalker()
         extractor = SCypherWalker(self.parser)
         tree = self.parser.oC_Query()
+        # print(tree.toStringTree(tree, self.parser))
         walker.walk(extractor, tree)
         clause = extractor.query_clause
         return SCypherClause(clause)

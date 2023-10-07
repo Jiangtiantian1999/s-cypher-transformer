@@ -154,7 +154,7 @@ oC_YieldItems
           :  oC_YieldItem ( SP? ',' SP? oC_YieldItem )* ( SP? oC_Where )? ;
 
 oC_YieldItem
-         :  ( oC_ProcedureResultField SP AS SP )? oC_Variable ;
+         :  oC_ProcedureResultField ( SP AS SP oC_Variable )? ;
 
 oC_With
     :  WITH oC_ProjectionBody ( SP? oC_Where )? ;

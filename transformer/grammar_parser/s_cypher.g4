@@ -88,7 +88,7 @@ s_LeftExpression : oC_Expression ;
 
 s_RightExpression : oC_Expression ;
 
-s_AtTExpression : oC_Atom ( ( SP? oC_PropertyLookup )+ ( SP? PoundValue )? )? SP? oC_PropertyLookupTime ;
+s_AtTExpression : oC_Atom ( ( SP? oC_PropertyLookup )+ ( SP? PoundValue )? )? SP? s_PropertyLookupTime ;
 
 s_PropertyLookupTime: AtT ( SP? oC_PropertyLookup )* ;
 
