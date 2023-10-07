@@ -78,15 +78,19 @@ oC_RelationshipDetail : '[' SP? ( oC_Variable SP? )? ( oC_RelationshipTypes SP? 
 
 oC_StringListNullPredicateExpression : oC_AddOrSubtractExpression ( s_TimePredicateExpression | oC_StringPredicateExpression | oC_ListPredicateExpression | oC_NullPredicateExpression )? ;
 
-oC_ListOperatorExpression : ( oC_PropertyOrLabelsExpression | s_AtTExpression ) ( oC_SingleIndexExpression | oC_DoubleIndexExpression )* ;
+oC_ListOperatorExpression : ( oC_PropertyOrLabelsExpression | s_AtTExpression ) ( s_SingleIndexExpression | s_DoubleIndexExpression )* ;
 
-oC_SingleIndexExpression : SP? '[' oC_Expression ']' ;
+s_SingleIndexExpression : SP? '[' s_LeftExpression ']' ;
 
-oC_DoubleIndexExpression : SP? '[' oC_Expression? '..' oC_Expression? ']' ;
+s_DoubleIndexExpression : SP? '[' s_LeftExpression? '..' s_RightExpression? ']' ;
+
+s_LeftExpression : oC_Expression ;
+
+s_RightExpression : oC_Expression ;
 
 s_AtTExpression : oC_Atom ( ( SP? oC_PropertyLookup )+ ( SP? PoundValue )? )? SP? oC_PropertyLookupTime ;
 
-oC_PropertyLookupTime: AtT ( SP? oC_PropertyLookup )* ;
+s_PropertyLookupTime: AtT ( SP? oC_PropertyLookup )* ;
 
 s_TimePredicateExpression : SP ( DURING | OVERLAPS ) SP oC_AddOrSubtractExpression ;
 

@@ -65,6 +65,7 @@ class SCypherWalker(s_cypherListener):
         self.stale_clause = None
 
         # expression
+        self.is_where_expression = True
         self.where_expression = None
         self.skip_expression = None  # Expression类型
         self.limit_expression = None
@@ -87,6 +88,28 @@ class SCypherWalker(s_cypherListener):
         self.AtT_expression = None
         self.properties_labels_expression = None
 
+        # where expression
+        self.where_skip_expression = None  # Expression类型
+        self.where_limit_expression = None
+        self.where_expression = None
+        self.where_or_expression = None
+        self.where_xor_expressions = []
+        self.where_and_expressions = []
+        self.where_not_expressions = []
+        self.where_comparison_expression = None
+        self.where_subject_expressions = []
+        self.where_null_predicate_expression = None
+        self.where_list_predicate_expression = None
+        self.where_string_predicate_expression = None
+        self.where_time_predicate_expression = None
+        self.where_add_subtract_expression = None
+        self.where_multiply_divide_expressions = []
+        self.where_power_expressions = []
+        self.where_list_index_expressions = []
+        self.where_index_expressions = []
+        self.where_AtT_expression = None
+        self.where_properties_labels_expression = None
+
         # 中间变量
         self.with_query_clauses = []
         self.union_is_all_list = []
@@ -105,6 +128,10 @@ class SCypherWalker(s_cypherListener):
         self.remove_items = []
         self.stale_items = []
         self.operations = []
+        self.left_expression = None
+        self.right_expression = None
+
+        self.where_operations = []
 
     def exitOC_Query(self, ctx:s_cypherParser.OC_QueryContext):
         if ctx.oC_RegularQuery():
@@ -235,17 +262,28 @@ class SCypherWalker(s_cypherListener):
             where_expression = self.where_expression
         self.match_clause = MatchClause(patterns, is_optional, where_expression, time_window)
 
-    def exitOC_Where(self, ctx: s_cypherParser.OC_WhereContext):
-        self.where_expression = self.expression
+    # def exitOC_Where(self, ctx: s_cypherParser.OC_WhereContext):
+    #     self.where_expression = self.expression
+
+    def enterS_Between(self, ctx:s_cypherParser.S_BetweenContext):
+        self.is_where_expression = False
 
     def exitS_Between(self, ctx: s_cypherParser.S_BetweenContext):
         # interval: Expression
         # interval = ctx.oC_Expression().getText()
         interval = self.expression
         self.between_clause = BetweenClause(interval)
+        self.is_where_expression = True
+
+    def enterS_AtTime(self, ctx: s_cypherParser.S_AtTimeContext):
+        self.is_where_expression = False
 
     def exitS_AtTime(self, ctx: s_cypherParser.S_AtTimeContext):
         self.at_time_clause = AtTimeClause(self.expression)
+        self.is_where_expression = True
+
+    def enterOC_Unwind(self, ctx: s_cypherParser.OC_UnwindContext):
+        self.is_where_expression = False
 
     def exitOC_Unwind(self, ctx: s_cypherParser.OC_UnwindContext):
         # expression: Expression,
@@ -253,9 +291,7 @@ class SCypherWalker(s_cypherListener):
         expression = self.expression
         variable = ctx.oC_Variable().getText()
         self.unwind_clause = UnwindClause(expression, variable)
-
-    def enterOC_Unwind(self, ctx:s_cypherParser.OC_UnwindContext):
-        print("enter unwind")
+        self.is_where_expression = True
 
     def exitOC_InQueryCall(self, ctx: s_cypherParser.OC_InQueryCallContext):
         # procedure_name: str,
@@ -366,6 +402,9 @@ class SCypherWalker(s_cypherListener):
         property_interval = self.at_t_element  # 属性节点时间
         self.property_node_list.append(PropertyNode(property_content, None, property_interval))
 
+    def enterS_ValueNode(self, ctx: s_cypherParser.S_ValueNodeContext):
+        self.is_where_expression = False
+
     # 获取值节点
     def exitS_ValueNode(self, ctx: s_cypherParser.S_ValueNodeContext):
         value_content = None  # 值节点内容
@@ -378,6 +417,7 @@ class SCypherWalker(s_cypherListener):
             value_interval = self.at_t_element
         # 构造值节点
         self.value_node_list.append(ValueNode(value_content, None, value_interval))
+        self.is_where_expression = True
 
     # 获取时间
     def enterS_AtTElement(self, ctx: s_cypherParser.S_AtTElementContext):
@@ -502,6 +542,9 @@ class SCypherWalker(s_cypherListener):
         self.return_clause = ReturnClause(projection_items, is_distinct, order_by_clause, skip_expression,
                                           limit_expression)
 
+    def enterOC_ProjectionItem(self, ctx: s_cypherParser.OC_ProjectionItemContext):
+        self.is_where_expression = False
+
     def exitOC_ProjectionItem(self, ctx: s_cypherParser.OC_ProjectionItemContext):
         # is_all: bool = False,
         # expression: Exception = None,
@@ -515,11 +558,15 @@ class SCypherWalker(s_cypherListener):
         if ctx.oC_Variable() is not None:
             variable = ctx.oC_Variable().getText()
         self.projection_items.append(ProjectionItem(is_all, expression, variable))
+        self.is_where_expression = True
 
     def exitOC_Order(self, ctx: s_cypherParser.OC_OrderContext):
         # sort_items: dict[Expression, str]
         self.order_by_clause = OrderByClause(self.sort_items)
         self.sort_items = dict()  # 退出清空
+
+    def enterOC_SortItem(self, ctx: s_cypherParser.OC_SortItemContext):
+        self.is_where_expression = False
 
     def exitOC_SortItem(self, ctx: s_cypherParser.OC_SortItemContext):
         # expression = Expression(ctx.oC_Expression().getText())
@@ -534,41 +581,79 @@ class SCypherWalker(s_cypherListener):
         elif ctx.DESC() is not None:
             string = 'DESC'
         self.sort_items[expression] = string
+        self.is_where_expression = True
+
+    def enterOC_Skip(self, ctx: s_cypherParser.OC_SkipContext):
+        self.is_where_expression = False
 
     def exitOC_Skip(self, ctx: s_cypherParser.OC_SkipContext):
         # self.skip_expression = Expression(ctx.oC_Expression().getText())  # 暂以字符串的的形式存储
         self.skip_expression = self.expression
+        self.is_where_expression = True
+
+    def enterOC_Limit(self, ctx: s_cypherParser.OC_LimitContext):
+        self.is_where_expression = False
 
     def exitOC_Limit(self, ctx: s_cypherParser.OC_LimitContext):
         # self.limit_expression = Expression(ctx.oC_Expression().getText())  # 暂以字符串的的形式存储
         self.limit_expression = self.expression
+        self.is_where_expression = True
+
+    def enterS_WhereExpression(self, ctx:s_cypherParser.S_WhereExpressionContext):
+        self.is_where_expression = True
+
+    def exitS_WhereExpression(self, ctx: s_cypherParser.S_WhereExpressionContext):
+        self.where_expression = Expression(self.where_or_expression)
+        self.is_where_expression = False
+
+    def enterOC_Expression(self, ctx: s_cypherParser.OC_ExpressionContext):
+        self.is_where_expression = False
 
     def exitOC_Expression(self, ctx: s_cypherParser.OC_ExpressionContext):
+        # if self.is_where_expression:
+        #     self.where_expression = Expression(self.where_or_expression)
+        # else:
         self.expression = Expression(self.or_expression)
         self.explicit_input_items.append(self.expression)
+        self.is_where_expression = True
 
     def exitOC_OrExpression(self, ctx: s_cypherParser.OC_OrExpressionContext):
         # xor_expressions: List[XorExpression]
-        self.or_expression = OrExpression(self.xor_expressions)
-        self.xor_expressions = []  # 退出时清空，避免重复记录
+        if self.is_where_expression:
+            self.where_or_expression = OrExpression(self.where_xor_expressions)
+            self.where_xor_expressions = []  # 退出时清空，避免重复记录
+        else:
+            self.or_expression = OrExpression(self.xor_expressions)
+            self.xor_expressions = []  # 退出时清空，避免重复记录
 
     def exitOC_XorExpression(self, ctx: s_cypherParser.OC_XorExpressionContext):
         # and_expressions: List[AndExpression]
-        self.xor_expressions.append(XorExpression(self.and_expressions))
-        self.and_expressions = []  # 退出时清空，避免重复记录
+        if self.is_where_expression:
+            self.where_xor_expressions.append(XorExpression(self.where_and_expressions))
+            self.where_and_expressions = []  # 退出时清空，避免重复记录
+        else:
+            self.xor_expressions.append(XorExpression(self.and_expressions))
+            self.and_expressions = []  # 退出时清空，避免重复记录
 
     def exitOC_AndExpression(self, ctx: s_cypherParser.OC_AndExpressionContext):
         # not_expressions: List[NotExpression]
-        self.and_expressions.append(AndExpression(self.not_expressions))
-        self.not_expressions = []  # 退出时清空，避免重复记录
+        if self.is_where_expression:
+            self.where_and_expressions.append(AndExpression(self.where_not_expressions))
+            self.where_not_expressions = []  # 退出时清空，避免重复记录
+        else:
+            self.and_expressions.append(AndExpression(self.not_expressions))
+            self.not_expressions = []  # 退出时清空，避免重复记录
 
     def exitOC_NotExpression(self, ctx: s_cypherParser.OC_NotExpressionContext):
         # comparison_expression: ComparisonExpression,
         # is_not=False
         is_not = False
-        if len(ctx.NOT()) > 1:
+        if ctx.NOT():
             is_not = True
-        self.not_expressions.append(NotExpression(self.comparison_expression, is_not))
+        if self.is_where_expression:
+            self.where_not_expressions.append(NotExpression(self.where_comparison_expression, is_not))
+        else:
+            self.not_expressions.append(NotExpression(self.comparison_expression, is_not))
 
     # 运算符的获取
     @staticmethod
@@ -600,119 +685,189 @@ class SCypherWalker(s_cypherListener):
 
     # 语法树获取运算符
     def exitS_operator(self, ctx:s_cypherParser.S_operatorContext):
-        self.operations.append(ctx.getText())
+        if self.is_where_expression:
+            print("count where operations", ctx.getText())
+            self.where_operations.append(ctx.getText())
+        else:
+            self.operations.append(ctx.getText())
 
     def exitOC_ComparisonExpression(self, ctx: s_cypherParser.OC_ComparisonExpressionContext):
         # subject_expressions: List[SubjectExpression],
         # comparison_operations: List[str] = None
         # 第一个SubjectExpression不可少，后面每一个符号和一个SubjectExpression为一组合
-        operations = ['=', '<>', '<', '>', '<=', '>=']
-        # 获取比较运算符
-        comparison_operations = self.operations
-        self.operations = []  # 退出清空
-        # if isinstance(ctx.oC_PartialComparisonExpression(), list):
-        #     for partial_comparison in ctx.oC_PartialComparisonExpression():
-        #         print(self.get_operations(partial_comparison.getText()))
-        #         comparison_operations.extend(self.get_operations(partial_comparison.getText(), operations))
-        # else:
-        #     print(ctx.oC_PartialComparisonExpression().getText())
-        #     comparison_operations.extend(
-        #         self.get_operations(ctx.oC_PartialComparisonExpression().getText(), operations))
-        subject_expressions = self.subject_expressions
-        self.subject_expressions = []  # 退出时清空，避免重复记录
-        self.comparison_expression = ComparisonExpression(subject_expressions, comparison_operations)
+        if self.is_where_expression:
+            # 获取比较运算符
+            where_comparison_operations = self.where_operations
+            self.where_operations = []  # 退出清空
+            where_subject_expressions = self.where_subject_expressions
+            self.where_subject_expressions = []  # 退出时清空，避免重复记录
+            self.where_comparison_expression = ComparisonExpression(where_subject_expressions, where_comparison_operations)
+        else:
+            # 获取比较运算符
+            comparison_operations = self.operations
+            self.operations = []  # 退出清空
+            subject_expressions = self.subject_expressions
+            self.subject_expressions = []  # 退出时清空，避免重复记录
+            self.comparison_expression = ComparisonExpression(subject_expressions, comparison_operations)
+        print("11")
 
     # 处理subject_expression
     def exitOC_StringListNullPredicateExpression(self, ctx: s_cypherParser.OC_StringListNullPredicateExpressionContext):
         # add_or_subtract_expression: AddSubtractExpression,
         # predicate_expression: TimePredicateExpression | StringPredicateExpression | ListPredicateExpression | NullPredicateExpression = None
-        add_or_subtract_expression = self.add_subtract_expression
-        predicate_expression = None
-        if self.time_predicate_expression is not None:
-            predicate_expression = self.time_predicate_expression
-        elif self.string_predicate_expression is not None:
-            predicate_expression = self.string_predicate_expression
-        elif self.list_predicate_expression is not None:
-            predicate_expression = self.list_predicate_expression
-        elif self.null_predicate_expression is not None:
-            predicate_expression = self.null_predicate_expression
-        self.subject_expressions.append(SubjectExpression(add_or_subtract_expression, predicate_expression))
+        if self.is_where_expression:
+            where_add_or_subtract_expression = self.where_add_subtract_expression
+            where_predicate_expression = None
+            if self.where_time_predicate_expression is not None:
+                where_predicate_expression = self.where_time_predicate_expression
+                self.where_time_predicate_expression = None
+            elif self.where_string_predicate_expression is not None:
+                where_predicate_expression = self.where_string_predicate_expression
+                self.where_string_predicate_expression = None
+            elif self.where_list_predicate_expression is not None:
+                where_predicate_expression = self.where_list_predicate_expression
+                self.where_list_predicate_expression = None
+            elif self.where_null_predicate_expression is not None:
+                where_predicate_expression = self.where_null_predicate_expression
+                self.where_null_predicate_expression = None
+            self.where_subject_expressions.append(SubjectExpression(where_add_or_subtract_expression, where_predicate_expression))
+        else:
+            add_or_subtract_expression = self.add_subtract_expression
+            predicate_expression = None
+            if self.time_predicate_expression is not None:
+                predicate_expression = self.time_predicate_expression
+                self.time_predicate_expression = None
+            elif self.string_predicate_expression is not None:
+                predicate_expression = self.string_predicate_expression
+                self.string_predicate_expression = None
+            elif self.list_predicate_expression is not None:
+                predicate_expression = self.list_predicate_expression
+                self.list_predicate_expression = None
+            elif self.null_predicate_expression is not None:
+                predicate_expression = self.null_predicate_expression
+                self.null_predicate_expression = None
+            self.subject_expressions.append(SubjectExpression(add_or_subtract_expression, predicate_expression))
+
+    def exitS_TimePredicateExpression(self, ctx: s_cypherParser.S_TimePredicateExpressionContext):
+        # time_operation: str,
+        # add_or_subtract_expression: AddSubtractExpression = None
+        time_str = ctx.getText()
+        if 'DURING' in time_str and 'OVERLAPS' not in time_str:
+            time_operation = 'DURING'
+        elif 'DURING' not in time_str and 'OVERLAPS' in time_str:
+            time_operation = 'OVERLAPS'
+        else:
+            raise FormatError("The time predicate expression must have the operation DURING or OVERLAPS.")
+        if self.is_where_expression:
+            where_add_or_subtract_expression = self.where_add_subtract_expression
+            self.where_time_predicate_expression = TimePredicateExpression(time_operation, where_add_or_subtract_expression)
+        else:
+            add_or_subtract_expression = self.add_subtract_expression
+            self.time_predicate_expression = TimePredicateExpression(time_operation, add_or_subtract_expression)
+
+    def exitOC_StringPredicateExpression(self, ctx: s_cypherParser.OC_StringPredicateExpressionContext):
+        # string_operation: str,
+        # add_or_subtract_expression: AddSubtractExpression = None
+        string_str = ctx.getText()
+        if 'STARTS' and 'WITH' in string_str:
+            string_operation = 'STARTS WITH'
+        elif 'ENDS' and 'WITH' in string_str:
+            string_operation = 'ENDS WITH'
+        elif 'CONTAINS' in string_str:
+            string_operation = 'CONTAINS'
+        else:
+            raise FormatError("There must have an operation among 'STARTS WITH','ENDS WITH' and 'CONTAINS'.")
+        if self.is_where_expression:
+            where_add_or_subtract_expression = self.where_add_subtract_expression
+            self.where_string_predicate_expression = StringPredicateExpression(string_operation, where_add_or_subtract_expression)
+        else:
+            add_or_subtract_expression = self.add_subtract_expression
+            self.string_predicate_expression = StringPredicateExpression(string_operation, add_or_subtract_expression)
+
+    def exitOC_ListPredicateExpression(self, ctx: s_cypherParser.OC_ListPredicateExpressionContext):
+        # add_or_subtract_expression: AddSubtractExpression = None
+        if self.is_where_expression:
+            self.where_list_predicate_expression = ListPredicateExpression(self.where_add_subtract_expression)
+        else:
+            self.list_predicate_expression = ListPredicateExpression(self.add_subtract_expression)
 
     def enterOC_NullPredicateExpression(self, ctx: s_cypherParser.OC_NullPredicateExpressionContext):
         is_null = True
         if ctx.IS() and ctx.NOT() and ctx.NULL() is not None:
             is_null = False
-        self.null_predicate_expression = NullPredicateExpression(is_null)
-
-    def exitOC_ListPredicateExpression(self, ctx: s_cypherParser.OC_ListPredicateExpressionContext):
-        # add_or_subtract_expression: AddSubtractExpression = None
-        self.list_predicate_expression = ListPredicateExpression(self.add_subtract_expression)
-
-    def exitS_TimePredicateExpression(self, ctx: s_cypherParser.S_TimePredicateExpressionContext):
-        # time_operation: str,
-        # add_or_subtract_expression: AddSubtractExpression = None
-        time_operation = ''
-        if ctx.DURING() is not None and ctx.OVERLAPS() is None:
-            time_operation = 'DURING'
-        elif ctx.DURING() is None and ctx.OVERLAPS() is not None:
-            time_operation = 'OVERLAPS'
+        if self.is_where_expression:
+            self.where_null_predicate_expression = NullPredicateExpression(is_null)
         else:
-            raise FormatError("The time predicate expression must have the operation DURING or OVERLAPS.")
-        add_or_subtract_expression = self.add_subtract_expression
-        self.time_predicate_expression = TimePredicateExpression(time_operation, add_or_subtract_expression)
-
-    def exitOC_StringPredicateExpression(self, ctx: s_cypherParser.OC_StringPredicateExpressionContext):
-        # string_operation: str,
-        # add_or_subtract_expression: AddSubtractExpression = None
-        string_operation = ''
-        if ctx.STARTS() and ctx.WITH() is not None:
-            string_operation = 'STARTS WITH'
-        elif ctx.ENDS() and ctx.WITH() is not None:
-            string_operation = 'ENDS WITH'
-        elif ctx.CONTAINS() is not None:
-            string_operation = 'CONTAINS'
-        else:
-            raise FormatError("There must have an operation among 'STARTS WITH','ENDS WITH' and 'CONTAINS'.")
-        add_or_subtract_expression = self.add_subtract_expression
-        self.string_predicate_expression = StringPredicateExpression(string_operation, add_or_subtract_expression)
+            self.null_predicate_expression = NullPredicateExpression(is_null)
 
     def exitOC_AddOrSubtractExpression(self, ctx: s_cypherParser.OC_AddOrSubtractExpressionContext):
         # multiply_divide_expressions: List[MultiplyDivideExpression],
         # add_subtract_operations: List[str] = None
-        multiply_divide_expressions = self.multiply_divide_expressions
-        self.multiply_divide_expressions = []  # 退出时清空，避免重复记录
-        # 获取加减运算符
-        add_subtract_operations = self.operations
-        self.operations = []  # 退出时清空
-        if '(' or ')' in ctx.getText():
-            new_operations_list = []
-        # operations = ['+', '-']
-        # add_subtract_operations = self.get_operations(ctx.getText(), operations)
-        self.add_subtract_expression = AddSubtractExpression(multiply_divide_expressions, add_subtract_operations)
+        if self.is_where_expression:
+            # 获取加减运算符
+            where_new_operations_list = self.where_operations
+            self.where_operations = []  # 退出时清空
+            # 暂时解决Atom运算符不匹配问题
+            if '(' or ')' in ctx.getText():
+                where_new_operations_list = []
+            where_add_subtract_operations = None
+            if len(where_new_operations_list) > 0:
+                where_add_subtract_operations = where_new_operations_list
+            where_multiply_divide_expressions = self.where_multiply_divide_expressions
+            self.where_multiply_divide_expressions = []  # 退出时清空，避免重复记录
+            self.where_add_subtract_expression = AddSubtractExpression(where_multiply_divide_expressions, where_add_subtract_operations)
+        else:
+            # 获取加减运算符
+            new_operations_list = self.operations
+            self.operations = []  # 退出时清空
+            # 暂时解决Atom运算符不匹配问题
+            if '(' or ')' in ctx.getText():
+                new_operations_list = []
+            add_subtract_operations = None
+            if len(new_operations_list) > 0:
+                add_subtract_operations = new_operations_list
+            multiply_divide_expressions = self.multiply_divide_expressions
+            self.multiply_divide_expressions = []  # 退出时清空，避免重复记录
+            self.add_subtract_expression = AddSubtractExpression(multiply_divide_expressions, add_subtract_operations)
 
     def exitOC_MultiplyDivideModuloExpression(self, ctx: s_cypherParser.OC_MultiplyDivideModuloExpressionContext):
         # power_expressions: List[PowerExpression],
         # multiply_divide_operations: List[str] = None
-        power_expressions = self.power_expressions
-        self.power_expressions = []  # 退出时清空，避免重复记录
-        # 获取乘除模运算符
-        # operations = ['*', '/', '%']
-        # new_operations_list = self.get_operations(ctx.getText(), operations)
-        new_operations_list = self.operations
-        self.operations = []  # 退出时清空
-        if '(' or ')' in ctx.getText():
-            new_operations_list = []
-        multiply_divide_operations = None
-        if len(new_operations_list) > 0:
-            multiply_divide_operations = new_operations_list
-        self.multiply_divide_expressions.append(MultiplyDivideExpression(power_expressions, multiply_divide_operations))
+        if self.is_where_expression:
+            # 获取乘除模运算符
+            where_new_operations_list = self.where_operations
+            self.where_operations = []  # 退出时清空
+            if '(' or ')' in ctx.getText():
+                where_new_operations_list = []
+            where_multiply_divide_operations = None
+            if len(where_new_operations_list) > 0:
+                where_multiply_divide_operations = where_new_operations_list
+            where_power_expressions = self.where_power_expressions
+            self.where_power_expressions = []  # 退出时清空，避免重复记录
+            self.where_multiply_divide_expressions.append(MultiplyDivideExpression(where_power_expressions, where_multiply_divide_operations))
+        else:
+            # 获取乘除模运算符
+            new_operations_list = self.operations
+            self.operations = []  # 退出时清空
+            if '(' or ')' in ctx.getText():
+                new_operations_list = []
+            multiply_divide_operations = None
+            if len(new_operations_list) > 0:
+                multiply_divide_operations = new_operations_list
+            power_expressions = self.power_expressions
+            self.power_expressions = []  # 退出时清空，避免重复记录
+            self.multiply_divide_expressions.append(MultiplyDivideExpression(power_expressions, multiply_divide_operations))
 
     def exitOC_PowerOfExpression(self, ctx: s_cypherParser.OC_PowerOfExpressionContext):
         # list_index_expressions: List[ListIndexExpression]
-        new_power_expression = PowerExpression(self.list_index_expressions)
-        # if new_power_expression not in self.power_expressions:
-        self.power_expressions.append(new_power_expression)
-        self.list_index_expressions = []  # 退出时清空，避免重复记录
+        if self.is_where_expression:
+            where_new_power_expression = PowerExpression(self.where_list_index_expressions)
+            self.where_power_expressions.append(where_new_power_expression)
+            self.where_list_index_expressions = []  # 退出时清空，避免重复记录
+        else:
+            new_power_expression = PowerExpression(self.list_index_expressions)
+            self.power_expressions.append(new_power_expression)
+            self.list_index_expressions = []  # 退出时清空，避免重复记录
 
     def exitOC_UnaryAddOrSubtractExpression(self, ctx: s_cypherParser.OC_UnaryAddOrSubtractExpressionContext):
         # 最后要返回的ListIndexExpression的参数如下
@@ -722,54 +877,79 @@ class SCypherWalker(s_cypherListener):
         is_positive = True
         if '-' in ctx.getText():
             is_positive = False
-        principal_expression = None
-        if self.properties_labels_expression is not None:
-            principal_expression = self.properties_labels_expression
-        elif self.AtT_expression is not None:
-            principal_expression = self.AtT_expression
-        index_expressions = self.index_expressions
-        self.index_expressions = []  # 退出时清空，避免重复记录
-        self.list_index_expressions.append(ListIndexExpression(principal_expression, is_positive, index_expressions))
+        if self.is_where_expression:
+            where_principal_expression = None
+            if self.where_properties_labels_expression is not None:
+                where_principal_expression = self.where_properties_labels_expression
+                self.where_properties_labels_expression = None
+            elif self.where_AtT_expression is not None:
+                where_principal_expression = self.where_AtT_expression
+                self.where_AtT_expression = None
+            where_index_expressions = self.where_index_expressions
+            self.where_index_expressions = []  # 退出时清空，避免重复记录
+            self.where_list_index_expressions.append(ListIndexExpression(where_principal_expression, is_positive, where_index_expressions))
+        else:
+            principal_expression = None
+            if self.properties_labels_expression is not None:
+                principal_expression = self.properties_labels_expression
+                self.properties_labels_expression = None
+            elif self.AtT_expression is not None:
+                principal_expression = self.AtT_expression
+                self.AtT_expression = None
+            index_expressions = self.index_expressions
+            self.index_expressions = []  # 退出时清空，避免重复记录
+            self.list_index_expressions.append(ListIndexExpression(principal_expression, is_positive, index_expressions))
 
     # 获取单个的IndexExpression
-    def exitOC_SingleIndexExpression(self, ctx: s_cypherParser.OC_SingleIndexExpressionContext):
+    def exitS_SingleIndexExpression(self, ctx: s_cypherParser.S_SingleIndexExpressionContext):
         # left_expression,
         # right_expression=None
-        left_expression = Expression(ctx.oC_Expression().getText())
-        # left_expression = self.expression
+        left_expression = self.left_expression
+        self.left_expression = None  # 退出置空
         index_expression = IndexExpression(left_expression, None)
-        self.index_expressions.append(index_expression)
+        if self.is_where_expression:
+            self.where_index_expressions.append(index_expression)
+        else:
+            self.index_expressions.append(index_expression)
 
     # 获取成对的IndexExpression
-    def exitOC_DoubleIndexExpression(self, ctx: s_cypherParser.OC_DoubleIndexExpressionContext):
+    def exitS_DoubleIndexExpression(self, ctx: s_cypherParser.S_DoubleIndexExpressionContext):
         # left_expression,
         # right_expression=None
-        left_expression = Expression(ctx.oC_Expression().getText())
-        right_expression = Expression(ctx.oC_Expression().getText())
+        left_expression = self.left_expression
+        self.left_expression = None  # 退出置空
+        right_expression = self.right_expression
+        self.right_expression = None  # 退出置空
         index_expression = IndexExpression(left_expression, right_expression)
         self.index_expressions.append(index_expression)
 
-    def enterOC_PropertyOrLabelsExpression(self, ctx: s_cypherParser.OC_PropertyOrLabelsExpressionContext):
+    def enterS_LeftExpression(self, ctx:s_cypherParser.S_LeftExpressionContext):
+        self.is_where_expression = False
+
+    def exitS_LeftExpression(self, ctx: s_cypherParser.S_LeftExpressionContext):
+        self.left_expression = self.expression
+        self.is_where_expression = True
+
+    def enterS_RightExpression(self, ctx: s_cypherParser.S_RightExpressionContext):
+        self.is_where_expression = False
+
+    def exitS_RightExpression(self, ctx: s_cypherParser.S_RightExpressionContext):
+        self.right_expression = self.expression
+        self.is_where_expression = True
+
+    def exitOC_PropertyOrLabelsExpression(self, ctx: s_cypherParser.OC_PropertyOrLabelsExpressionContext):
         # atom: Atom,
         # property_chains: List[str] = None,
         # labels: List[str] = None
         atom = Atom(ctx.oC_Atom().getText())
-        property_chains = ctx.oC_PropertyLookup()
-        property_chains_list = []
-        if isinstance(property_chains, list):
-            for property_chain in property_chains:
-                property_chains_list.append(property_chain.getText().lstrip('.'))
+        property_chains_list = self.property_look_up_list
+        self.property_look_up_list = []  # 退出清空
+        labels_list = self.node_labels
+        self.node_labels = []  # 退出清空
+        if self.is_where_expression:
+            self.where_properties_labels_expression = PropertiesLabelsExpression(atom, property_chains_list, labels_list)
         else:
-            property_chains_list.append(property_chains.getText().lstrip('.'))
-        labels = ctx.oC_NodeLabels()
-        labels_list = []
-        if labels is not None:
-            if isinstance(labels, list):
-                for label in labels:
-                    labels_list.append(label.getText())
-            else:
-                labels_list.append(labels.getText())
-        self.properties_labels_expression = PropertiesLabelsExpression(atom, property_chains_list, labels_list)
+            self.properties_labels_expression = PropertiesLabelsExpression(atom, property_chains_list, labels_list)
 
     def exitS_AtTExpression(self, ctx: s_cypherParser.S_AtTExpressionContext):
         # atom: Atom,
@@ -786,7 +966,10 @@ class SCypherWalker(s_cypherListener):
         # 获取时间属性
         time_property_chains = self.property_look_up_time_list
         self.property_look_up_time_list = []  # 退出清空
-        self.AtT_expression = AtTExpression(atom, property_chains, is_value, time_property_chains)
+        if self.is_where_expression:
+            self.where_AtT_expression = AtTExpression(atom, property_chains, is_value, time_property_chains)
+        else:
+            self.AtT_expression = AtTExpression(atom, property_chains, is_value, time_property_chains)
 
     def exitOC_PropertyLookup(self, ctx: s_cypherParser.OC_PropertyLookupContext):
         self.property_look_up_list.append(ctx.oC_PropertyKeyName().getText())
@@ -821,6 +1004,9 @@ class SCypherWalker(s_cypherListener):
         self.delete_clause = DeleteClause(self.delete_items)
         self.delete_items = []  # 退出时清空，避免重复记录
 
+    def enterS_DeleteItem(self, ctx: s_cypherParser.S_DeleteItemContext):
+        self.is_where_expression = False
+
     def exitS_DeleteItem(self, ctx: s_cypherParser.S_DeleteItemContext):
         # expression: Expression,
         # property_name: str = None,
@@ -833,11 +1019,15 @@ class SCypherWalker(s_cypherListener):
         if ctx.PoundValue() is not None:
             is_value = True
         self.delete_items.append(DeleteItem(expression, property_name, is_value))
+        self.is_where_expression = True
 
     def exitOC_Set(self, ctx: s_cypherParser.OC_SetContext):
         # set_items: List[SetItem]
         self.set_clause = SetClause(self.set_items)
         self.set_items = []  # 退出清空
+
+    def enterOC_SetItem(self, ctx: s_cypherParser.OC_SetItemContext):
+        self.is_where_expression = False
 
     def exitOC_SetItem(self, ctx: s_cypherParser.OC_SetItemContext):
         # 设置运算符
@@ -892,6 +1082,7 @@ class SCypherWalker(s_cypherListener):
         self.set_items.append(
             SetItem(operator, object_, labels, object_interval, property_variable, property_interval, value_interval,
                     value_expression))
+        self.is_where_expression = True
 
     def exitOC_Remove(self, ctx: s_cypherParser.OC_RemoveContext):
         # object_variable: str | Atom,
@@ -919,6 +1110,9 @@ class SCypherWalker(s_cypherListener):
         self.stale_clause = StaleClause(stale_items)
         self.stale_items = []  # 退出清空
 
+    def enterS_StaleItem(self, ctx: s_cypherParser.S_StaleItemContext):
+        self.is_where_expression = False
+
     def exitS_StaleItem(self, ctx: s_cypherParser.S_StaleItemContext):
         expression = self.expression
         property_name = None
@@ -928,6 +1122,7 @@ class SCypherWalker(s_cypherListener):
         if ctx.PoundValue() is not None:
             is_value = True
         self.stale_items.append(DeleteItem(expression, property_name, is_value))
+        self.is_where_expression = True
 
     # 时间窗口限定
     def exitS_TimeWindowLimit(self, ctx: s_cypherParser.S_TimeWindowLimitContext):
@@ -938,12 +1133,20 @@ class SCypherWalker(s_cypherListener):
             self.time_window_limit_clause = TimeWindowLimitClause(self.scope_clause)
 
     def enterS_Snapshot(self, ctx: s_cypherParser.S_SnapshotContext):
+        self.is_where_expression = False
+
+    def exitS_Snapshot(self, ctx:s_cypherParser.S_SnapshotContext):
         # time_point: Expression
         self.snapshot_clause = SnapshotClause(self.expression)
+        self.is_where_expression = True
 
     def enterS_Scope(self, ctx: s_cypherParser.S_ScopeContext):
+        self.is_where_expression = False
+
+    def exitS_Scope(self, ctx:s_cypherParser.S_ScopeContext):
         # interval: Expression
         self.scope_clause = ScopeClause(self.expression)
+        self.is_where_expression = True
 
     def exitOC_Atom(self, ctx: s_cypherParser.OC_AtomContext):
         pass

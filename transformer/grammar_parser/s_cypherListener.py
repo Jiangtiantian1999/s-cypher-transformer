@@ -260,21 +260,39 @@ class s_cypherListener(ParseTreeListener):
         pass
 
 
-    # Enter a parse tree produced by s_cypherParser#oC_SingleIndexExpression.
-    def enterOC_SingleIndexExpression(self, ctx:s_cypherParser.OC_SingleIndexExpressionContext):
+    # Enter a parse tree produced by s_cypherParser#s_SingleIndexExpression.
+    def enterS_SingleIndexExpression(self, ctx:s_cypherParser.S_SingleIndexExpressionContext):
         pass
 
-    # Exit a parse tree produced by s_cypherParser#oC_SingleIndexExpression.
-    def exitOC_SingleIndexExpression(self, ctx:s_cypherParser.OC_SingleIndexExpressionContext):
+    # Exit a parse tree produced by s_cypherParser#s_SingleIndexExpression.
+    def exitS_SingleIndexExpression(self, ctx:s_cypherParser.S_SingleIndexExpressionContext):
         pass
 
 
-    # Enter a parse tree produced by s_cypherParser#oC_DoubleIndexExpression.
-    def enterOC_DoubleIndexExpression(self, ctx:s_cypherParser.OC_DoubleIndexExpressionContext):
+    # Enter a parse tree produced by s_cypherParser#s_DoubleIndexExpression.
+    def enterS_DoubleIndexExpression(self, ctx:s_cypherParser.S_DoubleIndexExpressionContext):
         pass
 
-    # Exit a parse tree produced by s_cypherParser#oC_DoubleIndexExpression.
-    def exitOC_DoubleIndexExpression(self, ctx:s_cypherParser.OC_DoubleIndexExpressionContext):
+    # Exit a parse tree produced by s_cypherParser#s_DoubleIndexExpression.
+    def exitS_DoubleIndexExpression(self, ctx:s_cypherParser.S_DoubleIndexExpressionContext):
+        pass
+
+
+    # Enter a parse tree produced by s_cypherParser#s_LeftExpression.
+    def enterS_LeftExpression(self, ctx:s_cypherParser.S_LeftExpressionContext):
+        pass
+
+    # Exit a parse tree produced by s_cypherParser#s_LeftExpression.
+    def exitS_LeftExpression(self, ctx:s_cypherParser.S_LeftExpressionContext):
+        pass
+
+
+    # Enter a parse tree produced by s_cypherParser#s_RightExpression.
+    def enterS_RightExpression(self, ctx:s_cypherParser.S_RightExpressionContext):
+        pass
+
+    # Exit a parse tree produced by s_cypherParser#s_RightExpression.
+    def exitS_RightExpression(self, ctx:s_cypherParser.S_RightExpressionContext):
         pass
 
 
@@ -608,6 +626,15 @@ class s_cypherListener(ParseTreeListener):
 
     # Exit a parse tree produced by s_cypherParser#oC_Where.
     def exitOC_Where(self, ctx:s_cypherParser.OC_WhereContext):
+        pass
+
+
+    # Enter a parse tree produced by s_cypherParser#s_WhereExpression.
+    def enterS_WhereExpression(self, ctx:s_cypherParser.S_WhereExpressionContext):
+        pass
+
+    # Exit a parse tree produced by s_cypherParser#s_WhereExpression.
+    def exitS_WhereExpression(self, ctx:s_cypherParser.S_WhereExpressionContext):
         pass
 
 
