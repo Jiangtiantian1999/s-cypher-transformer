@@ -129,6 +129,7 @@ class SCypherWalker(s_cypherListener):
         self.left_expression = None
         self.right_expression = None
         self.map_key_values = dict()
+        self.integer_literals = []
 
     def exitOC_Query(self, ctx: s_cypherParser.OC_QueryContext):
         if ctx.oC_RegularQuery():
@@ -407,7 +408,6 @@ class SCypherWalker(s_cypherListener):
         self.time_point_literals = []  # 退出清空
 
     def exitS_TimePointLiteral(self, ctx: s_cypherParser.S_TimePointLiteralContext):
-        print("exit timepoint")
         if self.map_literal is not None:
             self.time_point_literals.append(TimePointLiteral(self.map_literal))
         else:
@@ -446,22 +446,29 @@ class SCypherWalker(s_cypherListener):
 
     def exitOC_RangeLiteral(self, ctx: s_cypherParser.OC_RangeLiteralContext):
         length_tuple = tuple()
-        if ctx.oC_IntegerLiteral() is not None:
-            lengths = ctx.oC_IntegerLiteral()
+        lengths = self.integer_literals
+        self.integer_literals = []  # 退出清空
+        # 没有指名长度时设为None，例如，
+        if len(lengths) == 2:
             # 左右区间都有
-            if len(lengths) == 2:
-                for length in lengths:
-                    length_tuple = length_tuple + (int(length.getText()),)
-            elif len(lengths) == 1:
-                if '*..' or '* ..' in ctx.getText():
-                    length_tuple = (None, int(lengths[0].getText()))
-                else:
-                    length_tuple = (int(lengths[0].getText()), None)
+            length_tuple = (int(lengths[0]), int(lengths[1]))
+        elif len(lengths) == 1:
+            if '*..' in ctx.getText() or '* ..' in ctx.getText():
+                # 只有右区间*..2 -> (None, 2)
+                length_tuple = (None, int(lengths[0]))
+            # 只有左区间
+            elif '*' in ctx.getText() and '..' in ctx.getText():
+                # *2.. -> (2, None)
+                length_tuple = (int(lengths[0]), None)
             else:
-                length_tuple = (None, None)
+                length_tuple = (int(lengths[0]), int(lengths[0]))
         else:
+            # * -> (None, None)
             length_tuple = (None, None)
         self.rel_length_range = length_tuple
+
+    def exitOC_IntegerLiteral(self, ctx: s_cypherParser.OC_IntegerLiteralContext):
+        self.integer_literals.append(ctx.getText())
 
     def exitOC_RelTypeName(self, ctx: s_cypherParser.OC_RelTypeNameContext):
         self.rel_type_names.append(ctx.getText())
