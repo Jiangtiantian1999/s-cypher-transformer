@@ -57,7 +57,7 @@ class CypherGenerator:
         if input_string != "":
             call_string = call_string + '(' + input_string + ')'
         if call_clause.yield_clause:
-            call_string = call_string + self.convert_yield_clause(call_clause.yield_clause)
+            call_string = call_string + '\n' + self.convert_yield_clause(call_clause.yield_clause)
         return call_string
 
     def convert_yield_clause(self, yield_clause: YieldClause) -> str:
@@ -172,7 +172,10 @@ class CypherGenerator:
                             call_string = call_string + " and "
                         call_string = call_string + interval_condition
                 # 限制路径的开始节点和结束节点
-                parameters_string = pattern.path.nodes[0].variable + ", " + pattern.path.nodes[1].variable
+                if pattern.path.edges[0].direction == SEdge.LEFT:
+                    parameters_string = pattern.path.nodes[1].variable + ", " + pattern.path.nodes[0].variable
+                else:
+                    parameters_string = pattern.path.nodes[0].variable + ", " + pattern.path.nodes[1].variable
                 # 限制路径的标签
                 if len(pattern.path.edges[0].labels) != 0:
                     parameters_string = parameters_string + ", " + str(pattern.path.edges[0].labels)
@@ -213,7 +216,7 @@ class CypherGenerator:
 
     def convert_where_clause(self, where_expression: Expression = None, interval_conditions: List[str] = None) -> str:
         if where_expression is None and (interval_conditions is None or len(interval_conditions) == 0):
-            raise ValueError("The where_expression and the interval_conditions can't be None at the same time.")
+            raise ValueError("The where expression and the interval conditions can't be None at the same time.")
         where_string = "WHERE "
         if where_expression:
             expression_string = where_expression.convert()
