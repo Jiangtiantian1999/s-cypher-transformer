@@ -291,16 +291,13 @@ class CypherGenerator:
         node_pattern = '(' + node_pattern + ')'
 
         # 节点的有效时间限制
-        if node.interval is None and time_window is None:
-            interval_condition = "scypher.limitInterval(" + node.variable + ")"
-        elif node.interval is not None and time_window is None:
+        if node.interval is not None:
             interval_condition = "scypher.limitInterval(" + node.variable + ", scypher.interval(" + \
                                  node.interval.interval_from.convert() + "," + node.interval.interval_to.convert() + "))"
-        elif node.interval is None and time_window is not None:
+        elif time_window is not None:
             interval_condition = "scypher.limitInterval(" + node.variable + ", null, " + time_window.convert() + ")"
         else:
-            interval_condition = "scypher.limitInterval(" + node.variable + ", scypher.interval(" + \
-                                 node.interval.interval_from.convert() + "," + node.interval.interval_to.convert() + "), " + time_window.convert() + ")"
+            interval_condition = "scypher.limitInterval(" + node.variable + ")"
 
         return node_pattern, interval_condition
 
@@ -339,16 +336,13 @@ class CypherGenerator:
             edge_pattern = edge_pattern + '>'
 
         # 边的有效时间限制
-        if edge.interval is None and time_window is None:
-            interval_condition = "scypher.limitInterval(" + edge.variable + ')'
-        elif edge.interval is not None and time_window is None:
+        if edge.interval is not None:
             interval_condition = "scypher.limitInterval(" + edge.variable + ", scypher.interval(" + \
                                  edge.interval.interval_from.convert() + "," + edge.interval.interval_to.convert() + "))"
-        elif edge.interval is None and time_window is not None:
-            interval_condition = "scypher.limitInterval(" + edge.variable + ", null, " + time_window.convert() + ')'
+        elif time_window is not None:
+            interval_condition = "scypher.limitInterval(" + edge.variable + ", " + time_window.convert() + ')'
         else:
-            interval_condition = "scypher.limitInterval(" + edge.variable + ", scypher.interval(" + \
-                                 edge.interval.interval_from.convert() + ',' + edge.interval.interval_to.convert() + "), " + time_window.convert() + ')'
+            interval_condition = "scypher.limitInterval(" + edge.variable + ')'
 
         return edge_pattern, interval_condition
 

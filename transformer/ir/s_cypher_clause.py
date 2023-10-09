@@ -7,7 +7,7 @@ class OrderByClause:
     # dict[排序的元素，排序方式
     def __init__(self, sort_items: dict[Expression, str]):
         if len(sort_items) == 0:
-            raise ValueError("The sort_items can't be empty.")
+            raise ValueError("The sort items can't be empty.")
         for item in sort_items.values():
             if item.upper() not in ["", "ASCENDING", "ASC", "DESCENDING", "DESC"]:
                 raise ValueError("Uncertain sorting method.")

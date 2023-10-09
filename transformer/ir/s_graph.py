@@ -75,9 +75,9 @@ class SEdge:
     RIGHT = 'RIGHT'
     UNDIRECTED = 'UNDIRECTED'
 
-    def __init__(self, direction, variable: str = None, labels: List[str] = None, length: Tuple[int, int] = (1, 1),
+    def __init__(self, direction: str, variable: str = None, labels: List[str] = None, length: Tuple[int, int] = (1, 1),
                  interval: AtTElement = None, properties: dict = None):
-        if direction not in [self.LEFT, self.RIGHT, self.UNDIRECTED]:
+        if direction.upper() not in [self.LEFT, self.RIGHT, self.UNDIRECTED]:
             raise ValueError("Direction of edges must be 'LEFT', 'RIGHT' or 'UNDIRECTED'.")
         if length[0] is not None and length[1] is not None and (length[0] < 0 or length[0] > length[1]):
             raise ValueError("The length range of edge is incorrect.")
