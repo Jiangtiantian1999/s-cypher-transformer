@@ -66,6 +66,8 @@ class UnwindClause:
 
 class YieldClause:
     def __init__(self, yield_items: List[YieldItem], where_expression: Expression = None):
+        if len(yield_items) == 0:
+            raise ValueError("The yield items can't be empty.")
         self.yield_items = yield_items
         self.where_expression = where_expression
 
@@ -155,7 +157,7 @@ class MergeClause:
 
 
 class RemoveClause:
-    def __init__(self, object_variable: str | Atom, property_variable: str = None, labels: List[str] = None):
+    def __init__(self, object_variable: Atom, property_variable: str = None, labels: List[str] = None):
         if property_variable is None and labels is None:
             raise ValueError("Only can remove the labels or properties of object nodes.")
         self.object_variable = object_variable
@@ -184,8 +186,8 @@ class UpdatingClause:
 class SingleQueryClause:
     def __init__(self, reading_clauses: List[ReadingClause] = None, updating_clauses: List[UpdatingClause] = None,
                  return_clause: ReturnClause = None):
-        if updating_clauses is None and return_clause is None:
-            raise ClauseError("The updating clauses and the return_clause can't be None at the same time.")
+        if (updating_clauses is None or len(updating_clauses) == 0) and return_clause is None:
+            raise ClauseError("The updating clauses and the return_clause can't be empty at the same time.")
         if reading_clauses is None:
             reading_clauses = []
         self.reading_clauses = reading_clauses
@@ -207,6 +209,8 @@ class WithClause:
     def __init__(self, projection_items: List[ProjectionItem], is_distinct: bool = False,
                  order_by_clause: OrderByClause = None, skip_expression: Expression = None,
                  limit_expression: Expression = None):
+        if len(projection_items) == 0:
+            raise ValueError("The projection items can't be empty.")
         self.projection_items = projection_items
         self.is_distinct = is_distinct
         self.order_by_clause = order_by_clause
@@ -256,6 +260,8 @@ class MultiQueryClause:
 # 复合查询（用UNION或UNION ALL连接）
 class UnionQueryClause:
     def __init__(self, multi_query_clauses: List[MultiQueryClause], is_all: List[bool] = None):
+        if len(multi_query_clauses) == 0:
+            raise ValueError("The multi-query clauses can't be empty.")
         if is_all is None:
             is_all = []
         if len(multi_query_clauses) != len(is_all) + 1:
