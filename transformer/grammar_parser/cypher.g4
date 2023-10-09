@@ -560,7 +560,10 @@ oC_ListLiteral
            :  '[' SP? ( oC_Expression SP? ( ',' SP? oC_Expression SP? )* )? ']' ;
 
 oC_MapLiteral
-          :  '{' SP? ( oC_PropertyKeyName SP? ':' SP? oC_Expression SP? ( ',' SP? oC_PropertyKeyName SP? ':' SP? oC_Expression SP? )* )? '}' ;
+          :  '{' SP? ( s_MapKeyValue ( ',' SP? s_MapKeyValue )* )? '}' ;
+
+s_MapKeyValue
+          :  oC_PropertyKeyName SP? ':' SP? oC_Expression SP? ;
 
 oC_PropertyKeyName
                :  oC_SchemaName ;

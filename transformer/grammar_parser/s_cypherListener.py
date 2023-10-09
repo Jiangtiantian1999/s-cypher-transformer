@@ -1358,6 +1358,15 @@ class s_cypherListener(ParseTreeListener):
         pass
 
 
+    # Enter a parse tree produced by s_cypherParser#s_MapKeyValue.
+    def enterS_MapKeyValue(self, ctx:s_cypherParser.S_MapKeyValueContext):
+        pass
+
+    # Exit a parse tree produced by s_cypherParser#s_MapKeyValue.
+    def exitS_MapKeyValue(self, ctx:s_cypherParser.S_MapKeyValueContext):
+        pass
+
+
     # Enter a parse tree produced by s_cypherParser#oC_PropertyKeyName.
     def enterOC_PropertyKeyName(self, ctx:s_cypherParser.OC_PropertyKeyNameContext):
         pass

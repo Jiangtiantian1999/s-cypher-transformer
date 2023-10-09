@@ -4,7 +4,6 @@ from transformer.ir.s_cypher_clause import *
 from transformer.ir.s_graph import *
 from transformer.ir.s_expression import *
 from transformer.exceptions.s_exception import *
-import re
 
 
 # This class records important information about the query
@@ -20,8 +19,9 @@ class SCypherWalker(s_cypherListener):
 
         # time
         self.at_time_clause = None
-        # self.interval = None
         self.at_t_element = None
+        self.time_point_literals = []
+        self.map_literal = None
 
         # pattern
         self.patterns = []
@@ -128,6 +128,7 @@ class SCypherWalker(s_cypherListener):
         self.operations = []
         self.left_expression = None
         self.right_expression = None
+        self.map_key_values = dict()
 
     def exitOC_Query(self, ctx: s_cypherParser.OC_QueryContext):
         if ctx.oC_RegularQuery():
@@ -376,7 +377,7 @@ class SCypherWalker(s_cypherListener):
         self.value_node_list = []
 
     # 获取属性节点
-    def enterS_PropertyNode(self, ctx: s_cypherParser.S_PropertyNodeContext):
+    def exitS_PropertyNode(self, ctx: s_cypherParser.S_PropertyNodeContext):
         # 获取属性节点内容
         property_content = ctx.oC_PropertyKeyName().getText()  # 属性节点内容
         # 获取属性节点的时间
@@ -396,21 +397,37 @@ class SCypherWalker(s_cypherListener):
         self.value_node_list.append(ValueNode(value_content, None, value_interval))
 
     # 获取时间
-    def enterS_AtTElement(self, ctx: s_cypherParser.S_AtTElementContext):
-        time_list = ctx.s_TimePointLiteral()
-        now = ctx.NOW()
-        if len(time_list) == 2 and now is None:
-            interval_from = time_list[0].getText().strip('"')
-            interval_to = time_list[1].getText().strip('"')
-        elif len(time_list) == 1 and now is not None:
-            interval_from = time_list[0].getText().strip('"')
-            interval_to = ctx.NOW().getText().strip('"')
+    def exitS_AtTElement(self, ctx: s_cypherParser.S_AtTElementContext):
+        print(ctx.NOW().getText())
+        if len(self.time_point_literals) == 2:
+            self.at_t_element = AtTElement(self.time_point_literals[0], self.time_point_literals[1])
+        elif len(self.time_point_literals) == 1 and ctx.NOW() is not None:
+            self.at_t_element = AtTElement(self.time_point_literals[0], TimePointLiteral(ctx.NOW().getText().strip('"')))
         else:
             raise FormatError("Invalid time format!")
-        if interval_to == "NOW":
-            self.at_t_element = AtTElement(TimePointLiteral(interval_from), TimePointLiteral("NOW"))
+        self.time_point_literals = []  # 退出清空
+
+    def exitS_TimePointLiteral(self, ctx: s_cypherParser.S_TimePointLiteralContext):
+        print("exit timepoint")
+        if self.map_literal is not None:
+            self.time_point_literals.append(TimePointLiteral(self.map_literal))
         else:
-            self.at_t_element = AtTElement(TimePointLiteral(interval_from), TimePointLiteral(interval_to))
+            self.time_point_literals.append(TimePointLiteral(ctx.StringLiteral().getText().strip('"')))
+
+    def exitOC_MapLiteral(self, ctx: s_cypherParser.OC_MapLiteralContext):
+        # keys_values: dict
+        # key_values为dict[str, Expression]类型
+        self.map_literal = MapLiteral(self.map_key_values)
+        self.map_key_values = dict()  # 退出清空
+
+    def exitS_MapKeyValue(self, ctx: s_cypherParser.S_MapKeyValueContext):
+        # oC_PropertyKeyName SP? ':' SP? oC_Expression SP?
+        property_key_name = None
+        if ctx.oC_PropertyKeyName() is not None:
+            property_key_name = ctx.oC_PropertyKeyName().getText()
+        expression = self.expression
+        if property_key_name is not None:
+            self.map_key_values[property_key_name] = expression
 
     def exitOC_RelationshipDetail(self, ctx: s_cypherParser.OC_RelationshipDetailContext):
         variable = None
@@ -1050,23 +1067,29 @@ class SCypherWalker(s_cypherListener):
             object_interval = self.getAtTElement(ctx.s_AtTElement().getText())
         # 设置属性节点的有效时间
         property_interval = None
-        if ctx.s_SetPropertyItemOne().s_AtTElement() is not None:
-            property_interval = self.getAtTElement(ctx.s_SetPropertyItemOne().s_AtTElement().getText())
-        elif ctx.s_SetPropertyItemTwo().s_AtTElement() is not None:
-            property_interval = self.getAtTElement(ctx.s_SetPropertyItemTwo().s_AtTElement().getText())
+        if ctx.s_SetPropertyItemOne() is not None:
+            if ctx.s_SetPropertyItemOne().s_AtTElement() is not None:
+                property_interval = self.getAtTElement(ctx.s_SetPropertyItemOne().s_AtTElement().getText())
+        elif ctx.s_SetPropertyItemTwo() is not None:
+            if ctx.s_SetPropertyItemTwo().s_AtTElement() is not None:
+                property_interval = self.getAtTElement(ctx.s_SetPropertyItemTwo().s_AtTElement().getText())
         # 设置值节点的有效时间
         value_interval = None
-        if ctx.s_SetValueItem().s_AtTElement() is not None:
-            value_interval = self.getAtTElement(ctx.s_SetValueItem().s_AtTElement().getText())
-        elif ctx.s_SetValueItemExpression().s_AtTElement() is not None:
-            value_interval = self.getAtTElement(ctx.s_SetValueItemExpression().s_AtTElement().getText())
+        if ctx.s_SetValueItem() is not None:
+            if ctx.s_SetValueItem().s_AtTElement() is not None:
+                value_interval = self.getAtTElement(ctx.s_SetValueItem().s_AtTElement().getText())
+        elif ctx.s_SetValueItemExpression() is not None:
+            if ctx.s_SetValueItemExpression().s_AtTElement() is not None:
+                value_interval = self.getAtTElement(ctx.s_SetValueItemExpression().s_AtTElement().getText())
         # 为属性节点名称，或者( SP? oC_PropertyLookup )+的字符串表示
         property_variable = None
-        if ctx.s_SetPropertyItemTwo().oC_PropertyKeyName() is not None:
-            property_variable = ctx.s_SetPropertyItemTwo().oC_PropertyKeyName().getText()
-        elif ctx.oC_PropertyExpression().oC_PropertyLookup() is not None:
-            property_variable = ' '.join(self.property_look_up_list)
-            self.property_look_up_list = []  # 退出清空
+        if ctx.s_SetPropertyItemTwo() is not None:
+            if ctx.s_SetPropertyItemTwo().oC_PropertyKeyName() is not None:
+                property_variable = ctx.s_SetPropertyItemTwo().oC_PropertyKeyName().getText()
+        elif ctx.oC_PropertyExpression() is not None:
+            if ctx.oC_PropertyExpression().oC_PropertyLookup() is not None:
+                property_variable = ' '.join(self.property_look_up_list)
+                self.property_look_up_list = []  # 退出清空
         self.set_items.append(
             SetItem(operator, object_, labels, object_interval, property_variable, property_interval, value_interval,
                     value_expression))
