@@ -398,7 +398,6 @@ class SCypherWalker(s_cypherListener):
 
     # 获取时间
     def exitS_AtTElement(self, ctx: s_cypherParser.S_AtTElementContext):
-        print(ctx.NOW().getText())
         if len(self.time_point_literals) == 2:
             self.at_t_element = AtTElement(self.time_point_literals[0], self.time_point_literals[1])
         elif len(self.time_point_literals) == 1 and ctx.NOW() is not None:
