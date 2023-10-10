@@ -84,6 +84,9 @@ class YieldClause:
 class CallClause:
 
     def __init__(self, procedure_name: str, input_items: List[Expression] = None, yield_clause: YieldClause = None):
+        if procedure_name in ["interval", "interval.intersection", "interval.range", "interval.elapsedTime",
+                              "timePoint"]:
+            procedure_name = "scypher." + procedure_name
         self.procedure_name = procedure_name
         if input_items is None:
             input_items = []
