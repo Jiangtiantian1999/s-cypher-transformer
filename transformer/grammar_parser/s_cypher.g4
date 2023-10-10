@@ -115,21 +115,20 @@ s_NotWhereExpression
              :  ( NOT SP? )* s_ComparisonWhereExpression ;
 
 s_ComparisonWhereExpression
-                    :  s_StringListNullPredicateWhereExpression ( SP? s_PartialComparisonWhereExpression )* ;
+                    :  s_StringListNullPredicateWhereExpression ( SP? s_ComparisonWhereOperator SP? s_StringListNullPredicateWhereExpression )* ;
 
-s_PartialComparisonWhereExpression
-                           :  ( s_operator SP? s_StringListNullPredicateWhereExpression )
-                               | ( s_operator SP? s_StringListNullPredicateWhereExpression )
-                               | ( s_operator SP? s_StringListNullPredicateWhereExpression )
-                               | ( s_operator SP? s_StringListNullPredicateWhereExpression )
-                               | ( s_operator SP? s_StringListNullPredicateWhereExpression )
-                               | ( s_operator SP? s_StringListNullPredicateWhereExpression )
-                               ;
+s_MultiplyDivideModuloWhereOperator : '*' | '/' | '%' ;
+
+s_PowerOfWhereOperator : '^' ;
+
+s_AddOrSubtractWhereOperator : '+' | '-' ;
+
+s_ComparisonWhereOperator : '=' | '<>' | '<' | '<=' | '>' | '>=' ;
 
 s_StringListNullPredicateWhereExpression : s_AddOrSubtractWhereExpression ( s_TimePredicateWhereExpression | s_StringPredicateWhereExpression | s_ListPredicateWhereExpression | s_NullPredicateWhereExpression )? ;
 
 s_AddOrSubtractWhereExpression
-                       :  s_MultiplyDivideModuloWhereExpression ( ( SP? s_operator SP? s_MultiplyDivideModuloWhereExpression ) | ( SP? s_operator SP? s_MultiplyDivideModuloWhereExpression ) )* ;
+                       :  s_MultiplyDivideModuloWhereExpression ( ( SP? s_AddOrSubtractWhereOperator SP? s_MultiplyDivideModuloWhereExpression ) | ( SP? s_AddOrSubtractWhereOperator SP? s_MultiplyDivideModuloWhereExpression ) )* ;
 
 s_TimePredicateWhereExpression : SP ( DURING | OVERLAPS ) SP s_AddOrSubtractWhereExpression ;
 
@@ -145,10 +144,10 @@ s_NullPredicateWhereExpression
                            ;
 
 s_MultiplyDivideModuloWhereExpression
-                              :  s_PowerOfWhereExpression ( ( SP? s_operator SP? s_PowerOfWhereExpression ) | ( SP? s_operator SP? s_PowerOfWhereExpression ) | ( SP? s_operator SP? s_PowerOfWhereExpression ) )* ;
+                              :  s_PowerOfWhereExpression ( ( SP? s_MultiplyDivideModuloWhereOperator SP? s_PowerOfWhereExpression ) | ( SP? s_MultiplyDivideModuloWhereOperator SP? s_PowerOfWhereExpression ) | ( SP? s_MultiplyDivideModuloWhereOperator SP? s_PowerOfWhereExpression ) )* ;
 
 s_PowerOfWhereExpression
-                 :  s_UnaryAddOrSubtractWhereExpression ( SP? s_operator SP? s_UnaryAddOrSubtractWhereExpression )* ;
+                 :  s_UnaryAddOrSubtractWhereExpression ( SP? s_PowerOfWhereOperator SP? s_UnaryAddOrSubtractWhereExpression )* ;
 
 s_UnaryAddOrSubtractWhereExpression
                             :  s_ListOperatorWhereExpression
