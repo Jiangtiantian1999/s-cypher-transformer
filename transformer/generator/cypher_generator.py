@@ -295,9 +295,9 @@ class CypherGenerator:
             interval_condition = "scypher.limitInterval(" + node.variable + ", scypher.interval(" + \
                                  node.interval.interval_from.convert() + "," + node.interval.interval_to.convert() + "))"
         elif time_window is not None:
-            interval_condition = "scypher.limitInterval(" + node.variable + ", null, " + time_window.convert() + ")"
+            interval_condition = "scypher.limitInterval(" + node.variable + ", " + time_window.convert() + ")"
         else:
-            interval_condition = "scypher.limitInterval(" + node.variable + ")"
+            interval_condition = "scypher.limitInterval(" + node.variable + ", null)"
 
         return node_pattern, interval_condition
 
@@ -342,7 +342,7 @@ class CypherGenerator:
         elif time_window is not None:
             interval_condition = "scypher.limitInterval(" + edge.variable + ", " + time_window.convert() + ')'
         else:
-            interval_condition = "scypher.limitInterval(" + edge.variable + ')'
+            interval_condition = "scypher.limitInterval(" + edge.variable + ', null)'
 
         return edge_pattern, interval_condition
 

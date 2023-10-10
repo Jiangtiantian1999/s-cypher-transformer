@@ -63,6 +63,9 @@ class ParenthesizedExpression:
 class FunctionInvocation:
     # 注意：该处expressions为List[Expression]类型，由于与Expression相互引用，故此处不写明类型。
     def __init__(self, function_name: str, is_distinct=False, expressions: List = None):
+        if function_name in ["interval", "interval.intersection", "interval.range", "interval.elapsedTime",
+                             "timePoint"]:
+            function_name = "scypher." + function_name
         self.function_name = function_name
         self.is_distinct = is_distinct
         if expressions is None:
