@@ -76,7 +76,7 @@ class FunctionInvocation:
         function_invocation_string = ""
         if self.is_distinct:
             function_invocation_string = function_invocation_string + 'DISTINCT '
-        for index, expression in self.expressions:
+        for index, expression in enumerate(self.expressions):
             if index != 0:
                 function_invocation_string = function_invocation_string + ", "
             function_invocation_string = function_invocation_string + expression.convert()
