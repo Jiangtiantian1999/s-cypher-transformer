@@ -1157,7 +1157,7 @@ class SCypherWalker(s_cypherListener):
 
     def exitS_UnaryAddOrSubtractWhereExpression(self, ctx: s_cypherParser.S_UnaryAddOrSubtractWhereExpressionContext):
         is_positive = True
-        if '-' in ctx.getText():
+        if ctx.getText()[0] == '-':
             is_positive = False
         where_principal_expression = None
         if self.where_properties_labels_expression is not None:
