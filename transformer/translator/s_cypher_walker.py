@@ -393,8 +393,11 @@ class SCypherWalker(s_cypherListener):
     # 获取对象节点
     def exitOC_NodePattern(self, ctx: s_cypherParser.OC_NodePatternContext):
         # node_content = ""  # 对象节点内容
-        node_label_list = self.node_labels  # 对象节点标签
-        self.node_labels = []  # 退出清空
+        if ctx.oC_NodeLabels() is not None:
+            node_label_list = self.node_labels  # 对象节点标签
+            self.node_labels = []  # 退出清空
+        else:
+            node_label_list = None
         interval = None  # 对象节点时间
         properties = dict()  # 对象节点属性
         variable = None
@@ -823,10 +826,16 @@ class SCypherWalker(s_cypherListener):
         # labels: List[str] = None
         atom = self.atom
         self.atom = None
-        property_chains_list = self.property_look_up_list
-        self.property_look_up_list = []  # 退出清空
-        labels_list = self.node_labels
-        self.node_labels = []  # 退出清空
+        if ctx.oC_PropertyLookup() is not None:
+            property_chains_list = self.property_look_up_list
+            self.property_look_up_list = []  # 退出清空
+        else:
+            property_chains_list = None
+        if ctx.oC_NodeLabels() is not None:
+            labels_list = self.node_labels
+            self.node_labels = []  # 退出清空
+        else:
+            labels_list = None
         self.properties_labels_expression = PropertiesLabelsExpression(atom, property_chains_list, labels_list)
 
     def exitS_AtTExpression(self, ctx: s_cypherParser.S_AtTExpressionContext):
@@ -841,11 +850,17 @@ class SCypherWalker(s_cypherListener):
         if ctx.PoundValue() is not None:
             is_value = True
         # 获取属性
-        property_chains = self.property_look_up_list
-        self.property_look_up_list = []  # 退出清空
+        if ctx.oC_PropertyLookup() is not None:
+            property_chains = self.property_look_up_list
+            self.property_look_up_list = []  # 退出清空
+        else:
+            property_chains = None
         # 获取时间属性
-        time_property_chains = self.property_look_up_time_list
-        self.property_look_up_time_list = []  # 退出清空
+        if ctx.s_PropertyLookupTime() is not None:
+            time_property_chains = self.property_look_up_time_list
+            self.property_look_up_time_list = []  # 退出清空
+        else:
+            time_property_chains = None
         self.AtT_expression = AtTExpression(atom, property_chains, is_value, time_property_chains)
 
     def exitOC_PropertyLookup(self, ctx: s_cypherParser.OC_PropertyLookupContext):
@@ -1035,10 +1050,16 @@ class SCypherWalker(s_cypherListener):
     def exitS_PropertyOrLabelsWhereExpression(self, ctx: s_cypherParser.S_PropertyOrLabelsWhereExpressionContext):
         atom = self.atom
         self.atom = None
-        property_chains_list = self.property_look_up_list
-        self.property_look_up_list = []  # 退出清空
-        labels_list = self.node_labels
-        self.node_labels = []  # 退出清空
+        if ctx.oC_PropertyLookup() is not None:
+            property_chains_list = self.property_look_up_list
+            self.property_look_up_list = []  # 退出清空
+        else:
+            property_chains_list = None
+        if ctx.oC_NodeLabels() is not None:
+            labels_list = self.node_labels
+            self.node_labels = []  # 退出清空
+        else:
+            labels_list = None
         self.where_properties_labels_expression = PropertiesLabelsExpression(atom, property_chains_list, labels_list)
 
     def exitS_AtTWhereExpression(self, ctx: s_cypherParser.S_AtTWhereExpressionContext):
