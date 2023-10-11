@@ -9,7 +9,8 @@ class OrderByClause:
         if len(sort_items) == 0:
             raise ValueError("The sort items can't be empty.")
         for item in sort_items.values():
-            if item.upper() not in ["", "ASCENDING", "ASC", "DESCENDING", "DESC"]:
+            # 若未指定排序方式，将sort_item.value设为None
+            if item and item.upper() not in ["ASCENDING", "ASC", "DESCENDING", "DESC"]:
                 raise ValueError("Uncertain sorting method.")
         self.sort_items = sort_items
 
@@ -48,20 +49,11 @@ class MatchClause:
         self.where_expression = where_expression
         self.time_window = time_window
 
-    def get_variables_dict(self) -> dict:
-        variables_dict = {}
-        for pattern in self.patterns:
-            variables_dict.update(pattern.get_variables_dict())
-        return variables_dict
-
 
 class UnwindClause:
     def __init__(self, expression: Expression, variable: str):
         self.expression = expression
         self.variable = variable
-
-    def get_variables_dict(self) -> dict:
-        return {self.variable: self}
 
 
 class YieldClause:
@@ -70,15 +62,6 @@ class YieldClause:
             raise ValueError("The yield items can't be empty.")
         self.yield_items = yield_items
         self.where_expression = where_expression
-
-    def get_variables_dict(self) -> dict:
-        variables_dict = {}
-        for yield_item in self.yield_items:
-            if yield_item.variable:
-                variables_dict[yield_item.variable] = YieldClause
-            else:
-                variables_dict[yield_item.procedure_result] = YieldClause
-        return variables_dict
 
 
 class CallClause:
@@ -93,19 +76,11 @@ class CallClause:
         self.input_items = input_items
         self.yield_clause = yield_clause
 
-    def get_variables_dict(self) -> dict:
-        if self.yield_clause:
-            return self.yield_clause.get_variables_dict()
-        return {}
-
 
 # 读查询
 class ReadingClause:
     def __init__(self, reading_clause: MatchClause | UnwindClause | CallClause):
         self.reading_clause = reading_clause
-
-    def get_variables_dict(self) -> dict:
-        return self.reading_clause.get_variables_dict()
 
 
 class CreateClause:
@@ -113,12 +88,6 @@ class CreateClause:
         if len(patterns) == 0:
             raise ValueError("The patterns can't be empty.")
         self.patterns = patterns
-
-    def get_variables_dict(self) -> dict:
-        variables_dict = {}
-        for pattern in self.patterns:
-            variables_dict.update(pattern.get_variables_dict())
-        return variables_dict
 
 
 class DeleteClause:
@@ -152,12 +121,6 @@ class MergeClause:
             actions = []
         self.actions = actions
 
-    def get_variables_dict(self) -> dict:
-        variables_dict = {}
-        for pattern in self.patterns:
-            variables_dict.update(pattern.get_variables_dict())
-        return variables_dict
-
 
 class RemoveClause:
     def __init__(self, object_variable: Atom, property_variable: str = None, labels: List[str] = None):
@@ -179,11 +142,6 @@ class UpdatingClause:
         self.update_clause = update_clause
         self.at_time_clause = at_time_clause
 
-    def get_variables_dict(self) -> dict:
-        if self.update_clause.__class__ in [CreateClause, MergeClause]:
-            return self.update_clause.get_variables_dict()
-        return {}
-
 
 # 最后的子句为return或update的查询模块，单一查询
 class SingleQueryClause:
@@ -198,14 +156,6 @@ class SingleQueryClause:
             updating_clauses = []
         self.updating_clauses = updating_clauses
         self.return_clause = return_clause
-
-    def get_variables_dict(self) -> dict:
-        variables_dict = {}
-        for reading_clause in self.reading_clauses:
-            variables_dict.update(reading_clause.get_variables_dict())
-        for updating_clause in self.updating_clauses:
-            variables_dict.update(updating_clause.get_variables_dict())
-        return variables_dict
 
 
 class WithClause:
@@ -233,14 +183,6 @@ class WithQueryClause:
             updating_clauses = []
         self.updating_clauses = updating_clauses
 
-    def get_variables_dict(self) -> dict:
-        variables_dict = {}
-        for reading_clause in self.reading_clauses:
-            variables_dict.update(reading_clause.get_variables_dict())
-        for updating_clause in self.updating_clauses:
-            variables_dict.update(updating_clause.get_variables_dict())
-        return variables_dict
-
 
 # 多个查询（用WITH子句连接）
 class MultiQueryClause:
@@ -251,13 +193,6 @@ class MultiQueryClause:
         if with_query_clauses is None:
             with_query_clauses = []
         self.with_query_clauses = with_query_clauses
-
-    def get_variables_dict(self) -> dict:
-        variables = {}
-        for with_query_clause in self.with_query_clauses:
-            variables.update(with_query_clause.get_variables_dict())
-        variables.update(self.single_query_clause.get_variables_dict())
-        return variables
 
 
 # 复合查询（用UNION或UNION ALL连接）
@@ -273,27 +208,15 @@ class UnionQueryClause:
         # 是否为union all
         self.is_all = is_all
 
-    def get_variables_dict(self) -> dict:
-        variables_dict = {}
-        for multi_query_clause in self.multi_query_clauses:
-            variables_dict.update(multi_query_clause.get_variables_dict())
-        return variables_dict
-
 
 class SnapshotClause:
     def __init__(self, time_point: Expression):
         self.time_point = time_point
 
-    def convert(self) -> str:
-        return "CALL scypher.snapshot( " + self.time_point.convert() + " )"
-
 
 class ScopeClause:
     def __init__(self, interval: Expression):
         self.interval = interval
-
-    def convert(self) -> str:
-        return "CALL scypher.scope( " + self.interval.convert() + " )"
 
 
 # 时间窗口限定
@@ -301,15 +224,7 @@ class TimeWindowLimitClause:
     def __init__(self, time_window_limit: SnapshotClause | ScopeClause):
         self.time_window_limit = time_window_limit
 
-    def convert(self) -> str:
-        return self.time_window_limit.convert()
-
 
 class SCypherClause:
     def __init__(self, query_clause: UnionQueryClause | CallClause | TimeWindowLimitClause):
         self.query_clause = query_clause
-
-    def get_variables_dict(self) -> dict:
-        if self.query_clause.__class__ in [UnionQueryClause, CallClause]:
-            return self.query_clause.get_variables_dict()
-        return {}

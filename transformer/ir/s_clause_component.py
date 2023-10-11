@@ -13,19 +13,11 @@ class TemporalPathCall:
             raise ValueError("The length of the temporal path are not matched.")
         self.path = path
 
-    def get_variables_dict(self):
-        variables_dict = {self.variable: self}
-        variables_dict.update(self.path.get_variables_dict())
-        return variables_dict
-
 
 class Pattern:
 
     def __init__(self, pattern: SPath | TemporalPathCall):
         self.pattern = pattern
-
-    def get_variables_dict(self):
-        return self.pattern.get_variables_dict()
 
 
 class ProjectionItem:

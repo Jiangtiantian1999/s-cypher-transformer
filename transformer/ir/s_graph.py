@@ -58,17 +58,6 @@ class ObjectNode(SNode):
             properties = {}
         self.properties = properties
 
-    def get_variables_dict(self) -> dict:
-        variables_dict = {}
-        if self.variable:
-            variables_dict[self.variable] = self
-        for key, value in self.properties.items():
-            if key.variable:
-                variables_dict[key.variable] = key
-            if value.variable:
-                variables_dict[value.variable] = value
-        return variables_dict
-
 
 class SEdge:
     LEFT = 'LEFT'
@@ -93,12 +82,6 @@ class SEdge:
             properties = {}
         self.properties = properties
 
-    def get_variables_dict(self) -> dict:
-        variables_dict = {}
-        if self.variable:
-            variables_dict[self.variable] = self
-        return variables_dict
-
 
 class SPath:
     def __init__(self, nodes: List[ObjectNode], edges: List[SEdge] = None, variable: str = None):
@@ -109,13 +92,3 @@ class SPath:
         self.nodes = nodes
         self.edges = edges
         self.variable = variable
-
-    def get_variables_dict(self) -> dict:
-        variables_dict = {}
-        if self.variable:
-            variables_dict = {self.variable: self}
-        for node in self.nodes:
-            variables_dict.update(node.get_variables_dict())
-        for edge in self.edges:
-            variables_dict.update(edge.get_variables_dict())
-        return variables_dict
