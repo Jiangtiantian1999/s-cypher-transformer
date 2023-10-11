@@ -49,6 +49,30 @@ s_TimeWindowLimit : s_Snapshot
                   | s_Scope
                   ;
 
+oC_InQueryCall
+           :  CALL SP oC_ExplicitProcedureInvocation ( SP? YIELD SP s_YieldItems )? ;
+
+oC_StandaloneCall
+              :  CALL SP ( oC_ExplicitProcedureInvocation | oC_ImplicitProcedureInvocation ) ( SP? YIELD SP ( '*' | s_YieldItems ) )? ;
+
+s_YieldItems
+          :  s_YieldItem ( SP? ',' SP? s_YieldItem )* ( SP? s_Where )? ;
+
+s_YieldItem
+         :  oC_ProcedureResultField ( SP AS SP oC_Variable )? ;
+
+s_WithPartQuery
+              : ( oC_ReadingClause SP? )* ( oC_UpdatingClause SP? )* s_With SP? ;
+
+s_With
+    :  WITH oC_ProjectionBody ( SP? s_Where )? ;
+
+oC_ExistentialSubquery
+                   :  EXISTS SP? '{' SP? ( oC_RegularQuery | ( oC_Pattern ( SP? s_Where )? ) ) SP? '}' ;
+
+oC_FilterExpression
+                :  oC_IdInColl ( SP? s_Where )? ;
+
 s_Snapshot : SNAPSHOT SP? oC_Expression ;
 
 s_Scope : SCOPE SP? oC_Expression ;

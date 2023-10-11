@@ -238,7 +238,7 @@ class SCypherWalker(s_cypherListener):
         self.reading_clauses = []  # 退出清空
         self.updating_clauses = []
 
-    def exitOC_With(self, ctx: s_cypherParser.OC_WithContext):
+    def exitS_With(self, ctx: s_cypherParser.S_WithContext):
         # projection_items: List[ProjectionItem],
         # is_distinct: bool = False,
         # order_by_clause: OrderByClause = None,
@@ -320,13 +320,14 @@ class SCypherWalker(s_cypherListener):
     def enterOC_ProcedureName(self, ctx: s_cypherParser.OC_ProcedureNameContext):
         self.procedure_name = ctx.getText()
 
-    def exitOC_YieldItems(self, ctx: s_cypherParser.OC_YieldItemsContext):
+    def exitS_YieldItems(self, ctx: s_cypherParser.S_YieldItemsContext):
         # yield_items: List[YieldItem],
         # where_expression: Expression = None
-        self.yield_clause = YieldClause(self.yield_items, self.where_expression)
+        where_expression = self.where_expression
+        self.yield_clause = YieldClause(self.yield_items, where_expression)
         self.yield_items = []  # 退出清空
 
-    def exitOC_YieldItem(self, ctx: s_cypherParser.OC_YieldItemContext):
+    def exitS_YieldItem(self, ctx: s_cypherParser.S_YieldItemContext):
         # procedure_result: str,
         # variable: str = None
         if ctx.oC_ProcedureResultField() is not None:

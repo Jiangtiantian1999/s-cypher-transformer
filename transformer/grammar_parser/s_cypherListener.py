@@ -143,6 +143,78 @@ class s_cypherListener(ParseTreeListener):
         pass
 
 
+    # Enter a parse tree produced by s_cypherParser#oC_InQueryCall.
+    def enterOC_InQueryCall(self, ctx:s_cypherParser.OC_InQueryCallContext):
+        pass
+
+    # Exit a parse tree produced by s_cypherParser#oC_InQueryCall.
+    def exitOC_InQueryCall(self, ctx:s_cypherParser.OC_InQueryCallContext):
+        pass
+
+
+    # Enter a parse tree produced by s_cypherParser#oC_StandaloneCall.
+    def enterOC_StandaloneCall(self, ctx:s_cypherParser.OC_StandaloneCallContext):
+        pass
+
+    # Exit a parse tree produced by s_cypherParser#oC_StandaloneCall.
+    def exitOC_StandaloneCall(self, ctx:s_cypherParser.OC_StandaloneCallContext):
+        pass
+
+
+    # Enter a parse tree produced by s_cypherParser#s_YieldItems.
+    def enterS_YieldItems(self, ctx:s_cypherParser.S_YieldItemsContext):
+        pass
+
+    # Exit a parse tree produced by s_cypherParser#s_YieldItems.
+    def exitS_YieldItems(self, ctx:s_cypherParser.S_YieldItemsContext):
+        pass
+
+
+    # Enter a parse tree produced by s_cypherParser#s_YieldItem.
+    def enterS_YieldItem(self, ctx:s_cypherParser.S_YieldItemContext):
+        pass
+
+    # Exit a parse tree produced by s_cypherParser#s_YieldItem.
+    def exitS_YieldItem(self, ctx:s_cypherParser.S_YieldItemContext):
+        pass
+
+
+    # Enter a parse tree produced by s_cypherParser#s_WithPartQuery.
+    def enterS_WithPartQuery(self, ctx:s_cypherParser.S_WithPartQueryContext):
+        pass
+
+    # Exit a parse tree produced by s_cypherParser#s_WithPartQuery.
+    def exitS_WithPartQuery(self, ctx:s_cypherParser.S_WithPartQueryContext):
+        pass
+
+
+    # Enter a parse tree produced by s_cypherParser#s_With.
+    def enterS_With(self, ctx:s_cypherParser.S_WithContext):
+        pass
+
+    # Exit a parse tree produced by s_cypherParser#s_With.
+    def exitS_With(self, ctx:s_cypherParser.S_WithContext):
+        pass
+
+
+    # Enter a parse tree produced by s_cypherParser#oC_ExistentialSubquery.
+    def enterOC_ExistentialSubquery(self, ctx:s_cypherParser.OC_ExistentialSubqueryContext):
+        pass
+
+    # Exit a parse tree produced by s_cypherParser#oC_ExistentialSubquery.
+    def exitOC_ExistentialSubquery(self, ctx:s_cypherParser.OC_ExistentialSubqueryContext):
+        pass
+
+
+    # Enter a parse tree produced by s_cypherParser#oC_FilterExpression.
+    def enterOC_FilterExpression(self, ctx:s_cypherParser.OC_FilterExpressionContext):
+        pass
+
+    # Exit a parse tree produced by s_cypherParser#oC_FilterExpression.
+    def exitOC_FilterExpression(self, ctx:s_cypherParser.OC_FilterExpressionContext):
+        pass
+
+
     # Enter a parse tree produced by s_cypherParser#s_Snapshot.
     def enterS_Snapshot(self, ctx:s_cypherParser.S_SnapshotContext):
         pass
@@ -665,15 +737,6 @@ class s_cypherListener(ParseTreeListener):
         pass
 
 
-    # Enter a parse tree produced by s_cypherParser#s_WithPartQuery.
-    def enterS_WithPartQuery(self, ctx:s_cypherParser.S_WithPartQueryContext):
-        pass
-
-    # Exit a parse tree produced by s_cypherParser#s_WithPartQuery.
-    def exitS_WithPartQuery(self, ctx:s_cypherParser.S_WithPartQueryContext):
-        pass
-
-
     # Enter a parse tree produced by s_cypherParser#oC_ReadingClause.
     def enterOC_ReadingClause(self, ctx:s_cypherParser.OC_ReadingClauseContext):
         pass
@@ -743,24 +806,6 @@ class s_cypherListener(ParseTreeListener):
 
     # Exit a parse tree produced by s_cypherParser#oC_RemoveItem.
     def exitOC_RemoveItem(self, ctx:s_cypherParser.OC_RemoveItemContext):
-        pass
-
-
-    # Enter a parse tree produced by s_cypherParser#oC_InQueryCall.
-    def enterOC_InQueryCall(self, ctx:s_cypherParser.OC_InQueryCallContext):
-        pass
-
-    # Exit a parse tree produced by s_cypherParser#oC_InQueryCall.
-    def exitOC_InQueryCall(self, ctx:s_cypherParser.OC_InQueryCallContext):
-        pass
-
-
-    # Enter a parse tree produced by s_cypherParser#oC_StandaloneCall.
-    def enterOC_StandaloneCall(self, ctx:s_cypherParser.OC_StandaloneCallContext):
-        pass
-
-    # Exit a parse tree produced by s_cypherParser#oC_StandaloneCall.
-    def exitOC_StandaloneCall(self, ctx:s_cypherParser.OC_StandaloneCallContext):
         pass
 
 
@@ -1223,15 +1268,6 @@ class s_cypherListener(ParseTreeListener):
         pass
 
 
-    # Enter a parse tree produced by s_cypherParser#oC_FilterExpression.
-    def enterOC_FilterExpression(self, ctx:s_cypherParser.OC_FilterExpressionContext):
-        pass
-
-    # Exit a parse tree produced by s_cypherParser#oC_FilterExpression.
-    def exitOC_FilterExpression(self, ctx:s_cypherParser.OC_FilterExpressionContext):
-        pass
-
-
     # Enter a parse tree produced by s_cypherParser#oC_PatternPredicate.
     def enterOC_PatternPredicate(self, ctx:s_cypherParser.OC_PatternPredicateContext):
         pass
@@ -1283,15 +1319,6 @@ class s_cypherListener(ParseTreeListener):
 
     # Exit a parse tree produced by s_cypherParser#oC_FunctionName.
     def exitOC_FunctionName(self, ctx:s_cypherParser.OC_FunctionNameContext):
-        pass
-
-
-    # Enter a parse tree produced by s_cypherParser#oC_ExistentialSubquery.
-    def enterOC_ExistentialSubquery(self, ctx:s_cypherParser.OC_ExistentialSubqueryContext):
-        pass
-
-    # Exit a parse tree produced by s_cypherParser#oC_ExistentialSubquery.
-    def exitOC_ExistentialSubquery(self, ctx:s_cypherParser.OC_ExistentialSubqueryContext):
         pass
 
 
