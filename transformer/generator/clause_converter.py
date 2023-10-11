@@ -10,21 +10,20 @@ class ClauseConverter:
     expression_converter = None
     graph_converter = None
 
-    def __init__(self, variables_manager: VariablesManager):
-        self.variables_manager = variables_manager
+    def __init__(self):
+        self.variables_manager = VariablesManager()
         self.expression_converter = ExpressionConverter()
         self.graph_converter = GraphConverter(self.variables_manager, self.expression_converter)
 
     def convert_union_query_clause(self, union_query_clause: UnionQueryClause) -> str:
         union_query_string = self.convert_multi_query_clause(union_query_clause.multi_query_clauses[0])
-        index = 1
-        while index < len(union_query_clause.multi_query_clauses):
-            operator = " UNION "
-            if union_query_clause.is_all[index - 1]:
+        for index, is_all in enumerate(union_query_clause.is_all):
+            if is_all:
                 operator = " UNION ALL "
+            else:
+                operator = " UNION "
             union_query_string = union_query_string + '\n' + operator + self.convert_multi_query_clause(
-                union_query_clause.multi_query_clauses[index])
-            index = index + 1
+                union_query_clause.multi_query_clauses[index + 1])
         return union_query_string
 
     def convert_call_clause(self, call_clause: CallClause) -> str:
@@ -41,6 +40,8 @@ class ClauseConverter:
         return call_string
 
     def convert_yield_clause(self, yield_clause: YieldClause) -> str:
+        # 更新可返回的变量名/别名
+        self.variables_manager.update_variables(self.variables_manager.get_yield_clause_variables_dict(yield_clause))
         yield_clause_string = "YIELD "
         for yield_item in yield_clause.yield_items:
             if yield_clause_string != "YIELD ":
@@ -74,6 +75,8 @@ class ClauseConverter:
             multi_query_string = multi_query_string + '\n'
         multi_query_string = multi_query_string + self.convert_single_query_clause(
             multi_query_clause.single_query_clause)
+        # 更新可返回的变量名/别名
+        self.variables_manager.set_variables({})
         return multi_query_string
 
     def convert_with_query_clause(self, with_query_clause: WithQueryClause) -> str:
@@ -91,8 +94,37 @@ class ClauseConverter:
         # with_clause部分
         if with_query_string == "":
             with_query_string = with_query_string + '\n'
-        with_query_string = with_query_string + with_query_clause.with_clause.convert()
+        with_query_string = with_query_string + self.convert_with_clause(with_query_clause.with_clause)
         return with_query_string
+
+    def convert_with_clause(self, with_clause: WithClause):
+        with_string = "WITH "
+        if with_clause.is_distinct:
+            with_string = "WITH DISTINCT "
+        for projection_item in with_clause.projection_items:
+            if projection_item.is_all:
+                # 返回所有用户指定的可返回的变量名/别名
+                for variable in self.variables_manager.variables_dict.keys():
+                    if with_string not in ["WITH ", "WITH DISTINCT "]:
+                        with_string = with_string + ", "
+                    with_string = with_string + variable
+            elif projection_item.expression:
+                if with_string not in ["WITH ", "WITH DISTINCT "]:
+                    with_string = with_string + ", "
+                with_string = with_string + self.expression_converter.convert_expression(projection_item.expression)
+                if projection_item.variable:
+                    with_string = with_string + " AS " + projection_item.variable
+        if with_clause.order_by_clause:
+            with_string = with_string + '\n' + self.convert_order_by_clause(with_clause.order_by_clause)
+        if with_clause.skip_expression:
+            with_string = with_string + "\nSKIP " + self.expression_converter.convert_expression(
+                with_clause.skip_expression)
+        if with_clause.limit_expression:
+            with_string = with_string + "\nLIMIT " + self.expression_converter.convert_expression(
+                with_clause.limit_expression)
+        # 更新可返回的变量名/别名
+        self.variables_manager.set_variables(self.variables_manager.get_with_clause_variables_dict(with_clause))
+        return with_string
 
     def convert_single_query_clause(self, single_query_clause: SingleQueryClause) -> str:
         single_query_string = ""
@@ -114,10 +146,14 @@ class ClauseConverter:
         return single_query_string
 
     def convert_reading_clause(self, reading_clause: ReadingClause) -> str:
+        # 更新可返回的变量名/别名
+        self.variables_manager.update_variables(
+            self.variables_manager.get_reading_clause_variables_dict(reading_clause))
         reading_clause = reading_clause.reading_clause
         if reading_clause.__class__ == MatchClause:
             return self.convert_match_clause(reading_clause)
         elif reading_clause.__class__ == UnwindClause:
+            # 更新可返回的变量名/别名
             return "UNWIND " + self.expression_converter.convert_expression(
                 reading_clause.expression) + " AS " + reading_clause.variable
         elif reading_clause.__class__ == CallClause:
@@ -222,6 +258,9 @@ class ClauseConverter:
         return where_string
 
     def convert_updating_clause(self, updating_clause: UpdatingClause) -> str:
+        # 更新可返回的变量名/别名
+        self.variables_manager.update_variables(
+            self.variables_manager.get_updating_clause_variables_dict(updating_clause))
         pass
 
     def convert_return_clause(self, return_clause: ReturnClause) -> str:
@@ -231,7 +270,7 @@ class ClauseConverter:
         for projection_item in return_clause.projection_items:
             if projection_item.is_all:
                 # 返回所有用户指定的可返回的变量
-                for variable in self.variables_manager.return_variables_dict.keys():
+                for variable in self.variables_manager.variables_dict.keys():
                     if return_string not in ["RETURN ", "RETURN DISTINCT "]:
                         return_string = return_string + ", "
                     return_string = return_string + variable
@@ -247,8 +286,10 @@ class ClauseConverter:
             return_string = return_string + "\nSKIP " + self.expression_converter.convert_expression(
                 return_clause.skip_expression)
         if return_clause.limit_expression:
-            return_string = return_string + "\nSKIP " + self.expression_converter.convert_expression(
+            return_string = return_string + "\nLIMIT " + self.expression_converter.convert_expression(
                 return_clause.limit_expression)
+        # 更新可返回的变量名/别名
+        self.variables_manager.set_variables(self.variables_manager.get_return_clause_variables_dict(return_clause))
         return return_string
 
     def convert_order_by_clause(self, order_by_clause: OrderByClause) -> str:

@@ -5,7 +5,7 @@ class ExpressionConverter:
     def convert_expression(self, expression: Expression) -> str:
         return self.convert_or_expression(expression.or_expression)
 
-    def convert_or_expression(self, or_expression: OrExpression):
+    def convert_or_expression(self, or_expression: OrExpression) -> str:
         or_expression_string = ""
         for index, xor_expression in enumerate(or_expression.xor_expressions):
             if index != 0:
@@ -13,7 +13,7 @@ class ExpressionConverter:
             or_expression_string = or_expression_string + self.convert_xor_expression(xor_expression)
         return or_expression_string
 
-    def convert_xor_expression(self, xor_expression: XorExpression):
+    def convert_xor_expression(self, xor_expression: XorExpression) -> str:
         xor_expression_string = ""
         for index, and_expression in enumerate(xor_expression.and_expressions):
             if index != 0:
@@ -21,7 +21,7 @@ class ExpressionConverter:
             xor_expression_string = xor_expression_string + self.convert_and_expression(and_expression)
         return xor_expression_string
 
-    def convert_and_expression(self, and_expression: AndExpression):
+    def convert_and_expression(self, and_expression: AndExpression) -> str:
         and_expression_string = ""
         for index, not_expression in enumerate(and_expression.not_expressions):
             if index != 0:
@@ -29,20 +29,20 @@ class ExpressionConverter:
             and_expression_string = and_expression_string + self.convert_not_expression(not_expression)
         return and_expression_string
 
-    def convert_not_expression(self, not_expression: NotExpression):
+    def convert_not_expression(self, not_expression: NotExpression) -> str:
         comparison_string = self.convert_comparison_expression(not_expression.comparison_expression)
         if not_expression.is_not:
             comparison_string = 'not ' + comparison_string
         return comparison_string
 
-    def convert_comparison_expression(self, comparison_expression: ComparisonExpression):
+    def convert_comparison_expression(self, comparison_expression: ComparisonExpression) -> str:
         comparison_string = self.convert_subject_expression(comparison_expression.subject_expressions[0])
         for index, comparison_operation in enumerate(comparison_expression.comparison_operations):
             comparison_string = comparison_string + ' ' + comparison_operation + ' ' + self.convert_subject_expression(
                 comparison_expression.subject_expressions[index + 1])
         return comparison_string
 
-    def convert_subject_expression(self, subject_expression: SubjectExpression):
+    def convert_subject_expression(self, subject_expression: SubjectExpression) -> str:
         subject_string = self.convert_add_subtract_expression(subject_expression.add_or_subtract_expression)
         predicate_expression = subject_expression.predicate_expression
         if predicate_expression:
@@ -61,7 +61,7 @@ class ExpressionConverter:
                 return subject_string + " IS NOT NULL"
         return subject_string
 
-    def convert_add_subtract_expression(self, add_or_subtract_expression: AddSubtractExpression):
+    def convert_add_subtract_expression(self, add_or_subtract_expression: AddSubtractExpression) -> str:
         add_subtract_string = self.convert_multiply_divide_expression(
             add_or_subtract_expression.multiply_divide_expressions[0])
         for index, add_subtract_operation in enumerate(add_or_subtract_expression.add_subtract_operations):
@@ -69,21 +69,21 @@ class ExpressionConverter:
                 add_or_subtract_expression.multiply_divide_expressions[index + 1])
         return add_subtract_string
 
-    def convert_multiply_divide_expression(self, multiply_divide_expression: MultiplyDivideExpression):
+    def convert_multiply_divide_expression(self, multiply_divide_expression: MultiplyDivideExpression) -> str:
         multiply_divide_string = self.convert_power_expression(multiply_divide_expression.power_expressions[0])
         for index, multiply_divide_operation in enumerate(multiply_divide_expression.multiply_divide_operations):
             multiply_divide_string = multiply_divide_string + ' ' + multiply_divide_operation + ' ' + self.convert_power_expression(
                 multiply_divide_expression.power_expressions[index + 1])
         return multiply_divide_string
 
-    def convert_power_expression(self, power_expression: PowerExpression):
+    def convert_power_expression(self, power_expression: PowerExpression) -> str:
         power_string = self.convert_list_index_expression(power_expression.list_index_expressions[0])
         for index, list_index_expression in enumerate(power_expression.list_index_expressions):
             if index != 0:
                 power_string = power_string + '^' + self.convert_list_index_expression(list_index_expression)
         return power_string
 
-    def convert_list_index_expression(self, list_index_expression: ListIndexExpression):
+    def convert_list_index_expression(self, list_index_expression: ListIndexExpression) -> str:
         list_index_string = ""
         if list_index_expression.principal_expression.__class__ == PropertiesLabelsExpression:
             list_index_string = self.convert_properties_labels_expression(list_index_expression.principal_expression)
@@ -100,7 +100,7 @@ class ExpressionConverter:
             list_index_string = '-' + list_index_string
         return list_index_string
 
-    def convert_properties_labels_expression(self, properties_labels_expression: PropertiesLabelsExpression):
+    def convert_properties_labels_expression(self, properties_labels_expression: PropertiesLabelsExpression) -> str:
         properties_labels_expression_string = self.convert_atom(properties_labels_expression.atom)
         for proprety in properties_labels_expression.property_chains:
             properties_labels_expression_string = properties_labels_expression_string + '.' + proprety
@@ -108,7 +108,7 @@ class ExpressionConverter:
             properties_labels_expression_string = properties_labels_expression_string + ':' + label
         return properties_labels_expression_string
 
-    def convert_at_t_expression(self, at_t_expression: AtTExpression):
+    def convert_at_t_expression(self, at_t_expression: AtTExpression) -> str:
         at_t_expression_string = self.convert_atom(at_t_expression.atom)
         for proprety in at_t_expression.property_chains:
             at_t_expression_string = at_t_expression_string + '.' + proprety
@@ -119,7 +119,7 @@ class ExpressionConverter:
             at_t_expression_string = at_t_expression_string + '.' + time_proprety
         return at_t_expression_string
 
-    def convert_atom(self, atom: Atom):
+    def convert_atom(self, atom: Atom) -> str:
         atom = atom.atom
         atom_string = ""
         if atom.__class__ == str:
@@ -156,7 +156,7 @@ class ExpressionConverter:
             pass
         return atom_string
 
-    def convert_map_literal(self, map_literal: MapLiteral):
+    def convert_map_literal(self, map_literal: MapLiteral) -> str:
         map_literal_string = ""
         for index, (key, value) in enumerate(map_literal.keys_values.items()):
             if index != 0:

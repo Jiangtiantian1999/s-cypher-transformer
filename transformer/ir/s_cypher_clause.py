@@ -47,7 +47,10 @@ class MatchClause:
         self.patterns = patterns
         self.is_optional = is_optional
         self.where_expression = where_expression
-        self.time_window = time_window
+        if time_window.__class__ == AtTimeClause:
+            self.time_window = time_window.time_point
+        elif time_window.__class__ == BetweenClause:
+            self.time_window = time_window.interval
 
 
 class UnwindClause:

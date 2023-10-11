@@ -1,5 +1,4 @@
 from transformer.generator.clause_converter import ClauseConverter
-from transformer.generator.variables_manager import VariablesManager
 from transformer.ir.s_cypher_clause import *
 
 
@@ -7,8 +6,7 @@ class CypherGenerator:
     clause_converter = None
 
     def generate_cypher_query(self, s_cypher_clause: SCypherClause) -> str:
-        variables_manager = VariablesManager(s_cypher_clause)
-        self.clause_converter = ClauseConverter(variables_manager)
+        self.clause_converter = ClauseConverter()
         if s_cypher_clause.query_clause.__class__ == UnionQueryClause:
             return self.clause_converter.convert_union_query_clause(s_cypher_clause.query_clause)
         elif s_cypher_clause.query_clause.__class__ == CallClause:
