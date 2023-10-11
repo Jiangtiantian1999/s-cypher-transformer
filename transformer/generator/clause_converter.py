@@ -83,16 +83,16 @@ class ClauseConverter:
         with_query_string = ""
         # reading_clauses部分
         for reading_clause in with_query_clause.reading_clauses:
-            if with_query_string == "":
+            if with_query_string != "":
                 with_query_string = with_query_string + '\n'
             with_query_string = with_query_string + self.convert_reading_clause(reading_clause)
         # updating_clauses部分
         for updating_clause in with_query_clause.updating_clauses:
-            if with_query_string == "":
+            if with_query_string != "":
                 with_query_string = with_query_string + '\n'
             with_query_string = with_query_string + self.convert_updating_clause(updating_clause)
         # with_clause部分
-        if with_query_string == "":
+        if with_query_string != "":
             with_query_string = with_query_string + '\n'
         with_query_string = with_query_string + self.convert_with_clause(with_query_clause.with_clause)
         return with_query_string
@@ -113,7 +113,7 @@ class ClauseConverter:
                     with_string = with_string + ", "
                 with_string = with_string + self.expression_converter.convert_expression(projection_item.expression)
                 if projection_item.variable:
-                    with_string = with_string + " AS " + projection_item.variable
+                    with_string = with_string + " as " + projection_item.variable
         if with_clause.order_by_clause:
             with_string = with_string + '\n' + self.convert_order_by_clause(with_clause.order_by_clause)
         if with_clause.skip_expression:
@@ -279,7 +279,7 @@ class ClauseConverter:
                     return_string = return_string + ", "
                 return_string = return_string + self.expression_converter.convert_expression(projection_item.expression)
                 if projection_item.variable:
-                    return_string = return_string + " AS " + projection_item.variable
+                    return_string = return_string + " as " + projection_item.variable
         if return_clause.order_by_clause:
             return_string = return_string + '\n' + self.convert_order_by_clause(return_clause.order_by_clause)
         if return_clause.skip_expression:

@@ -123,13 +123,9 @@ class ExpressionConverter:
         atom = atom.atom
         atom_string = ""
         if atom.__class__ == str:
-            return atom
+            return self.convert_str(atom)
         elif atom.__class__ == ListLiteral:
-            for index, expression in enumerate(atom.expressions):
-                if index != 0:
-                    atom_string = atom_string + ", "
-                atom_string = atom_string + self.convert_expression(expression)
-            atom_string = '[' + atom_string + ']'
+            return self.convert_list_literal(atom)
         elif atom.__class__ == MapLiteral:
             return self.convert_map_literal(atom)
         elif atom.__class__ == CaseExpression:
@@ -145,16 +141,23 @@ class ExpressionConverter:
         elif atom.__class__ == ParenthesizedExpression:
             return '(' + self.convert_expression(atom.expression) + ')'
         elif atom.__class__ == FunctionInvocation:
-            if atom.is_distinct:
-                atom_string = "DISTINCT "
-            for index, expression in enumerate(atom.expressions):
-                if index != 0:
-                    atom_string = atom_string + ", "
-                atom_string = atom_string + self.convert_expression(expression)
-            atom_string = atom.function_name + '(' + atom_string + ')'
+            return self.convert_function_invocation(atom)
         elif atom.__class__ == ExistentialSubquery:
             pass
         return atom_string
+
+    def convert_str(self, string: str):
+        if string.upper() == "NOW":
+            return "\"" + string + "\""
+        return string
+
+    def convert_list_literal(self, list_literal: ListLiteral) -> str:
+        list_literal_string = ""
+        for index, expression in enumerate(list_literal.expressions):
+            if index != 0:
+                list_literal_string = list_literal_string + ", "
+            list_literal_string = list_literal_string + self.convert_expression(expression)
+        return '[' + list_literal_string + ']'
 
     def convert_map_literal(self, map_literal: MapLiteral) -> str:
         map_literal_string = ""
@@ -162,5 +165,14 @@ class ExpressionConverter:
             if index != 0:
                 map_literal_string = map_literal_string + ", "
             map_literal_string = map_literal_string + key + ": " + self.convert_expression(value)
-        map_literal_string = '{' + map_literal_string + '}'
-        return map_literal_string
+        return '{' + map_literal_string + '}'
+
+    def convert_function_invocation(self, function_invocation: FunctionInvocation) -> str:
+        function_invocation_string = ""
+        if function_invocation.is_distinct:
+            function_invocation_string = "DISTINCT "
+        for index, expression in enumerate(function_invocation.expressions):
+            if index != 0:
+                function_invocation_string = function_invocation_string + ", "
+            function_invocation_string = function_invocation_string + self.convert_expression(expression)
+        return function_invocation.function_name + '(' + function_invocation_string + ')'

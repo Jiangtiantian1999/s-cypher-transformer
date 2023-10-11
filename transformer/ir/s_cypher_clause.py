@@ -51,6 +51,8 @@ class MatchClause:
             self.time_window = time_window.time_point
         elif time_window.__class__ == BetweenClause:
             self.time_window = time_window.interval
+        else:
+            self.time_window = None
 
 
 class UnwindClause:

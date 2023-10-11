@@ -69,8 +69,8 @@ class GraphConverter:
 
         # 节点的有效时间限制
         if node.interval is not None:
-            interval_from_string = self.convert_time_point_literval(node.interval.interval_from)
-            interval_to_string = self.convert_time_point_literval(node.interval.interval_to)
+            interval_from_string = self.convert_time_point_literal(node.interval.interval_from)
+            interval_to_string = self.convert_time_point_literal(node.interval.interval_to)
             interval_condition = "scypher.limitInterval(" + node.variable + ", scypher.interval(" + interval_from_string + ", " + interval_to_string + "))"
         elif time_window is not None:
             interval_condition = "scypher.limitInterval(" + node.variable + ", " + self.expression_converter.convert_expression(
@@ -116,8 +116,8 @@ class GraphConverter:
 
         # 边的有效时间限制
         if edge.interval is not None:
-            interval_from_string = self.convert_time_point_literval(edge.interval.interval_from)
-            interval_to_string = self.convert_time_point_literval(edge.interval.interval_to)
+            interval_from_string = self.convert_time_point_literal(edge.interval.interval_from)
+            interval_to_string = self.convert_time_point_literal(edge.interval.interval_to)
             interval_condition = "scypher.limitInterval(" + edge.variable + ", scypher.interval(" + interval_from_string + ", " + interval_to_string + "))"
         elif time_window is not None:
             interval_condition = "scypher.limitInterval(" + edge.variable + ", " + self.expression_converter.convert_expression(
@@ -127,8 +127,9 @@ class GraphConverter:
 
         return edge_pattern, interval_condition
 
-    def convert_time_point_literval(self, time_point_literval: TimePointLiteral):
-        if time_point_literval.time_point.__class__ == str:
-            return '\"' + time_point_literval.time_point + '\"'
+    def convert_time_point_literal(self, time_point_literal: TimePointLiteral):
+        print("convert_time_point_literal", time_point_literal.time_point)
+        if time_point_literal.time_point.__class__ == str:
+            return '\"' + time_point_literal.time_point + '\"'
         else:
-            return self.expression_converter.convert_map_literal(time_point_literval.time_point)
+            return self.expression_converter.convert_map_literal(time_point_literal.time_point)
