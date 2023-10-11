@@ -399,7 +399,6 @@ class SCypherWalker(s_cypherListener):
         else:
             node_label_list = None
         interval = None  # 对象节点时间
-        properties = dict()  # 对象节点属性
         variable = None
         if ctx.oC_Variable() is not None:
             variable = ctx.oC_Variable().getText()
@@ -409,7 +408,9 @@ class SCypherWalker(s_cypherListener):
             interval = self.getAtTElement(interval_str)
         if ctx.s_Properties() is not None:
             properties = self.properties
-        self.properties = None  # 退出清空
+            self.properties = None  # 退出清空
+        else:
+            properties = None  # 对象节点属性
         self.object_node_list.append(ObjectNode(node_label_list, variable, interval, properties))
 
     def exitOC_NodeLabel(self, ctx: s_cypherParser.OC_NodeLabelContext):
@@ -418,9 +419,11 @@ class SCypherWalker(s_cypherListener):
     def exitS_Properties(self, ctx: s_cypherParser.S_PropertiesContext):
         if ctx.s_PropertiesPattern() is not None:
             self.properties = self.properties_pattern
+            self.properties_pattern = dict()  # 退出清空
         elif ctx.oC_Parameter() is not None:
             # 无法组成字典，暂未处理
             self.properties = self.properties_parameter
+            self.properties_parameter = None  # 退出清空
         else:
             self.properties = None
 
