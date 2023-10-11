@@ -13,7 +13,6 @@ class TemporalPathCall:
             raise ValueError("The length of the temporal path are not matched.")
         self.path = path
 
-
 class Pattern:
 
     def __init__(self, pattern: SPath | TemporalPathCall):

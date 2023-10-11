@@ -131,11 +131,7 @@ class ExpressionConverter:
                 atom_string = atom_string + self.convert_expression(expression)
             atom_string = '[' + atom_string + ']'
         elif atom.__class__ == MapLiteral:
-            for index, (key, value) in enumerate(atom.keys_values.items()):
-                if index != 0:
-                    atom_string = atom_string + ", "
-                atom_string = atom_string + key + ': ' + self.convert_expression(value)
-            atom_string = '{' + atom_string + '}'
+            return self.convert_map_literal(atom)
         elif atom.__class__ == CaseExpression:
             pass
         elif atom.__class__ == ListComprehension:
@@ -159,3 +155,12 @@ class ExpressionConverter:
         elif atom.__class__ == ExistentialSubquery:
             pass
         return atom_string
+
+    def convert_map_literal(self, map_literal: MapLiteral):
+        map_literal_string = ""
+        for index, (key, value) in enumerate(map_literal.keys_values.items()):
+            if index != 0:
+                map_literal_string = map_literal_string + ", "
+            map_literal_string = map_literal_string + key + ": " + self.convert_expression(value)
+        map_literal_string = '{' + map_literal_string + '}'
+        return map_literal_string

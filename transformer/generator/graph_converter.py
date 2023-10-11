@@ -11,6 +11,27 @@ class GraphConverter:
         self.variables_manager = variables_manager
         self.expression_converter = expression_converter
 
+    def convert_path(self, path: SPath, time_window: Expression = None) -> (str, List[str], List[str]):
+        # 路径模式，属性节点和值节点的模式，路径有效时间限制
+        path_pattern, property_patterns, interval_conditions = self.convert_object_node(path.nodes[0], time_window)
+        index = 1
+        while index < len(path.nodes):
+            # 生成边模式
+            edge_pattern, edge_interval_condition = self.convert_edge(path.edges[index - 1], time_window)
+            path_pattern = path_pattern + edge_pattern
+            interval_conditions.append(edge_interval_condition)
+            # 生成节点模式
+            node_pattern, node_property_patterns, node_interval_conditions = self.convert_object_node(path.nodes[index],
+                                                                                                      time_window)
+            path_pattern = path_pattern + node_pattern
+            property_patterns.extend(node_property_patterns)
+            interval_conditions.extend(node_interval_conditions)
+
+            index = index + 1
+        if path.variable:
+            path_pattern = path.variable + " = " + path_pattern
+        return path_pattern, property_patterns, interval_conditions
+
     def convert_object_node(self, object_node: ObjectNode, time_window: Expression = None) -> (
             str, List[str], List[str]):
         # 对象节点模式, 对象节点的有效时间限制
@@ -48,8 +69,9 @@ class GraphConverter:
 
         # 节点的有效时间限制
         if node.interval is not None:
-            interval_condition = "scypher.limitInterval(" + node.variable + ", scypher.interval(" + \
-                                 node.interval.interval_from.convert() + "," + node.interval.interval_to.convert() + "))"
+            interval_from_string = self.convert_time_point_literval(node.interval.interval_from)
+            interval_to_string = self.convert_time_point_literval(node.interval.interval_to)
+            interval_condition = "scypher.limitInterval(" + node.variable + ", scypher.interval(" + interval_from_string + ", " + interval_to_string + "))"
         elif time_window is not None:
             interval_condition = "scypher.limitInterval(" + node.variable + ", " + self.expression_converter.convert_expression(
                 time_window) + ")"
@@ -94,32 +116,19 @@ class GraphConverter:
 
         # 边的有效时间限制
         if edge.interval is not None:
-            interval_condition = "scypher.limitInterval(" + edge.variable + ", scypher.interval(" + \
-                                 edge.interval.interval_from.convert() + "," + edge.interval.interval_to.convert() + "))"
+            interval_from_string = self.convert_time_point_literval(edge.interval.interval_from)
+            interval_to_string = self.convert_time_point_literval(edge.interval.interval_to)
+            interval_condition = "scypher.limitInterval(" + edge.variable + ", scypher.interval(" + interval_from_string + ", " + interval_to_string + "))"
         elif time_window is not None:
-            interval_condition = "scypher.limitInterval(" + edge.variable + ", " + time_window.convert() + ')'
+            interval_condition = "scypher.limitInterval(" + edge.variable + ", " + self.expression_converter.convert_expression(
+                time_window) + ')'
         else:
-            interval_condition = "scypher.limitInterval(" + edge.variable + ', null)'
+            interval_condition = "scypher.limitInterval(" + edge.variable + ", null)"
 
         return edge_pattern, interval_condition
 
-    def convert_path(self, path: SPath, time_window: Expression = None) -> (str, List[str], List[str]):
-        # 路径模式，属性节点和值节点的模式，路径有效时间限制
-        path_pattern, property_patterns, interval_conditions = self.convert_object_node(path.nodes[0], time_window)
-        index = 1
-        while index < len(path.nodes):
-            # 生成边模式
-            edge_pattern, edge_interval_condition = self.convert_edge(path.edges[index - 1], time_window)
-            path_pattern = path_pattern + edge_pattern
-            interval_conditions.append(edge_interval_condition)
-            # 生成节点模式
-            node_pattern, node_property_patterns, node_interval_conditions = self.convert_object_node(path.nodes[index],
-                                                                                                      time_window)
-            path_pattern = path_pattern + node_pattern
-            property_patterns.extend(node_property_patterns)
-            interval_conditions.extend(node_interval_conditions)
-
-            index = index + 1
-        if path.variable:
-            path_pattern = path.variable + " = " + path_pattern
-        return path_pattern, property_patterns, interval_conditions
+    def convert_time_point_literval(self, time_point_literval: TimePointLiteral):
+        if time_point_literval.time_point.__class__ == str:
+            return '\"' + time_point_literval.time_point + '\"'
+        else:
+            return self.expression_converter.convert_map_literal(time_point_literval.time_point)

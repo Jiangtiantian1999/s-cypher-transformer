@@ -183,9 +183,11 @@ class ClauseConverter:
                     parameters_string = parameters_string + ", NULL"
                 # 限制路径的有效时间
                 if pattern.path.edges[0].interval:
-                    parameters_string = parameters_string + ", scypher.interval(" + pattern.path.edges[
-                        0].interval.interval_from.convert() + \
-                                        ", " + pattern.path.edges[0].interval.interval_to.convert() + ")"
+                    interval_from_string = self.graph_converter.convert_time_point_literval(
+                        pattern.path.edges[0].interval.interval_from)
+                    interval_to_string = self.graph_converter.convert_time_point_literval(
+                        pattern.path.edges[0].interval.interval_to)
+                    parameters_string = parameters_string + ", scypher.interval(" + interval_from_string + ", " + interval_to_string + ')'
                 else:
                     parameters_string = parameters_string + ", NULL"
                 # 限制路径的属性
