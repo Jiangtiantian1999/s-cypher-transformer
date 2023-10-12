@@ -194,6 +194,10 @@ class SCypherWalker(s_cypherListener):
         with_clause = self.with_clause
         reading_clauses = self.reading_clauses
         updating_clauses = self.updating_clauses
+        # 退出清空
+        self.with_clause = None
+        self.reading_clauses = []
+        self.updating_clauses = []
         self.with_query_clauses.append(WithQueryClause(with_clause, reading_clauses, updating_clauses))
 
     def exitOC_UpdatingClause(self, ctx: s_cypherParser.OC_UpdatingClauseContext):
@@ -213,11 +217,13 @@ class SCypherWalker(s_cypherListener):
         elif ctx.s_Stale() is not None:
             update_clause = self.stale_clause
         self.updating_clauses.append(UpdatingClause(update_clause, self.at_time_clause))
+        self.at_time_clause = None  # 退出清空
 
     def exitOC_MultiPartQuery(self, ctx: s_cypherParser.OC_MultiPartQueryContext):
         # single_query_clause: SingleQueryClause = None,
         # with_query_clauses: List[WithQueryClause] = None
         self.multi_part_query_clauses.append(MultiQueryClause(self.single_part_query_clause, self.with_query_clauses))
+        self.single_part_query_clause = None
         self.with_query_clauses = []  # 退出清空
 
     # SinglePartQuery或者MultiPartQuery
@@ -225,9 +231,10 @@ class SCypherWalker(s_cypherListener):
         if len(self.multi_part_query_clauses) > 0:
             # self.single_query_clauses.append(self.multi_part_query_clauses)
             self.single_query_clauses = self.multi_part_query_clauses
+            self.multi_part_query_clauses = []  # 退出清空
         else:
             self.single_query_clauses.append(MultiQueryClause(self.single_part_query_clause, None))
-        self.multi_part_query_clauses = []  # 退出清空
+            self.single_part_query_clause = None
 
     def exitOC_SinglePartQuery(self, ctx: s_cypherParser.OC_SinglePartQueryContext):
         # reading_clauses: List[ReadingClause] = None,
@@ -237,6 +244,7 @@ class SCypherWalker(s_cypherListener):
                                                           self.return_clause)
         self.reading_clauses = []  # 退出清空
         self.updating_clauses = []
+        self.return_clause = None
 
     def exitS_With(self, ctx: s_cypherParser.S_WithContext):
         # projection_items: List[ProjectionItem],
@@ -252,6 +260,9 @@ class SCypherWalker(s_cypherListener):
         order_by_clause = self.order_by_clause
         skip_expression = self.skip_expression
         limit_expression = self.limit_expression
+        self.order_by_clause = None  # 退出清空
+        self.skip_expression = None
+        self.limit_expression = None
         self.with_clause = WithClause(projection_items, is_distinct, order_by_clause, skip_expression, limit_expression)
 
     def exitOC_ReadingClause(self, ctx: s_cypherParser.OC_ReadingClauseContext):
@@ -582,12 +593,15 @@ class SCypherWalker(s_cypherListener):
         order_by_clause = self.order_by_clause
         skip_expression = self.skip_expression
         limit_expression = self.limit_expression
+        self.order_by_clause = None  # 退出清空
+        self.skip_expression = None
+        self.limit_expression = None
         self.return_clause = ReturnClause(projection_items, is_distinct, order_by_clause, skip_expression,
                                           limit_expression)
 
     def exitOC_ProjectionItem(self, ctx: s_cypherParser.OC_ProjectionItemContext):
         # is_all: bool = False,
-        # expression: Exception = None,
+        # expression: Expression = None,
         # variable: str = None
         is_all = False
         if '*' in ctx.getText():
@@ -870,9 +884,8 @@ class SCypherWalker(s_cypherListener):
     def exitOC_PropertyLookup(self, ctx: s_cypherParser.OC_PropertyLookupContext):
         self.property_look_up_list.append(ctx.oC_PropertyKeyName().getText())
 
-    def exitS_PropertyLookupTime(self, ctx: s_cypherParser.S_PropertyLookupTimeContext):
-        self.property_look_up_time_list = self.property_look_up_list
-        self.property_look_up_list = []  # 退出清空
+    def exitS_PropertyLookup(self, ctx: s_cypherParser.S_PropertyLookupContext):
+        self.property_look_up_time_list.append(ctx.oC_PropertyKeyName().getText())
 
     # =============处理WhereExpression===============
     def exitS_WhereExpression(self, ctx: s_cypherParser.S_WhereExpressionContext):

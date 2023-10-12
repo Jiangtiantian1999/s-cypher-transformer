@@ -1,3 +1,4 @@
+from __future__ import annotations
 from transformer.exceptions.s_exception import ClauseError
 from transformer.ir.s_clause_component import *
 from transformer.ir.s_expression import Expression

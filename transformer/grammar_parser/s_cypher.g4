@@ -114,7 +114,10 @@ s_RightExpression : oC_Expression ;
 
 s_AtTExpression : oC_Atom ( ( SP? oC_PropertyLookup )+ ( SP? PoundValue )? )? SP? s_PropertyLookupTime ;
 
-s_PropertyLookupTime: AtT ( SP? oC_PropertyLookup )* ;
+s_PropertyLookupTime: AtT ( SP? s_PropertyLookup )* ;
+
+s_PropertyLookup
+              :  '.' SP? ( oC_PropertyKeyName ) ;
 
 s_TimePredicateExpression : SP ( DURING | OVERLAPS ) SP oC_AddOrSubtractExpression ;
 
