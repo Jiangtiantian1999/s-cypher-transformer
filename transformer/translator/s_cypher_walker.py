@@ -361,8 +361,9 @@ class SCypherWalker(s_cypherListener):
             input_items = self.explicit_input_items
             self.explicit_input_items = []  # 退出清空
         elif ctx.oC_ImplicitProcedureInvocation() is not None:
-            input_items = self.implicit_input_item
-            self.implicit_input_item = None  # 退出清空
+            # input_items = self.implicit_input_item
+            # self.implicit_input_item = None  # 退出清空
+            input_items = None
         self.stand_alone_call_clause = CallClause(self.procedure_name, input_items, self.yield_clause)
 
     def enterOC_ExplicitProcedureInvocation(self, ctx:s_cypherParser.OC_ExplicitProcedureInvocationContext):
