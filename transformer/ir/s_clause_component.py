@@ -41,8 +41,6 @@ class YieldItem:
         self.procedure_result = procedure_result
         # 别名
         self.variable = variable
-        # 该项的数据类型
-        self.date_type = None
 
 
 class DeleteItem:

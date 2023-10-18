@@ -1,7 +1,5 @@
 from typing import List
 
-from transformer.global_variables import GlobalVariables
-
 
 class ListLiteral:
     # 注意：该处expressions为List[Expression]类型，由于与Expression相互引用，故此处不写明类型。
@@ -44,10 +42,6 @@ class ParenthesizedExpression:
 class FunctionInvocation:
     # 注意：该处expressions为List[Expression]类型，由于与Expression相互引用，故此处不写明类型。
     def __init__(self, function_name: str, is_distinct=False, expressions: List = None):
-        if function_name not in GlobalVariables.function_info.keys():
-            raise ValueError(
-                "There is no function with the name `" + function_name + "` registered for this database instance.")
-
         self.function_name = function_name
         self.is_distinct = is_distinct
         # 输入参数

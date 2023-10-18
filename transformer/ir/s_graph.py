@@ -28,6 +28,7 @@ class SNode:
         self.variable = variable
         # 节点有效时间
         self.interval = interval
+        self.time_window = None
 
 
 class PropertyNode(SNode):

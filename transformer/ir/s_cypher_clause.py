@@ -1,9 +1,6 @@
 from __future__ import annotations
 
-import json
-
 from transformer.exceptions.s_exception import ClauseError
-from transformer.global_variables import GlobalVariables
 from transformer.ir.s_clause_component import *
 from transformer.ir.s_expression import Expression
 
@@ -73,23 +70,10 @@ class CallClause:
 
     def __init__(self, procedure_name: str, input_items: List[Expression] = None, yield_clause: YieldClause = None,
                  is_all=False):
-        if procedure_name not in GlobalVariables.procedure_info.keys():
-            raise ValueError(
-                "There is no procedure with the name `" + procedure_name + "` registered for this database instance.")
         self.procedure_name = procedure_name
         if input_items is None:
             input_items = []
         self.input_items = input_items
-        if yield_clause is not None:
-            if is_all is False:
-                for yield_item in yield_clause.yield_items:
-                    if yield_item.procedure_result in GlobalVariables.procedure_info[procedure_name].keys():
-                        yield_item.data_type = GlobalVariables.procedure_info[procedure_name][
-                            yield_item.procedure_result]
-                    else:
-                        raise ValueError("Unknown procedure output: `" + yield_item.procedure_result + "`")
-            else:
-                raise ValueError("Uncertain yield.")
         self.yield_clause = yield_clause
         self.is_all = is_all
 

@@ -1,18 +1,15 @@
-from transformer.generator.expression_converter import ExpressionConverter
 from transformer.ir.s_cypher_clause import *
 from transformer.ir.s_graph import *
 
 
 class VariablesManager:
-
     def __init__(self):
         self.count_num = 99
-        # 用户定义的变量名/别名：数据类型
+        # 用户定义的变量名/别名：对象
         self.variables_dict = {}
         # 是否返回所有对象
         self.is_all = False
-        self.property_patterns = []
-        self.with_project_items = []
+        self.expression_converter = None
 
     # 获取新的变量名
     def get_random_variable(self) -> str:
@@ -35,9 +32,9 @@ class VariablesManager:
         if yield_clause:
             for yield_item in yield_clause.yield_items:
                 if yield_item.variable:
-                    variables_dict[yield_item.variable] = yield_item.date_type
+                    variables_dict[yield_item.variable] = yield_item.procedure_result
                 else:
-                    variables_dict[yield_item.procedure_result] = yield_item.date_type
+                    variables_dict[yield_item.procedure_result] = None
             return variables_dict
         return variables_dict
 
@@ -50,9 +47,8 @@ class VariablesManager:
                 if projection_item.variable:
                     variables_dict[projection_item.variable] = projection_item.expression
                 else:
-                    expression_string, expression_type = ExpressionConverter.convert_expression(
-                        projection_item.expression, self)
-                    variables_dict[expression_string] = expression_type
+                    variables_dict[self.expression_converter.convert_expression(
+                        projection_item.expression)] = projection_item.expression
         return variables_dict
 
     def get_return_clause_variables_dict(self, return_clause: ReturnClause) -> dict:
@@ -65,9 +61,8 @@ class VariablesManager:
                     if projection_item.variable:
                         variables_dict[projection_item.variable] = projection_item.expression
                     else:
-                        expression_string, expression_type = ExpressionConverter.convert_expression(
-                            projection_item.expression, self)
-                        variables_dict[expression_string] = expression_type
+                        variables_dict[self.expression_converter.convert_expression(
+                            projection_item.expression)] = projection_item.expression
         return variables_dict
 
     def get_updating_clause_variables_dict(self, updating_clause: UpdatingClause) -> dict:
@@ -123,11 +118,11 @@ class VariablesManager:
         if object_node.variable:
             # ObjectNode
             variables_dict[object_node.variable] = object_node
-        for key, value in object_node.properties.items():
-            if key.variable:
-                # PropertyNode
-                variables_dict[key.variable] = key
-            if value.variable:
-                # ValueNode
-                variables_dict[value.variable] = value
+        # for key, value in object_node.properties.items():
+        #     if key.variable:
+        #         # PropertyNode
+        #         variables_dict[key.variable] = key
+        #     if value.variable:
+        #         # ValueNode
+        #         variables_dict[value.variable] = value
         return variables_dict
