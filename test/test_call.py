@@ -10,10 +10,8 @@ class TestCall(TestCase):
         print("test_call_1:", '\n', s_cypher, '\n\n', cypher_query, '\n\n')
 
     def test_call_2(self):
-        s_cypher = 'CALL dbms.procedures()' \
-                   '\nYIELD name, signature' \
-                   '\nWHERE name="dbms.listConfig"' \
-                   '\nRETURN signature'
+        s_cypher = 'CALL dbms.info()' \
+                   '\nYIELD id, name, createDate'
         cypher_query = transform_to_cypher(s_cypher)
         print("test_call_2:", '\n', s_cypher, '\n\n', cypher_query, '\n\n')
 
