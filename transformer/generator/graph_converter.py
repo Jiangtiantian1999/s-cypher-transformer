@@ -83,8 +83,7 @@ class GraphConverter:
 
         return node_pattern, interval_condition
 
-    def convert_edge(self, edge: SEdge, time_window: AtTimeClause | BetweenClause = None) -> (
-            str, List[str]):
+    def convert_edge(self, edge: SEdge, time_window: AtTimeClause | BetweenClause = None) -> (str, List[str]):
         if edge.variable is None:
             if self.variables_manager is not None:
                 edge.variable = self.variables_manager.get_random_variable()

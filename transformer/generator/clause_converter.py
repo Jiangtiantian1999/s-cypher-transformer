@@ -59,9 +59,8 @@ class ClauseConverter:
             if yield_item.variable:
                 yield_clause_string = yield_clause_string + " as " + yield_item.variable
         if yield_clause.where_expression:
-            where_expression_string, where_expression_type = self.expression_converter.convert_expression(
+            yield_clause_string = yield_clause_string + "\nWHERE " + self.expression_converter.convert_expression(
                 yield_clause.where_expression)
-            yield_clause_string = yield_clause_string + "\nWHERE " + where_expression_string
         return yield_clause_string
 
     def convert_time_window_limit_clause(self, time_window_limit_clause: TimeWindowLimitClause) -> str:
@@ -176,7 +175,7 @@ class ClauseConverter:
         elif reading_clause.__class__ == UnwindClause:
             # 更新可返回的变量名/别名
             return "UNWIND " + self.expression_converter.convert_expression(
-                reading_clause.expression) + " as " + reading_clause.variable
+                reading_clause.expression) + "\nAS " + reading_clause.variable
         elif reading_clause.__class__ == CallClause:
             return self.convert_call_clause(reading_clause)
 
