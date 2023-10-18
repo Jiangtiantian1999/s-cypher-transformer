@@ -99,3 +99,7 @@ class TestSet(TestCase):
         """
         cypher_query = transform_to_cypher(s_cypher)
         print("test_match_2:", '\n', s_cypher, '\n\n', cypher_query, '\n\n')
+
+    # b)	检查对象节点No下的与属性节点Na拥有相同内容的属性节点的有效时间是否与new_interval均无重合时间区间，如否，则报错；
+    # b)	检查属性节点Na下的值节点的有效时间是否与new_interval均无重合时间区间，如否，则报错；
+    # set new interval from > to
