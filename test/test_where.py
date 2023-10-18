@@ -10,3 +10,7 @@ class TestWhere(TestCase):
                    '\nRETURN e'
         cypher_query = transform_to_cypher(s_cypher)
         print("test_where_1:", '\n', s_cypher, '\n\n', cypher_query, '\n\n')
+
+
+## where 中可以套很多各种时间类型的函数判断
+## and or not等逻辑判断
