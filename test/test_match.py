@@ -1,3 +1,4 @@
+from textwrap import dedent
 from unittest import TestCase
 
 from transformer.main import transform_to_cypher
@@ -93,7 +94,7 @@ class TestMatch(TestCase):
         WITH n AS person
         RETURN person.name@T;
         """
-        cypher_query = transform_to_cypher(s_cypher.dedent())
+        cypher_query = transform_to_cypher(dedent(s_cypher))
         print("test_match_15:", '\n', s_cypher, '\n\n', cypher_query, '\n\n')
 
     def test_match_16(self):
@@ -101,7 +102,7 @@ class TestMatch(TestCase):
         WITH n.name + '000' as name
         RETURN name;
         """
-        cypher_query = transform_to_cypher(s_cypher.dedent())
+        cypher_query = transform_to_cypher(dedent(s_cypher))
         print("test_match_16:", '\n', s_cypher, '\n\n', cypher_query, '\n\n')
 
     def test_match_17(self):
@@ -109,7 +110,7 @@ class TestMatch(TestCase):
         WITH n.name AS name
         RETURN name@T;
         """
-        cypher_query = transform_to_cypher(s_cypher.dedent())
+        cypher_query = transform_to_cypher(dedent(s_cypher))
         print("test_match_17:", '\n', s_cypher, '\n\n', cypher_query, '\n\n')
 
     def test_match_18(self):
@@ -117,7 +118,7 @@ class TestMatch(TestCase):
         MATCH path = (a:Person)-[*1..5]->(b:Person)
         RETURN path;
         """
-        cypher_query = transform_to_cypher(s_cypher.dedent())
+        cypher_query = transform_to_cypher(dedent(s_cypher))
         print("test_match_18:", '\n', s_cypher, '\n\n', cypher_query, '\n\n')
 
     def test_match_19(self):
@@ -125,7 +126,7 @@ class TestMatch(TestCase):
         WHERE r.@T.from < '2022-01-01'
         RETURN a, b;
         """
-        cypher_query = transform_to_cypher(s_cypher.dedent())
+        cypher_query = transform_to_cypher(dedent(s_cypher))
         print("test_match_19:", '\n', s_cypher, '\n\n', cypher_query, '\n\n')
 
     def test_match_20(self):
@@ -133,5 +134,5 @@ class TestMatch(TestCase):
         WHERE r.@T.from < '2022-01-01'
         RETURN n;
         """
-        cypher_query = transform_to_cypher(s_cypher.dedent())
+        cypher_query = transform_to_cypher(dedent(s_cypher))
         print("test_match_20:", '\n', s_cypher, '\n\n', cypher_query, '\n\n')
