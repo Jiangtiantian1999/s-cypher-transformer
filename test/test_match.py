@@ -156,3 +156,11 @@ class TestMatch(TestCase):
         """
         cypher_query = transform_to_cypher(dedent(s_cypher))
         print("test_match_20:", '\n', s_cypher, '\n\n', cypher_query, '\n\n')
+
+    def test_match_21(self):
+        s_cypher = """MATCH (n:City {name: "London"}) -[r:route]->(m:City@T("1000", NOW) {name@T("1900", NOW): "Birmingham"@T("2200", NOW)})
+        WHERE r.@T.from < '2022-01-01'
+        RETURN n;
+        """
+        cypher_query = transform_to_cypher(dedent(s_cypher))
+        print("test_match_21:", '\n', s_cypher, '\n\n', cypher_query, '\n\n')

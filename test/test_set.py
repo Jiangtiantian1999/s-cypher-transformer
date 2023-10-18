@@ -1,5 +1,5 @@
 from unittest import TestCase
-
+from textwrap import dedent
 from transformer.main import transform_to_cypher
 
 
@@ -75,3 +75,27 @@ class TestSet(TestCase):
         """
         cypher_query = transform_to_cypher(s_cypher)
         print("test_set_10:", '\n', s_cypher, '\n\n', cypher_query, '\n\n')
+
+    def tset_set_11(self):
+        # TODO: Test whether an error will be reported when the interval of the child node is not within the interval of the parent node
+        s_cypher = """MATCH (n:City@T("1690", NOW))
+        SET  n.name@T(1550,1660)
+        """
+        cypher_query = transform_to_cypher(s_cypher)
+        print("test_match_11:", '\n', s_cypher, '\n\n', cypher_query, '\n\n')
+
+    def tset_set_12(self):
+        # TODO: Test whether an error will be reported when the interval of the child node is not within the interval of the parent node
+        s_cypher = """MATCH (n:City@T("1690", NOW) {name@T("1900", NOW): "London"@T("2000", NOW)})
+        SET  n.name#Value@T(1550,1660)
+        """
+        cypher_query = transform_to_cypher(s_cypher)
+        print("test_match_11:", '\n', s_cypher, '\n\n', cypher_query, '\n\n')
+
+    def test_set_12(self):
+        # TODO: Test when the new interval for e is not within the interval of the p1
+        s_cypher = """MATCH (n1:Person@T("2003", NOW) {name: "John"})-[e:LIVED@T("2010","2023")]->(n2:City@T("1690", NOW) {name@T("1900", NOW): "London"@T("2000", NOW)})
+        SET e@T("1700", NOW)
+        """
+        cypher_query = transform_to_cypher(s_cypher)
+        print("test_match_2:", '\n', s_cypher, '\n\n', cypher_query, '\n\n')
