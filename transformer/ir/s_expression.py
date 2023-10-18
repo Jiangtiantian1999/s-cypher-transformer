@@ -1,5 +1,7 @@
 from typing import List
 
+from transformer.global_variables import GlobalVariables
+
 
 class ListLiteral:
     # 注意：该处expressions为List[Expression]类型，由于与Expression相互引用，故此处不写明类型。
@@ -42,9 +44,10 @@ class ParenthesizedExpression:
 class FunctionInvocation:
     # 注意：该处expressions为List[Expression]类型，由于与Expression相互引用，故此处不写明类型。
     def __init__(self, function_name: str, is_distinct=False, expressions: List = None):
-        if function_name in ["interval", "interval.intersection", "interval.range", "interval.elapsedTime",
-                             "timePoint"]:
-            function_name = "scypher." + function_name
+        if function_name not in GlobalVariables.function_info.keys():
+            raise ValueError(
+                "There is no function with the name `" + function_name + "` registered for this database instance.")
+
         self.function_name = function_name
         self.is_distinct = is_distinct
         # 输入参数
@@ -146,24 +149,24 @@ class AddSubtractExpression:
 
 
 class TimePredicateExpression:
-    def __init__(self, time_operation: str, add_or_subtract_expression: AddSubtractExpression):
+    def __init__(self, time_operation: str, add_subtract_expression: AddSubtractExpression):
         if time_operation.lower() not in ["during", "overlaps"]:
             raise ValueError("The time operation must be 'during' or 'overlaps'.")
         self.time_operation = time_operation
-        self.add_or_subtract_expression = add_or_subtract_expression
+        self.add_or_subtract_expression = add_subtract_expression
 
 
 class StringPredicateExpression:
-    def __init__(self, string_operation: str, add_or_subtract_expression: AddSubtractExpression):
+    def __init__(self, string_operation: str, add_subtract_expression: AddSubtractExpression):
         if string_operation.lower() not in ["starts with", "ends with", "contains"]:
             raise ValueError("The string operation must in 'starts with', 'ends with' and 'contains'.")
         self.string_operation = string_operation
-        self.add_or_subtract_expression = add_or_subtract_expression
+        self.add_subtract_expression = add_subtract_expression
 
 
 class ListPredicateExpression:
-    def __init__(self, add_or_subtract_expression: AddSubtractExpression):
-        self.add_or_subtract_expression = add_or_subtract_expression
+    def __init__(self, add_subtract_expression: AddSubtractExpression):
+        self.add_subtract_expression = add_subtract_expression
 
 
 class NullPredicateExpression:
@@ -174,9 +177,9 @@ class NullPredicateExpression:
 
 # 相当于StringListNullPredicateExpression
 class SubjectExpression:
-    def __init__(self, add_or_subtract_expression: AddSubtractExpression,
+    def __init__(self, add_subtract_expression: AddSubtractExpression,
                  predicate_expression: TimePredicateExpression | StringPredicateExpression | ListPredicateExpression | NullPredicateExpression = None):
-        self.add_or_subtract_expression = add_or_subtract_expression
+        self.add_or_subtract_expression = add_subtract_expression
         self.predicate_expression = predicate_expression
 
 

@@ -1,11 +1,18 @@
+from transformer.generator.expression_converter import ExpressionConverter
 from transformer.ir.s_cypher_clause import *
 from transformer.ir.s_graph import *
 
 
 class VariablesManager:
-    count_num = 99
-    # 用户定义的变量名/别名->对应实体对象/原表达式
-    variables_dict = {}
+
+    def __init__(self):
+        self.count_num = 99
+        # 用户定义的变量名/别名：数据类型
+        self.variables_dict = {}
+        # 是否返回所有对象
+        self.is_all = False
+        self.property_patterns = []
+        self.with_project_items = []
 
     # 获取新的变量名
     def get_random_variable(self) -> str:
@@ -23,36 +30,44 @@ class VariablesManager:
             result = result + variable
         return result
 
-    def set_variables(self, variables_dict: dict):
-        self.variables_dict = variables_dict
-
-    def update_variables(self, variables_dict: dict):
-        self.variables_dict.update(variables_dict)
-
     def get_yield_clause_variables_dict(self, yield_clause: YieldClause) -> dict:
         variables_dict = {}
         if yield_clause:
             for yield_item in yield_clause.yield_items:
                 if yield_item.variable:
-                    variables_dict[yield_item.variable] = yield_item.procedure_result
+                    variables_dict[yield_item.variable] = yield_item.date_type
                 else:
-                    variables_dict[yield_item.procedure_result] = None
+                    variables_dict[yield_item.procedure_result] = yield_item.date_type
             return variables_dict
         return variables_dict
 
     def get_with_clause_variables_dict(self, with_clause: WithClause) -> dict:
         variables_dict = {}
         for projection_item in with_clause.projection_items:
-            if projection_item.variable:
-                variables_dict[projection_item.variable] = projection_item.expression
+            if projection_item.is_all:
+                self.is_all = True
+            else:
+                if projection_item.variable:
+                    variables_dict[projection_item.variable] = projection_item.expression
+                else:
+                    expression_string, expression_type = ExpressionConverter.convert_expression(
+                        projection_item.expression, self)
+                    variables_dict[expression_string] = expression_type
         return variables_dict
 
     def get_return_clause_variables_dict(self, return_clause: ReturnClause) -> dict:
         variables_dict = {}
         if return_clause:
             for projection_item in return_clause.projection_items:
-                if projection_item.variable:
-                    variables_dict[projection_item.variable] = projection_item.expression
+                if projection_item.is_all:
+                    self.is_all = True
+                else:
+                    if projection_item.variable:
+                        variables_dict[projection_item.variable] = projection_item.expression
+                    else:
+                        expression_string, expression_type = ExpressionConverter.convert_expression(
+                            projection_item.expression, self)
+                        variables_dict[expression_string] = expression_type
         return variables_dict
 
     def get_updating_clause_variables_dict(self, updating_clause: UpdatingClause) -> dict:
@@ -79,9 +94,12 @@ class VariablesManager:
     def get_pattern_variables_dict(self, pattern: Pattern) -> dict:
         pattern = pattern.pattern
         if pattern.__class__ == SPath:
+            # SPath/ObjectNode/PropertyNode/ValueNode/SEdge
             return self.get_path_variables_dict(pattern)
         elif pattern.__class__ == TemporalPathCall:
+            # TemporalPathCall
             variables_dict = {pattern.variable: pattern}
+            # SPath/ObjectNode/PropertyNode/ValueNode/SEdge
             variables_dict.update(self.get_path_variables_dict(pattern.path))
             return variables_dict
         return {}
@@ -89,21 +107,27 @@ class VariablesManager:
     def get_path_variables_dict(self, path: SPath) -> dict:
         variables_dict = {}
         if path.variable:
+            # SPath
             variables_dict[path.variable] = path
         for node in path.nodes:
+            # ObjectNode/PropertyNode/ValueNode
             variables_dict.update(self.get_object_node_variables_dict(node))
         for edge in path.edges:
             if edge.variable:
+                # SEdge
                 variables_dict[edge.variable] = edge
         return variables_dict
 
     def get_object_node_variables_dict(self, object_node: ObjectNode) -> dict:
         variables_dict = {}
         if object_node.variable:
+            # ObjectNode
             variables_dict[object_node.variable] = object_node
         for key, value in object_node.properties.items():
             if key.variable:
+                # PropertyNode
                 variables_dict[key.variable] = key
             if value.variable:
+                # ValueNode
                 variables_dict[value.variable] = value
         return variables_dict

@@ -13,6 +13,7 @@ class TemporalPathCall:
             raise ValueError("The length of the temporal path are not matched.")
         self.path = path
 
+
 class Pattern:
 
     def __init__(self, pattern: SPath | TemporalPathCall):
@@ -40,6 +41,8 @@ class YieldItem:
         self.procedure_result = procedure_result
         # 别名
         self.variable = variable
+        # 该项的数据类型
+        self.date_type = None
 
 
 class DeleteItem:

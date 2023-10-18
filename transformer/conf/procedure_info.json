@@ -1,0 +1,17 @@
+{
+  "scypher": {
+    "scypher.snapshot": null,
+    "scypher.scope": null
+  },
+  "cypher": {
+    "db.labels": {
+      "label": "property"
+    },
+    "dbms.info": {
+      "id": "property",
+      "name": "property",
+      "createDate": "property"
+    },
+    "org.opencypher.procedure.example.addNodeToIndex": null
+  }
+}
