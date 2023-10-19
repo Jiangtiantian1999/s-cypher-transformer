@@ -92,10 +92,12 @@ class CreateClause:
 
 
 class DeleteClause:
-    def __init__(self, delete_items: List[DeleteItem]):
+    def __init__(self, delete_items: List[DeleteItem], is_detach=False):
         if len(delete_items) == 0:
             raise ValueError("The delete items can't be empty.")
         self.delete_items = delete_items
+        # 删除节点时，是否删除相连边
+        self.is_detach = is_detach
 
 
 class StaleClause:
