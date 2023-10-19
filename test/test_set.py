@@ -113,6 +113,18 @@ class TestSet(TestCase):
         cypher_query = transform_to_cypher(s_cypher)
         print("test_match_13:", s_cypher, '\n', cypher_query, '\n')
 
-    # b)	检查对象节点No下的与属性节点Na拥有相同内容的属性节点的有效时间是否与new_interval均无重合时间区间，如否，则报错；
-    # b)	检查属性节点Na下的值节点的有效时间是否与new_interval均无重合时间区间，如否，则报错；
-    # set new interval from > to
+
+    def test_set_14(self):
+        # set new interval from > to
+        s_cypher = dedent("""
+        MATCH (n{name: "Pauline Boutler"})
+        SET n.name@T("1970", "1910"); 
+        """)
+        cypher_query = transform_to_cypher(s_cypher)
+        print("test_match_14:", s_cypher, '\n', cypher_query, '\n')
+
+
+    # 设置No有效时间：若用户指定了对象节点No的有效时间，且未指定属性节点Na的有效时间，则检查对象节点No的相连属性节点和相连边的有效时间是否均落在指定有效时间区间内，如是，则将No@T设为指定值，如否，则报错；
+    # 检查对象节点No下的与属性节点Na拥有相同内容的属性节点的有效时间是否与new_interval均无重合时间区间，如否，则报错；
+    # 检查属性节点Na下的值节点的有效时间是否与new_interval均无重合时间区间，如否，则报错；
+    

@@ -39,3 +39,13 @@ class TestStale(TestCase):
         """)
         cypher_query = transform_to_cypher(s_cypher)
         print("test_stale_4:", s_cypher, '\n', cypher_query, '\n')
+
+    def test_stale_5(self):
+        # test if @T.to is not NOW
+        s_cypher = dedent("""
+        MATCH (n:City@T("1690", "1999") {name@T("1900", "1999"): "London"@T("1900", "1999")})
+        STALE n
+        """)
+        cypher_query = transform_to_cypher(s_cypher)
+        print("test_stale_5:", s_cypher, '\n', cypher_query, '\n')
+    
