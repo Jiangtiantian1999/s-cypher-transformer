@@ -24,3 +24,5 @@ class TestTimeWindow(TestCase):
         """)
         cypher_query = transform_to_cypher(s_cypher)
         print("test_between_1:", s_cypher, '\n', cypher_query, '\n')
+
+# TODO: SNAPSHOT SCOPE
