@@ -60,7 +60,7 @@ class SEdge:
     UNDIRECTED = 'UNDIRECTED'
 
     def __init__(self, direction: str, variable: str = None, labels: List[str] = None, length: Tuple[int, int] = (1, 1),
-                 interval: AtTElement = None, properties: dict = None):
+                 interval: AtTElement = None, properties: dict[str, Expression] = None):
         if direction.upper() not in [self.LEFT, self.RIGHT, self.UNDIRECTED]:
             raise ValueError("Direction of edges must be 'LEFT', 'RIGHT' or 'UNDIRECTED'.")
         if length[0] is not None and length[1] is not None and (length[0] < 0 or length[0] > length[1]):

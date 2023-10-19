@@ -188,8 +188,8 @@ class ClauseConverter:
         for pattern in match_clause.patterns:
             pattern = pattern.pattern
             if pattern.__class__ == SPath:
-                path_pattern, property_patterns, path_interval_conditions = self.graph_converter.convert_path(pattern,
-                                                                                                              match_clause.time_window)
+                path_pattern, property_patterns, path_interval_conditions = self.graph_converter.match_path(pattern,
+                                                                                                            match_clause.time_window)
                 if match_clause_string not in ["MATCH ", "OPTIONAL MATCH "]:
                     match_clause_string = match_clause_string + ", "
                 match_clause_string = match_clause_string + path_pattern
@@ -200,9 +200,9 @@ class ClauseConverter:
             elif pattern.__class__ == TemporalPathCall:
                 if call_string != "":
                     call_string = call_string + '\n'
-                start_node_pattern, start_node_property_patterns, start_node_interval_conditions = self.graph_converter.convert_object_node(
+                start_node_pattern, start_node_property_patterns, start_node_interval_conditions = self.graph_converter.match_object_node(
                     pattern.path.nodes[0], match_clause.time_window)
-                end_node_pattern, end_node_property_patterns, end_node_interval_conditions = self.graph_converter.convert_object_node(
+                end_node_pattern, end_node_property_patterns, end_node_interval_conditions = self.graph_converter.match_object_node(
                     pattern.path.nodes[1], match_clause.time_window)
                 call_string = call_string + "MATCH " + start_node_pattern + ", " + end_node_pattern
                 # 添加节点属性模式的匹配
@@ -280,6 +280,57 @@ class ClauseConverter:
         # 更新可返回的变量名/别名
         self.variables_manager.variables_dict.update(
             self.variables_manager.get_updating_clause_variables_dict(updating_clause))
+        if updating_clause.update_clause.__class__ == CreateClause:
+            return self.convert_create_clause(updating_clause.update_clause, updating_clause.at_time_clause)
+        elif updating_clause.update_clause.__class__ == DeleteClause:
+            return self.convert_delete_clause(updating_clause.update_clause, updating_clause.at_time_clause)
+        elif updating_clause.update_clause.__class__ == StaleClause:
+            return self.convert_stale_clause(updating_clause.update_clause, updating_clause.at_time_clause)
+        elif updating_clause.update_clause.__class__ == SetClause:
+            return self.convert_set_clause(updating_clause.update_clause, updating_clause.at_time_clause)
+        elif updating_clause.update_clause.__class__ == MergeClause:
+            return self.convert_merge_clause(updating_clause.update_clause, updating_clause.at_time_clause)
+        elif updating_clause.update_clause.__class__ == RemoveClause:
+            return self.convert_remove_clause(updating_clause.update_clause, updating_clause.at_time_clause)
+
+    def convert_create_clause(self, create_clause: CreateClause, at_time_clause: AtTimeClause = None) -> str:
+        create_clause_string = "CREATE "
+        for index, pattern in enumerate(create_clause.patterns):
+            # create clause的pattern均为SPath类型
+            pattern = pattern.pattern
+            path_pattern, property_patterns = self.graph_converter.create_path(pattern, at_time_clause)
+            if index != 0:
+                create_clause_string = create_clause_string + ", "
+            create_clause_string = create_clause_string + path_pattern
+            # 添加节点属性模式的匹配
+            for property_pattern in property_patterns:
+                create_clause_string = create_clause_string + ", " + property_pattern
+        return create_clause_string
+
+    def convert_delete_clause(self, delete_clause: DeleteClause, at_time_clause: AtTimeClause = None) -> str:
+        delete_clause_string = "DELETE "
+        for delete_item in delete_clause.delete_items:
+            if delete_item.property_name is None and delete_item.is_value is None:
+                # 删除对象节点，以及相连的属性节点，值节点和边
+                pass
+            elif delete_item.property_name is not None and delete_item.is_value is None:
+                # 删除属性节点，以及相连的值节点和边
+                pass
+            elif delete_item.property_name is not None and delete_item.is_value is not None:
+                # 删除值节点，以及相连的边
+                pass
+        pass
+
+    def convert_stale_clause(self, stale_clause: StaleClause, at_time_clause: AtTimeClause = None) -> str:
+        pass
+
+    def convert_set_clause(self, set_clause: SetClause, at_time_clause: AtTimeClause = None) -> str:
+        pass
+
+    def convert_merge_clause(self, merge_clause: MergeClause, at_time_clause: AtTimeClause = None) -> str:
+        pass
+
+    def convert_remove_clause(self, remove_clause: RemoveClause, at_time_clause: AtTimeClause = None) -> str:
         pass
 
     def convert_return_clause(self, return_clause: ReturnClause) -> str:

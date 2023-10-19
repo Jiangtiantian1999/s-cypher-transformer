@@ -7,39 +7,37 @@ class GraphConverter:
         self.variables_manager = None
         self.expression_converter = None
 
-    def convert_path(self, path: SPath, time_window: AtTimeClause | BetweenClause = None) -> (
+    def match_path(self, path: SPath, time_window: AtTimeClause | BetweenClause = None) -> (
             str, List[str], List[str]):
         # 路径模式，属性节点和值节点的模式，路径有效时间限制
-        path_pattern, property_patterns, interval_conditions = self.convert_object_node(path.nodes[0], time_window)
-        index = 1
-        while index < len(path.nodes):
+        path_pattern, property_patterns, interval_conditions = self.match_object_node(path.nodes[0], time_window)
+        for index, path in path.edges:
             # 生成边模式
-            edge_pattern, edge_interval_condition = self.convert_edge(path.edges[index - 1], time_window)
+            edge_pattern, edge_interval_condition = self.match_edge(path.edges[index], time_window)
             path_pattern = path_pattern + edge_pattern
             interval_conditions.append(edge_interval_condition)
             # 生成节点模式
-            node_pattern, node_property_patterns, node_interval_conditions = self.convert_object_node(
-                path.nodes[index], time_window)
+            node_pattern, node_property_patterns, node_interval_conditions = self.match_object_node(
+                path.nodes[index + 1], time_window)
             path_pattern = path_pattern + node_pattern
             property_patterns.extend(node_property_patterns)
             interval_conditions.extend(node_interval_conditions)
 
-            index = index + 1
         if path.variable:
             path_pattern = path.variable + " = " + path_pattern
         return path_pattern, property_patterns, interval_conditions
 
-    def convert_object_node(self, object_node: ObjectNode, time_window: Expression = None) -> (
+    def match_object_node(self, object_node: ObjectNode, time_window: Expression = None) -> (
             str, List[str], List[str]):
         # 对象节点模式, 对象节点的有效时间限制
-        object_pattern, object_interval_condition = self.convert_node(object_node, time_window)
+        object_pattern, object_interval_condition = self.match_node(object_node, time_window)
         interval_conditions = [object_interval_condition]
 
         # 对象节点属性模式
         property_patterns = []
         for key, value in object_node.properties.items():
-            property_pattern, property_interval_condition = self.convert_node(key, time_window)
-            value_pattern, value_interval_condition = self.convert_node(value, time_window)
+            property_pattern, property_interval_condition = self.match_node(key, time_window)
+            value_pattern, value_interval_condition = self.match_node(value, time_window)
             property_patterns.append(
                 object_pattern + "-[:OBJECT_PROPERTY]->" + property_pattern + "-[:PROPERTY_VALUE]->" + value_pattern)
             # 属性节点的有效时间限制
@@ -49,7 +47,8 @@ class GraphConverter:
 
         return object_pattern, property_patterns, interval_conditions
 
-    def convert_node(self, node: SNode, time_window: AtTimeClause | BetweenClause = None) -> (str, List[str]):
+    def match_node(self, node: SNode, time_window: AtTimeClause | BetweenClause = None) -> (
+            str, List[str]):
         if node.variable is None:
             node.variable = self.variables_manager.get_random_variable()
             self.variables_manager.variables_dict[node.variable] = node
@@ -83,12 +82,11 @@ class GraphConverter:
 
         return node_pattern, interval_condition
 
-    def convert_edge(self, edge: SEdge, time_window: AtTimeClause | BetweenClause = None) -> (str, List[str]):
+    def match_edge(self, edge: SEdge, time_window: AtTimeClause | BetweenClause = None) -> (
+            str, List[str]):
         if edge.variable is None:
-            if self.variables_manager is not None:
-                edge.variable = self.variables_manager.get_random_variable()
-            else:
-                raise RuntimeError("Missing variables manager.")
+            edge.variable = self.variables_manager.get_random_variable()
+            self.variables_manager.variables_dict[edge.variable] = edge
         # 边模式
         edge_pattern = edge.variable
         for label in edge.labels:
@@ -109,9 +107,9 @@ class GraphConverter:
             for index, (key, value) in enumerate(edge.properties.items()):
                 if index != 0:
                     edge_pattern = edge_pattern + ", "
-                edge_pattern = edge_pattern + key + " : " + str(value)
+                edge_pattern = edge_pattern + key + " : " + self.expression_converter.convert_expression(value)
             edge_pattern = edge_pattern + '}'
-        if edge.variable or edge.labels or edge.length[0] != 1 or edge.length[1] != 1 or edge.properties:
+        if edge_pattern != "":
             edge_pattern = "-[" + edge_pattern + "]-"
         else:
             edge_pattern = '-' + edge_pattern + '-'
@@ -136,6 +134,91 @@ class GraphConverter:
             interval_condition = "scypher.limitInterval(" + edge.variable + ", null)"
 
         return edge_pattern, interval_condition
+
+    def create_path(self, path: SPath, time_window: AtTimeClause = None) -> (str, List[str], List[str]):
+        # 路径模式，属性节点和值节点的模式
+        path_pattern, property_patterns = self.create_object_node(path.nodes[0], time_window)
+        for index, edge in enumerate(path.edges):
+            # 生成边模式
+            edge_pattern = self.create_edge(path.edges[index], time_window)
+            path_pattern = path_pattern + edge_pattern
+            # 生成节点模式
+            node_pattern, node_property_patterns = self.create_object_node(path.nodes[index + 1], time_window)
+            path_pattern = path_pattern + node_pattern
+            property_patterns.extend(node_property_patterns)
+
+        if path.variable:
+            path_pattern = path.variable + " = " + path_pattern
+        return path_pattern, property_patterns
+
+    def create_object_node(self, object_node: ObjectNode, time_window: Expression = None) -> (str, List[str]):
+        object_pattern = self.create_node(object_node, time_window)
+
+        property_patterns = []
+        for key, value in object_node.properties.items():
+            property_pattern = self.create_node(key, time_window)
+            value_pattern = self.create_node(value, time_window)
+            property_patterns.append(
+                object_pattern + "-[:OBJECT_PROPERTY]->" + property_pattern + "-[:PROPERTY_VALUE]->" + value_pattern)
+
+        return object_pattern, property_patterns
+
+    def create_node(self, node: SNode, time_window: AtTimeClause = None) -> str:
+        if node.variable:
+            node_pattern = node.variable
+        else:
+            node_pattern = ""
+        for label in node.labels:
+            node_pattern = node_pattern + ':' + label
+        if node.__class__ == PropertyNode:
+            node_pattern = node_pattern + "{content: \"" + node.content + "\""
+        elif node.__class__ == ValueNode:
+            node_pattern = node_pattern + "{content: " + self.expression_converter.convert_expression(node.content)
+        if node.interval:
+            node_pattern = node_pattern + ", intervalFrom: " + self.convert_time_point_literal(
+                node.interval.interval_from)
+            node_pattern = node_pattern + ", intervalTo: " + self.convert_time_point_literal(node.interval.interval_to)
+        elif time_window:
+            node_pattern = node_pattern + ", intervalFrom: " + self.expression_converter.convert_expression(
+                time_window.time_point)
+            node_pattern = node_pattern + ", intervalTo: scypher.timePoint(\"NOW\")"
+        else:
+            node_pattern = node_pattern + ", intervalFrom: scypher.createTimePoint(), intervalTo: scypher.timePoint(\"NOW\")"
+        node_pattern = '(' + node_pattern + "})"
+        return node_pattern
+
+    def create_edge(self, edge: SEdge, time_window: AtTimeClause = None) -> str:
+        if edge.variable:
+            edge_pattern = edge.variable
+        else:
+            edge_pattern = ""
+
+        if len(edge.labels) <= 1:
+            raise SyntaxError(
+                "Exactly one relationship type must be specified for CREATE. Did you forget to prefix your relationship type with a ':'?")
+        for label in edge.labels:
+            edge_pattern = edge_pattern + ':' + label
+
+        edge_pattern = edge_pattern + '{'
+        for key, value in edge.properties.items():
+            edge_pattern = edge_pattern + key + " : " + self.expression_converter.convert_expression(value) + ", "
+        if edge.interval:
+            edge_pattern = edge_pattern + "intervalFrom: scypher.timePoint(" + self.convert_time_point_literal(
+                edge.interval.interval_from) + "), intervalTo: scypher.timePoint(" + self.convert_time_point_literal(
+                edge.interval.interval_to) + ')'
+        elif time_window:
+            edge_pattern = edge_pattern + "intervalFrom: " + self.expression_converter.convert_expression(
+                time_window.time_point) + ", intervalTo: scypher.timePoint(\"NOW\")"
+        else:
+            edge_pattern = edge_pattern + "intervalFrom: scypher.createTimePoint(), intervalTo: scypher.timePoint(\"NOW\")"
+
+        edge_pattern = '-[' + edge_pattern + '}]-'
+        if edge.direction == edge.LEFT:
+            edge_pattern = '<' + edge_pattern
+        elif edge.direction == edge.RIGHT:
+            edge_pattern = edge_pattern + '>'
+
+        return edge_pattern
 
     def convert_time_point_literal(self, time_point_literal: TimePointLiteral) -> str:
         time_point = time_point_literal.time_point
