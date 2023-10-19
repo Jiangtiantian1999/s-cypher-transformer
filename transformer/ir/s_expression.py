@@ -147,7 +147,7 @@ class TimePredicateExpression:
         if time_operation.lower() not in ["during", "overlaps"]:
             raise ValueError("The time operation must be 'during' or 'overlaps'.")
         self.time_operation = time_operation
-        self.add_or_subtract_expression = add_subtract_expression
+        self.add_subtract_expression = add_subtract_expression
 
 
 class StringPredicateExpression:

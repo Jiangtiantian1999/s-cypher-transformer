@@ -193,7 +193,7 @@ class GraphConverter:
         else:
             edge_pattern = ""
 
-        if len(edge.labels) <= 1:
+        if len(edge.labels) == 0:
             raise SyntaxError(
                 "Exactly one relationship type must be specified for CREATE. Did you forget to prefix your relationship type with a ':'?")
         for label in edge.labels:
