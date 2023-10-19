@@ -11,9 +11,9 @@ class GraphConverter:
             str, List[str], List[str]):
         # 路径模式，属性节点和值节点的模式，路径有效时间限制
         path_pattern, property_patterns, interval_conditions = self.match_object_node(path.nodes[0], time_window)
-        for index, path in path.edges:
+        for index, edge in enumerate(path.edges):
             # 生成边模式
-            edge_pattern, edge_interval_condition = self.match_edge(path.edges[index], time_window)
+            edge_pattern, edge_interval_condition = self.match_edge(edge, time_window)
             path_pattern = path_pattern + edge_pattern
             interval_conditions.append(edge_interval_condition)
             # 生成节点模式
@@ -140,7 +140,7 @@ class GraphConverter:
         path_pattern, property_patterns = self.create_object_node(path.nodes[0], time_window)
         for index, edge in enumerate(path.edges):
             # 生成边模式
-            edge_pattern = self.create_edge(path.edges[index], time_window)
+            edge_pattern = self.create_edge(edge, time_window)
             path_pattern = path_pattern + edge_pattern
             # 生成节点模式
             node_pattern, node_property_patterns = self.create_object_node(path.nodes[index + 1], time_window)
