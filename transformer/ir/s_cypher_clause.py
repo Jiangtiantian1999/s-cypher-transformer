@@ -18,12 +18,16 @@ class OrderByClause:
 
 
 class ReturnClause:
-    def __init__(self, projection_items: List[ProjectionItem], is_distinct: bool = False,
+    def __init__(self, projection_items: List[ProjectionItem] = None, is_all: bool = False, is_distinct: bool = False,
                  order_by_clause: OrderByClause = None, skip_expression: Expression = None,
                  limit_expression: Expression = None):
-        if len(projection_items) == 0:
-            raise ValueError("The projection items can't be empty.")
+        if projection_items is None:
+            projection_items = []
+        if len(projection_items) == 0 and is_all is False:
+            raise ValueError("The return items can't be empty.")
         self.projection_items = projection_items
+        # 第一个返回值为*
+        self.is_all = is_all
         self.is_distinct = is_distinct
         self.order_by_clause = order_by_clause
         self.skip_expression = skip_expression
@@ -59,23 +63,25 @@ class UnwindClause:
 
 
 class YieldClause:
-    def __init__(self, yield_items: List[YieldItem], where_expression: Expression = None):
-        if len(yield_items) == 0:
+    def __init__(self, yield_items: List[YieldItem] = None, is_all=False, where_expression: Expression = None):
+        if yield_items is None:
+            yield_items = []
+        if len(yield_items) == 0 and is_all is False:
             raise ValueError("The yield items can't be empty.")
         self.yield_items = yield_items
+        # 第一个返回值为*
+        self.is_all = is_all
         self.where_expression = where_expression
 
 
 class CallClause:
 
-    def __init__(self, procedure_name: str, input_items: List[Expression] = None, yield_clause: YieldClause = None,
-                 is_all=False):
+    def __init__(self, procedure_name: str, input_items: List[Expression] = None, yield_clause: YieldClause = None):
         self.procedure_name = procedure_name
         if input_items is None:
             input_items = []
         self.input_items = input_items
         self.yield_clause = yield_clause
-        self.is_all = is_all
 
 
 # 读查询
@@ -85,48 +91,56 @@ class ReadingClause:
 
 
 class CreateClause:
-    def __init__(self, patterns: List[Pattern]):
+    def __init__(self, patterns: List[Pattern], at_time_clause: AtTimeClause = None):
         if len(patterns) == 0:
             raise ValueError("The patterns can't be empty.")
         self.patterns = patterns
+        self.at_time_clause = at_time_clause
 
 
 class DeleteClause:
-    def __init__(self, delete_items: List[DeleteItem], is_detach=False):
+    def __init__(self, delete_items: List[DeleteItem], is_detach=False,
+                 time_window: AtTimeClause | BetweenClause = None):
         if len(delete_items) == 0:
             raise ValueError("The delete items can't be empty.")
         self.delete_items = delete_items
         # 删除节点时，是否删除相连边
         self.is_detach = is_detach
+        self.time_window = time_window
 
 
 class StaleClause:
     # stale_item和delete_item的形式是相同的
-    def __init__(self, stale_items: List[DeleteItem]):
+    def __init__(self, stale_items: List[DeleteItem], at_time_clause: AtTimeClause = None):
         if len(stale_items) == 0:
             raise ValueError("The stale items can't be empty.")
         self.stale_items = stale_items
+        self.at_time_clause = at_time_clause
 
 
 class SetClause:
-    def __init__(self, set_items: List[SetItem]):
+    def __init__(self, set_items: List[SetItem], at_time_clause: AtTimeClause = None):
         if len(set_items) == 0:
             raise ValueError("The set items can't be empty.")
         self.set_items = set_items
+        self.at_time_clause = at_time_clause
 
 
 class MergeClause:
-    def __init__(self, patterns: List[Pattern], actions: dict[str, SetClause] = None):
+    def __init__(self, patterns: List[Pattern], actions: dict[str, SetClause] = None,
+                 at_time_clause: AtTimeClause = None):
         if len(patterns) == 0:
             raise ValueError("The patterns can't be empty.")
         self.patterns = patterns
         if actions is None:
             actions = []
         self.actions = actions
+        self.at_time_clause = at_time_clause
 
 
 class RemoveClause:
-    def __init__(self, object_variable: Atom, property_variable: str = None, labels: List[str] = None):
+    def __init__(self, object_variable: Atom, property_variable: str = None, labels: List[str] = None,
+                 at_time_clause: AtTimeClause = None):
         if property_variable is None and labels is None:
             raise ValueError("Only can remove the labels or properties of object nodes.")
         self.object_variable = object_variable
@@ -135,15 +149,14 @@ class RemoveClause:
         if labels is None:
             labels = []
         self.labels = labels
+        self.at_time_clause = at_time_clause
 
 
 # 更新查询
 class UpdatingClause:
     def __init__(self,
-                 update_clause: CreateClause | DeleteClause | StaleClause | SetClause | MergeClause | RemoveClause,
-                 at_time_clause: AtTimeClause = None):
+                 update_clause: CreateClause | DeleteClause | StaleClause | SetClause | MergeClause | RemoveClause):
         self.update_clause = update_clause
-        self.at_time_clause = at_time_clause
 
 
 # 最后的子句为return或update的查询模块，单一查询
@@ -162,12 +175,16 @@ class SingleQueryClause:
 
 
 class WithClause:
-    def __init__(self, projection_items: List[ProjectionItem], is_distinct: bool = False,
+    def __init__(self, projection_items: List[ProjectionItem] = None, is_all: bool = False, is_distinct: bool = False,
                  order_by_clause: OrderByClause = None, skip_expression: Expression = None,
                  limit_expression: Expression = None):
-        if len(projection_items) == 0:
-            raise ValueError("The projection items can't be empty.")
+        if projection_items is None:
+            projection_items = []
+        if len(projection_items) == 0 and is_all is False:
+            raise ValueError("The with items can't be empty.")
         self.projection_items = projection_items
+        # 第一个返回值为*
+        self.is_all = is_all
         self.is_distinct = is_distinct
         self.order_by_clause = order_by_clause
         self.skip_expression = skip_expression

@@ -8,7 +8,7 @@ oC_Query : oC_RegularQuery
 
 oC_Match : ( OPTIONAL SP )? MATCH SP? oC_Pattern ( SP? ( s_AtTime | s_Between ) )? ( SP? s_Where )? ;
 
-oC_UpdatingClause : ( oC_Create | oC_Merge | oC_Delete | oC_Set | oC_Remove | s_Stale) ( SP? s_AtTime )? ;
+oC_UpdatingClause : ( ( oC_Create | oC_Merge | oC_Set | oC_Remove | s_Stale) ( SP? s_AtTime )? ) | ( oC_Delete ( SP? ( s_AtTime | s_Between ) )? ) ;
 
 oC_SetItem : ( oC_Variable SP? s_AtTElement )
            | ( oC_Variable ( SP? s_AtTElement )? '.' s_SetPropertyItemOne )

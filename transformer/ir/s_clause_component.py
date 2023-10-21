@@ -22,12 +22,7 @@ class Pattern:
 
 class ProjectionItem:
 
-    def __init__(self, is_all: bool = False, expression: Expression = None, variable: str = None):
-        # 要么为*，要么为expression( as variable)
-        if is_all is False and expression is None:
-            raise ValueError("The projection item can't be empty.")
-        # 是否返回所有变量，即return *
-        self.is_all = is_all
+    def __init__(self, expression: Expression = None, variable: str = None):
         # 表达式
         self.expression = expression
         # 别名
