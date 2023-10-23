@@ -41,9 +41,17 @@ class VariablesManager:
     def get_with_clause_variables_dict(self, with_clause: WithClause) -> dict:
         variables_dict = {}
         for projection_item in with_clause.projection_items:
-            if projection_item.is_all:
-                self.is_all = True
+            if projection_item.variable:
+                variables_dict[projection_item.variable] = projection_item.expression
             else:
+                variables_dict[self.expression_converter.convert_expression(
+                    projection_item.expression)] = projection_item.expression
+        return variables_dict
+
+    def get_return_clause_variables_dict(self, return_clause: ReturnClause) -> dict:
+        variables_dict = {}
+        if return_clause:
+            for projection_item in return_clause.projection_items:
                 if projection_item.variable:
                     variables_dict[projection_item.variable] = projection_item.expression
                 else:
@@ -51,25 +59,11 @@ class VariablesManager:
                         projection_item.expression)] = projection_item.expression
         return variables_dict
 
-    def get_return_clause_variables_dict(self, return_clause: ReturnClause) -> dict:
+    def get_updating_clause_variables_dict(self,
+                                           updating_clause: CreateClause | DeleteClause | StaleClause | SetClause | MergeClause | RemoveClause) -> dict:
         variables_dict = {}
-        if return_clause:
-            for projection_item in return_clause.projection_items:
-                if projection_item.is_all:
-                    self.is_all = True
-                else:
-                    if projection_item.variable:
-                        variables_dict[projection_item.variable] = projection_item.expression
-                    else:
-                        variables_dict[self.expression_converter.convert_expression(
-                            projection_item.expression)] = projection_item.expression
-        return variables_dict
-
-    def get_updating_clause_variables_dict(self, updating_clause: UpdatingClause) -> dict:
-        update_clause = updating_clause.update_clause
-        variables_dict = {}
-        if update_clause.__class__ in [CreateClause, MergeClause]:
-            for pattern in update_clause.patterns:
+        if updating_clause.__class__ in [CreateClause, MergeClause]:
+            for pattern in updating_clause.patterns:
                 variables_dict.update(self.get_pattern_variables_dict(pattern))
         return variables_dict
 

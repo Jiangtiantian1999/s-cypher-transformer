@@ -52,8 +52,10 @@ class ClauseConverter:
         self.variables_manager.variables_dict.update(
             self.variables_manager.get_yield_clause_variables_dict(yield_clause))
         yield_clause_string = "YIELD "
-        for yield_item in yield_clause.yield_items:
-            if yield_clause_string != "YIELD ":
+        if yield_clause.is_all:
+            yield_clause_string = "YIELD *, "
+        for index, yield_item in enumerate(yield_clause.yield_items):
+            if index != 0:
                 yield_clause_string = yield_clause_string + ", "
             yield_clause_string = yield_clause_string + yield_item.procedure_result
             if yield_item.variable:
@@ -112,20 +114,19 @@ class ClauseConverter:
         with_clause_string = "WITH "
         if with_clause.is_distinct:
             with_clause_string = "WITH DISTINCT "
-        for projection_item in with_clause.projection_items:
-            if projection_item.is_all:
-                # 返回所有用户指定的可返回的变量名/别名
-                for variable in self.variables_manager.variables_dict.keys():
-                    if with_clause_string not in ["WITH ", "WITH DISTINCT "]:
-                        with_clause_string = with_clause_string + ", "
-                    with_clause_string = with_clause_string + variable
-            elif projection_item.expression:
-                if with_clause_string not in ["WITH ", "WITH DISTINCT "]:
+        if with_clause.is_all:
+            # 返回所有用户指定的可返回的变量名/别名
+            for index, variable in enumerate(self.variables_manager.variables_dict.keys()):
+                if index != 0:
                     with_clause_string = with_clause_string + ", "
-                with_clause_string = with_clause_string + self.expression_converter.convert_expression(
-                    projection_item.expression)
-                if projection_item.variable:
-                    with_clause_string = with_clause_string + " as " + projection_item.variable
+                with_clause_string = with_clause_string + variable
+        for projection_item in with_clause.projection_items:
+            if with_clause_string not in ["WITH ", "WITH DISTINCT "]:
+                with_clause_string = with_clause_string + ", "
+            with_clause_string = with_clause_string + self.expression_converter.convert_expression(
+                projection_item.expression)
+            if projection_item.variable:
+                with_clause_string = with_clause_string + " as " + projection_item.variable
         if with_clause.order_by_clause:
             with_clause_string = with_clause_string + '\n' + self.convert_order_by_clause(with_clause.order_by_clause)
         if with_clause.skip_expression:
@@ -277,28 +278,30 @@ class ClauseConverter:
         return where_clause_string
 
     def convert_updating_clause(self, updating_clause: UpdatingClause) -> str:
+        updating_clause = updating_clause.updating_clause
         # 更新可返回的变量名/别名
         self.variables_manager.variables_dict.update(
             self.variables_manager.get_updating_clause_variables_dict(updating_clause))
-        if updating_clause.update_clause.__class__ == CreateClause:
-            return self.convert_create_clause(updating_clause.update_clause, updating_clause.at_time_clause)
-        elif updating_clause.update_clause.__class__ == DeleteClause:
-            return self.convert_delete_clause(updating_clause.update_clause, updating_clause.at_time_clause)
-        elif updating_clause.update_clause.__class__ == StaleClause:
-            return self.convert_stale_clause(updating_clause.update_clause, updating_clause.at_time_clause)
-        elif updating_clause.update_clause.__class__ == SetClause:
-            return self.convert_set_clause(updating_clause.update_clause, updating_clause.at_time_clause)
-        elif updating_clause.update_clause.__class__ == MergeClause:
-            return self.convert_merge_clause(updating_clause.update_clause, updating_clause.at_time_clause)
-        elif updating_clause.update_clause.__class__ == RemoveClause:
-            return self.convert_remove_clause(updating_clause.update_clause, updating_clause.at_time_clause)
 
-    def convert_create_clause(self, create_clause: CreateClause, at_time_clause: AtTimeClause = None) -> str:
+        if updating_clause.__class__ == CreateClause:
+            return self.convert_create_clause(updating_clause)
+        elif updating_clause.__class__ == DeleteClause:
+            return self.convert_delete_clause(updating_clause)
+        elif updating_clause.__class__ == StaleClause:
+            return self.convert_stale_clause(updating_clause)
+        elif updating_clause.__class__ == SetClause:
+            return self.convert_set_clause(updating_clause)
+        elif updating_clause.__class__ == MergeClause:
+            return self.convert_merge_clause(updating_clause)
+        elif updating_clause.__class__ == RemoveClause:
+            return self.convert_remove_clause(updating_clause)
+
+    def convert_create_clause(self, create_clause: CreateClause) -> str:
         create_clause_string = "CREATE "
         for index, pattern in enumerate(create_clause.patterns):
             # create clause的pattern均为SPath类型
             pattern = pattern.pattern
-            path_pattern, property_patterns = self.graph_converter.create_path(pattern, at_time_clause)
+            path_pattern, property_patterns = self.graph_converter.create_path(pattern, create_clause.at_time_clause)
             if index != 0:
                 create_clause_string = create_clause_string + ", "
             create_clause_string = create_clause_string + path_pattern
@@ -307,7 +310,7 @@ class ClauseConverter:
                 create_clause_string = create_clause_string + ", " + property_pattern
         return create_clause_string
 
-    def convert_delete_clause(self, delete_clause: DeleteClause, at_time_clause: AtTimeClause = None) -> str:
+    def convert_delete_clause(self, delete_clause: DeleteClause) -> str:
         delete_clause_string = "DELETE "
         for delete_item in delete_clause.delete_items:
             if delete_item.property_name is None and delete_item.is_value is None:
@@ -321,16 +324,16 @@ class ClauseConverter:
                 pass
         pass
 
-    def convert_stale_clause(self, stale_clause: StaleClause, at_time_clause: AtTimeClause = None) -> str:
+    def convert_stale_clause(self, stale_clause: StaleClause) -> str:
         pass
 
-    def convert_set_clause(self, set_clause: SetClause, at_time_clause: AtTimeClause = None) -> str:
+    def convert_set_clause(self, set_clause: SetClause) -> str:
         pass
 
-    def convert_merge_clause(self, merge_clause: MergeClause, at_time_clause: AtTimeClause = None) -> str:
+    def convert_merge_clause(self, merge_clause: MergeClause) -> str:
         pass
 
-    def convert_remove_clause(self, remove_clause: RemoveClause, at_time_clause: AtTimeClause = None) -> str:
+    def convert_remove_clause(self, remove_clause: RemoveClause) -> str:
         pass
 
     def convert_return_clause(self, return_clause: ReturnClause) -> str:
@@ -338,20 +341,19 @@ class ClauseConverter:
         return_clause_string = "RETURN "
         if return_clause.is_distinct:
             return_clause_string = "RETURN DISTINCT "
-        for projection_item in return_clause.projection_items:
-            if projection_item.is_all:
-                # 返回所有用户指定的可返回的变量
-                for variable in self.variables_manager.variables_dict.keys():
-                    if return_clause_string not in ["RETURN ", "RETURN DISTINCT "]:
-                        return_clause_string = return_clause_string + ", "
-                    return_clause_string = return_clause_string + variable
-            elif projection_item.expression:
-                if return_clause_string not in ["RETURN ", "RETURN DISTINCT "]:
+        if return_clause.is_all:
+            # 返回所有用户指定的可返回的变量
+            for index, variable in enumerate(self.variables_manager.variables_dict.keys()):
+                if index != 0:
                     return_clause_string = return_clause_string + ", "
-                return_clause_string = return_clause_string + self.expression_converter.convert_expression(
-                    projection_item.expression)
-                if projection_item.variable:
-                    return_clause_string = return_clause_string + " as " + projection_item.variable
+                return_clause_string = return_clause_string + variable
+        for projection_item in return_clause.projection_items:
+            if return_clause_string not in ["RETURN ", "RETURN DISTINCT "]:
+                return_clause_string = return_clause_string + ", "
+            return_clause_string = return_clause_string + self.expression_converter.convert_expression(
+                projection_item.expression)
+            if projection_item.variable:
+                return_clause_string = return_clause_string + " as " + projection_item.variable
         if return_clause.order_by_clause:
             return_clause_string = return_clause_string + '\n' + self.convert_order_by_clause(
                 return_clause.order_by_clause)

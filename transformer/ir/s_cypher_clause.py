@@ -155,8 +155,8 @@ class RemoveClause:
 # 更新查询
 class UpdatingClause:
     def __init__(self,
-                 update_clause: CreateClause | DeleteClause | StaleClause | SetClause | MergeClause | RemoveClause):
-        self.update_clause = update_clause
+                 updating_clause: CreateClause | DeleteClause | StaleClause | SetClause | MergeClause | RemoveClause):
+        self.updating_clause = updating_clause
 
 
 # 最后的子句为return或update的查询模块，单一查询

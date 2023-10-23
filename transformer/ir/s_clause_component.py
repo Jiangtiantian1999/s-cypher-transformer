@@ -22,7 +22,7 @@ class Pattern:
 
 class ProjectionItem:
 
-    def __init__(self, expression: Expression = None, variable: str = None):
+    def __init__(self, expression: Expression, variable: str = None):
         # 表达式
         self.expression = expression
         # 别名
