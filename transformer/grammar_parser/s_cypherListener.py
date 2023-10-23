@@ -1,4 +1,4 @@
-# Generated from s_cypher.g4 by ANTLR 4.13.0
+# Generated from .\s_cypher.g4 by ANTLR 4.13.0
 from antlr4 import *
 if "." in __name__:
     from .s_cypherParser import s_cypherParser
@@ -32,6 +32,51 @@ class s_cypherListener(ParseTreeListener):
 
     # Exit a parse tree produced by s_cypherParser#oC_UpdatingClause.
     def exitOC_UpdatingClause(self, ctx:s_cypherParser.OC_UpdatingClauseContext):
+        pass
+
+
+    # Enter a parse tree produced by s_cypherParser#s_Create.
+    def enterS_Create(self, ctx:s_cypherParser.S_CreateContext):
+        pass
+
+    # Exit a parse tree produced by s_cypherParser#s_Create.
+    def exitS_Create(self, ctx:s_cypherParser.S_CreateContext):
+        pass
+
+
+    # Enter a parse tree produced by s_cypherParser#s_Merge.
+    def enterS_Merge(self, ctx:s_cypherParser.S_MergeContext):
+        pass
+
+    # Exit a parse tree produced by s_cypherParser#s_Merge.
+    def exitS_Merge(self, ctx:s_cypherParser.S_MergeContext):
+        pass
+
+
+    # Enter a parse tree produced by s_cypherParser#s_Set.
+    def enterS_Set(self, ctx:s_cypherParser.S_SetContext):
+        pass
+
+    # Exit a parse tree produced by s_cypherParser#s_Set.
+    def exitS_Set(self, ctx:s_cypherParser.S_SetContext):
+        pass
+
+
+    # Enter a parse tree produced by s_cypherParser#s_Remove.
+    def enterS_Remove(self, ctx:s_cypherParser.S_RemoveContext):
+        pass
+
+    # Exit a parse tree produced by s_cypherParser#s_Remove.
+    def exitS_Remove(self, ctx:s_cypherParser.S_RemoveContext):
+        pass
+
+
+    # Enter a parse tree produced by s_cypherParser#s_Stale.
+    def enterS_Stale(self, ctx:s_cypherParser.S_StaleContext):
+        pass
+
+    # Exit a parse tree produced by s_cypherParser#s_Stale.
+    def exitS_Stale(self, ctx:s_cypherParser.S_StaleContext):
         pass
 
 
@@ -80,15 +125,6 @@ class s_cypherListener(ParseTreeListener):
         pass
 
 
-    # Enter a parse tree produced by s_cypherParser#s_Stale.
-    def enterS_Stale(self, ctx:s_cypherParser.S_StaleContext):
-        pass
-
-    # Exit a parse tree produced by s_cypherParser#s_Stale.
-    def exitS_Stale(self, ctx:s_cypherParser.S_StaleContext):
-        pass
-
-
     # Enter a parse tree produced by s_cypherParser#s_StaleItem.
     def enterS_StaleItem(self, ctx:s_cypherParser.S_StaleItemContext):
         pass
@@ -98,12 +134,12 @@ class s_cypherListener(ParseTreeListener):
         pass
 
 
-    # Enter a parse tree produced by s_cypherParser#oC_Delete.
-    def enterOC_Delete(self, ctx:s_cypherParser.OC_DeleteContext):
+    # Enter a parse tree produced by s_cypherParser#s_Delete.
+    def enterS_Delete(self, ctx:s_cypherParser.S_DeleteContext):
         pass
 
-    # Exit a parse tree produced by s_cypherParser#oC_Delete.
-    def exitOC_Delete(self, ctx:s_cypherParser.OC_DeleteContext):
+    # Exit a parse tree produced by s_cypherParser#s_Delete.
+    def exitS_Delete(self, ctx:s_cypherParser.S_DeleteContext):
         pass
 
 
@@ -797,6 +833,15 @@ class s_cypherListener(ParseTreeListener):
 
     # Exit a parse tree produced by s_cypherParser#oC_Set.
     def exitOC_Set(self, ctx:s_cypherParser.OC_SetContext):
+        pass
+
+
+    # Enter a parse tree produced by s_cypherParser#oC_Delete.
+    def enterOC_Delete(self, ctx:s_cypherParser.OC_DeleteContext):
+        pass
+
+    # Exit a parse tree produced by s_cypherParser#oC_Delete.
+    def exitOC_Delete(self, ctx:s_cypherParser.OC_DeleteContext):
         pass
 
 
