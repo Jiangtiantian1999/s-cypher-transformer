@@ -50,10 +50,10 @@ class TestReturn(TestCase):
 
     def test_return_6(self):
         # TODO: test aggregate functions
-        s_cypher = """
+        s_cypher = dedent("""
         MATCH (p:Person)
         RETURN avg(p.age) AS AverageAge, max(p.age) AS Oldest, min(p.age) AS Youngest;
-        """
+        """)
         cypher_query = transform_to_cypher(s_cypher)
         print("test_return_6:", s_cypher, '\n', cypher_query, '\n')
 
