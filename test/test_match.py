@@ -162,7 +162,7 @@ class TestMatch(TestCase):
     def test_match_19(self):
         s_cypher = dedent("""
         MATCH (a:Person)-[r:FRIENDS_WITH]->(b:Person)
-        WHERE r.@T.from < '2022-01-01'
+        WHERE r@T.from < '2022-01-01'
         RETURN a, b;
         """)
         cypher_query = transform_to_cypher(s_cypher)
@@ -171,7 +171,7 @@ class TestMatch(TestCase):
     def test_match_20(self):
         s_cypher = dedent("""
         MATCH (n:City@T("1690", NOW) {name@T("1900", NOW): "London"@T("2000", NOW)}) -[r:route]->(m:City@T("1000", NOW) {name@T("1900", NOW): "Birmingham"@T("2200", NOW)})
-        WHERE r.@T.from < '2022-01-01'
+        WHERE r@T.from < '2022-01-01'
         RETURN n;
         """)
         cypher_query = transform_to_cypher(s_cypher)
@@ -180,7 +180,7 @@ class TestMatch(TestCase):
     def test_match_21(self):
         s_cypher = dedent("""
         MATCH (n:City {name: "London"}) -[r:route]->(m:City@T("1000", NOW) {name@T("1900", NOW): "Birmingham"@T("2200", NOW)})
-        WHERE r.@T.from < '2022-01-01'
+        WHERE r@T.from < '2022-01-01'
         RETURN n;
         """)
         cypher_query = transform_to_cypher(s_cypher)
