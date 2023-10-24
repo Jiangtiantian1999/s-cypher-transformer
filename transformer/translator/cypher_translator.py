@@ -12,7 +12,7 @@ class CypherTranslator:
     def translate_s_cypher_query(self) -> SCypherClause:
         walker = ParseTreeWalker()
         extractor = SCypherWalker(self.parser)
-        tree = self.parser.oC_Query()
+        tree = self.parser.oC_Cypher()
         # print(tree.toStringTree(tree, self.parser))
         walker.walk(extractor, tree)
         clause = extractor.query_clause
