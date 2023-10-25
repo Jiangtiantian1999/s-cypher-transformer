@@ -7,8 +7,7 @@ class GraphConverter:
         self.variables_manager = None
         self.expression_converter = None
 
-    def match_path(self, path: SPath, time_window: AtTimeClause | BetweenClause = None) -> (
-            str, List[str], List[str]):
+    def match_path(self, path: SPath, time_window: AtTimeClause | BetweenClause = None) -> (str, List[str], List[str]):
         # 路径模式，属性节点和值节点的模式，路径有效时间限制
         path_pattern, property_patterns, interval_conditions = self.match_object_node(path.nodes[0], time_window)
         for index, edge in enumerate(path.edges):
@@ -27,8 +26,7 @@ class GraphConverter:
             path_pattern = path.variable + " = " + path_pattern
         return path_pattern, property_patterns, interval_conditions
 
-    def match_object_node(self, object_node: ObjectNode, time_window: Expression = None) -> (
-            str, List[str], List[str]):
+    def match_object_node(self, object_node: ObjectNode, time_window: Expression = None) -> (str, List[str], List[str]):
         # 对象节点模式, 对象节点的有效时间限制
         object_pattern, object_interval_condition = self.match_node(object_node, time_window)
         interval_conditions = [object_interval_condition]
@@ -47,14 +45,11 @@ class GraphConverter:
 
         return object_pattern, property_patterns, interval_conditions
 
-    def match_node(self, node: SNode, time_window: AtTimeClause | BetweenClause = None) -> (
-            str, List[str]):
+    def match_node(self, node: SNode, time_window: AtTimeClause | BetweenClause = None) -> (str, List[str]):
         if node.variable is None:
             node.variable = self.variables_manager.get_random_variable()
-            self.variables_manager.variables_dict[node.variable] = node
-        node_pattern = ""
-        if node.variable:
-            node_pattern = node.variable
+        # 点模式
+        node_pattern = node.variable
         for label in node.labels:
             node_pattern = node_pattern + ':' + label
         if node.__class__ == PropertyNode:
@@ -82,11 +77,9 @@ class GraphConverter:
 
         return node_pattern, interval_condition
 
-    def match_edge(self, edge: SEdge, time_window: AtTimeClause | BetweenClause = None) -> (
-            str, List[str]):
+    def match_edge(self, edge: SEdge, time_window: AtTimeClause | BetweenClause = None) -> (str, List[str]):
         if edge.variable is None:
             edge.variable = self.variables_manager.get_random_variable()
-            self.variables_manager.variables_dict[edge.variable] = edge
         # 边模式
         edge_pattern = edge.variable
         for label in edge.labels:

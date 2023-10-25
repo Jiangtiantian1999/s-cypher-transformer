@@ -8,8 +8,10 @@ class ClauseConverter:
         self.variables_manager = None
         self.expression_converter = None
         self.graph_converter = None
+        # unwind表达式字符串：unwind变量
         self.unwind_variables_dict = {}
-        self.is_with_or_return = False
+        # 当前分析的语句
+        self.current_clause = None
 
     def convert_s_cypher_clause(self, s_cypher_clause: SCypherClause) -> str:
         query_clause = s_cypher_clause.query_clause
@@ -48,9 +50,8 @@ class ClauseConverter:
         return call_clause_string
 
     def convert_yield_clause(self, yield_clause: YieldClause) -> str:
-        # 更新可返回的变量名/别名
-        self.variables_manager.variables_dict.update(
-            self.variables_manager.get_yield_clause_variables_dict(yield_clause))
+        self.variables_manager.update_yield_clause_variables(yield_clause)
+
         yield_clause_string = "YIELD "
         if yield_clause.is_all:
             yield_clause_string = "YIELD *, "
@@ -86,8 +87,7 @@ class ClauseConverter:
             multi_query_clause_string = multi_query_clause_string + '\n'
         multi_query_clause_string = multi_query_clause_string + self.convert_single_query_clause(
             multi_query_clause.single_query_clause)
-        # 更新可返回的变量名/别名
-        self.variables_manager.variables_dict = {}
+
         return multi_query_clause_string
 
     def convert_with_query_clause(self, with_query_clause: WithQueryClause) -> str:
@@ -109,17 +109,12 @@ class ClauseConverter:
         return with_query_clause_string
 
     def convert_with_clause(self, with_clause: WithClause):
-        self.is_with_or_return = True
-
+        self.current_clause = "WITH"
         with_clause_string = "WITH "
         if with_clause.is_distinct:
             with_clause_string = "WITH DISTINCT "
         if with_clause.is_all:
-            # 返回所有用户指定的可返回的变量名/别名
-            for index, variable in enumerate(self.variables_manager.variables_dict.keys()):
-                if index != 0:
-                    with_clause_string = with_clause_string + ", "
-                with_clause_string = with_clause_string + variable
+            with_clause_string = with_clause_string + "*, "
         for projection_item in with_clause.projection_items:
             if with_clause_string not in ["WITH ", "WITH DISTINCT "]:
                 with_clause_string = with_clause_string + ", "
@@ -140,10 +135,9 @@ class ClauseConverter:
         for index, (unwind_expression_string, unwind_variable) in enumerate(self.unwind_variables_dict.items()):
             unwind_clause_string = unwind_clause_string + "UNWIND " + unwind_expression_string + "\nAS " + unwind_variable + '\n'
 
-        # 更新可返回的变量名/别名
-        self.variables_manager.variables_dict = self.variables_manager.get_with_clause_variables_dict(with_clause)
+        self.variables_manager.clear_variables()
         self.unwind_variables_dict = {}
-        self.is_with_or_return = False
+        self.variables_manager.update_with_clause_variables(with_clause)
         return unwind_clause_string + with_clause_string
 
     def convert_single_query_clause(self, single_query_clause: SingleQueryClause) -> str:
@@ -168,8 +162,7 @@ class ClauseConverter:
 
     def convert_reading_clause(self, reading_clause: ReadingClause) -> str:
         # 更新可返回的变量名/别名
-        self.variables_manager.variables_dict.update(
-            self.variables_manager.get_reading_clause_variables_dict(reading_clause))
+        self.variables_manager.update_reading_clause_variables(reading_clause)
         reading_clause = reading_clause.reading_clause
         if reading_clause.__class__ == MatchClause:
             return self.convert_match_clause(reading_clause)
@@ -265,6 +258,8 @@ class ClauseConverter:
             return call_string
 
     def convert_where_clause(self, where_expression: Expression = None, interval_conditions: List[str] = None) -> str:
+        self.current_clause = "WHERE"
+
         if where_expression is None and (interval_conditions is None or len(interval_conditions) == 0):
             raise ValueError("The where expression and the interval conditions can't be None at the same time.")
         where_clause_string = "WHERE "
@@ -275,13 +270,15 @@ class ClauseConverter:
                 if where_clause_string != "WHERE ":
                     where_clause_string = where_clause_string + " and "
                 where_clause_string = where_clause_string + interval_condition
+
+        self.unwind_variables_dict = {}
+
         return where_clause_string
 
     def convert_updating_clause(self, updating_clause: UpdatingClause) -> str:
         updating_clause = updating_clause.updating_clause
-        # 更新可返回的变量名/别名
-        self.variables_manager.variables_dict.update(
-            self.variables_manager.get_updating_clause_variables_dict(updating_clause))
+
+        self.variables_manager.update_updating_clause_variables(updating_clause)
 
         if updating_clause.__class__ == CreateClause:
             return self.convert_create_clause(updating_clause)
@@ -337,13 +334,13 @@ class ClauseConverter:
         pass
 
     def convert_return_clause(self, return_clause: ReturnClause) -> str:
-        self.is_with_or_return = True
+        self.current_clause = "RETURN"
         return_clause_string = "RETURN "
         if return_clause.is_distinct:
             return_clause_string = "RETURN DISTINCT "
         if return_clause.is_all:
             # 返回所有用户指定的可返回的变量
-            for index, variable in enumerate(self.variables_manager.variables_dict.keys()):
+            for index, variable in enumerate(self.variables_manager.variables):
                 if index != 0:
                     return_clause_string = return_clause_string + ", "
                 return_clause_string = return_clause_string + variable
@@ -368,14 +365,12 @@ class ClauseConverter:
         for index, (unwind_expression_string, unwind_variable) in enumerate(self.unwind_variables_dict.items()):
             unwind_clause_string = unwind_clause_string + "UNWIND " + unwind_expression_string + "\nAS " + unwind_variable + '\n'
 
-        # 更新可返回的变量名/别名
-        self.variables_manager.variables_dict = self.variables_manager.get_return_clause_variables_dict(return_clause)
+        self.variables_manager.clear_variables()
         self.unwind_variables_dict = {}
-        self.is_with_or_return = False
         return unwind_clause_string + return_clause_string
 
     def convert_order_by_clause(self, order_by_clause: OrderByClause) -> str:
-        order_by_clause_string = ""
+        order_by_clause_string = "ORDER BY "
         for index, (key, value) in enumerate(order_by_clause.sort_items.items()):
             if index != 0:
                 order_by_clause_string = order_by_clause_string + '\n'

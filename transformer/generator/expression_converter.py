@@ -119,29 +119,26 @@ class ExpressionConverter:
     def convert_properties_labels_expression(self, properties_labels_expression: PropertiesLabelsExpression) -> str:
         properties_labels_expression_string = self.convert_atom(properties_labels_expression.atom)
         for property_name in properties_labels_expression.property_chains:
-            if properties_labels_expression_string in self.variables_manager.variables_dict.keys() and \
-                    self.variables_manager.variables_dict[properties_labels_expression_string].__class__ == ObjectNode:
+            # 是否指定过属性节点
+            flag = False
+            if properties_labels_expression_string in self.variables_manager.user_object_nodes_dict.keys():
                 # 查找对象节点的属性
-                object_node = self.variables_manager.variables_dict[properties_labels_expression_string]
-                properties_labels_expression_string = properties_labels_expression_string + ", \"" + property_name + '\"'
-                if object_node.interval:
-                    interval_from_string = self.graph_converter.convert_time_point_literal(
-                        object_node.interval.interval_from)
-                    interval_to_string = self.graph_converter.convert_time_point_literal(
-                        object_node.interval.interval_to)
-                    properties_labels_expression_string = properties_labels_expression_string + ", scypher.interval(" + interval_from_string + ", " + interval_to_string + ")"
-                elif object_node.time_window:
-                    properties_labels_expression_string = properties_labels_expression_string + ", " + self.convert_expression(
-                        object_node.time_window)
-                else:
-                    properties_labels_expression_string = properties_labels_expression_string + ", null"
-                properties_labels_expression_string = "scypher.getPropertyValue(" + properties_labels_expression_string + ')'
-                if self.clause_converter.is_with_or_return:
+                object_node = self.variables_manager.user_object_nodes_dict[properties_labels_expression_string]
+                for property_node, value_node in object_node.properties:
+                    # 所有属性节点都被赋予过变量名（无论是用户赋予的还是系统赋予的）
+                    if property_node.variable == property_name:
+                        flag = True
+                        properties_labels_expression_string = property_node.variable + ".content"
+                        break
+
+            if flag is False:
+                # 没有指定过属性节点，调用scypher.getPropertyValue，第一个参数为对象节点，第二个参数为属性名
+                # 不确定是否查找对象节点的属性，也可能是查找Map类型数据的键值，scypher.getPropertyValue能够自动识别
+                properties_labels_expression_string = "scypher.getPropertyValue(" + properties_labels_expression_string + ", \"" + property_name + "\")"
+                if self.clause_converter.current_clause in ["WITH", "RETURN"]:
                     unwind_variable = self.variables_manager.get_random_variable()
                     self.clause_converter.unwind_variables_dict[properties_labels_expression_string] = unwind_variable
                     properties_labels_expression_string = unwind_variable
-            else:
-                properties_labels_expression_string = properties_labels_expression_string + '.' + property_name
         for label in properties_labels_expression.labels:
             # 判断某节点/边是否有某（些）标签
             properties_labels_expression_string = properties_labels_expression_string + ':' + label
@@ -156,59 +153,48 @@ class ExpressionConverter:
 
         if property_name is None:
             # 返回对象节点或边的有效时间
-            at_t_expression_string = "scypher.getObjectOrEdgeInterval(" + object_variable + ')'
-        elif property_name is not None and at_t_expression.is_value is False:
-            # 返回属性节点的有效时间
-            property_interval_string = "null"
-            if object_variable in self.variables_manager.variables_dict.keys() and \
-                    self.variables_manager.variables_dict[object_variable].__class__ == ObjectNode:
-                object_node = self.variables_manager.variables_dict[object_variable]
+            at_t_expression_string = "scypher.interval(" + object_variable + ".intervalFrom, " + object_variable + ".intervalTo)"
+        else:
+            # 返回属性节点/值节点的有效时间
+
+            # 是否指定过属性节点
+            flag = False
+            if object_variable in self.variables_manager.user_object_nodes_dict.keys():
+                object_node = self.variables_manager.user_object_nodes_dict[object_variable]
                 for property_node, value_node in object_node.properties.items():
                     if property_node.content == property_name:
-                        if property_node.interval:
-                            interval_from = self.graph_converter.convert_time_point_literal(
-                                property_node.interval.interval_from)
-                            interval_to = self.graph_converter.convert_time_point_literal(
-                                property_node.interval.interval_to)
-                            property_interval_string = "scypher.interval(" + interval_from + ", " + interval_to + ')'
-                        elif property_node.time_window:
-                            property_interval_string = self.convert_expression(property_node.time_window)
+                        # 指定过属性节点，必然也指定过值节点，且所有属性节点和值节点都被赋予过变量名（无论是用户赋予的还是系统赋予的），
+                        flag = True
+                        if at_t_expression.is_value is None:
+                            # 返回属性节点的有效时间
+                            at_t_expression_string = property_node.variable + ".content"
+                        else:
+                            # 返回值节点的有效时间
+                            at_t_expression_string = value_node.variable + ".content"
                     break
-            at_t_expression_string = "scypher.getPropertyInterval(" + object_variable + ", " + property_name + ", " + property_interval_string + ')'
-        elif property_name is not None and at_t_expression.is_value:
-            # 返回值节点的有效时间
-            property_interval_string, property_value_string, value_interval_string = "null", "null", "null"
-            if object_variable in self.variables_manager.variables_dict.keys() and \
-                    self.variables_manager.variables_dict[object_variable].__class__ == ObjectNode:
-                object_node = self.variables_manager.variables_dict[object_variable]
-                for property_node, value_node in object_node.properties.items():
-                    if property_node.content == property_name:
-                        if property_node.interval:
-                            interval_from = self.graph_converter.convert_time_point_literal(
-                                property_node.interval.interval_from)
-                            interval_to = self.graph_converter.convert_time_point_literal(
-                                property_node.interval.interval_to)
-                            property_interval_string = "scypher.interval(" + interval_from + ", " + interval_to + ')'
-                        elif property_node.time_window:
-                            property_interval_string = self.convert_expression(property_node.time_window)
-                        property_value_string = value_node.content
-                        if value_node.interval:
-                            interval_from = self.graph_converter.convert_time_point_literal(
-                                value_node.interval.interval_from)
-                            interval_to = self.graph_converter.convert_time_point_literal(
-                                value_node.interval.interval_to)
-                            value_interval_string = "scypher.interval(" + interval_from + ", " + interval_to + ')'
-                        elif value_node.time_window:
-                            value_interval_string = self.convert_expression(value_node.time_window)
-                    break
-            at_t_expression_string = "scypher.getPropertyInterval(" + object_variable + ", " + property_name + ", " + property_interval_string + \
-                                     ", " + property_value_string + ", " + value_interval_string + ')'
-        if property_name is not None and self.clause_converter.is_with_or_return:
-            unwind_variable = self.variables_manager.get_random_variable()
-            self.clause_converter.unwind_variables_dict[at_t_expression_string] = unwind_variable
-            at_t_expression_string = unwind_variable
+            if flag is False:
+                # 没有指定过属性节点
+                if at_t_expression.is_value is None:
+                    # 返回属性节点的有效时间，调用scypher.getPropertyInterval，第一个参数为对象节点，第二个参数为属性名
+                    at_t_expression_string = "scypher.getPropertyInterval(" + object_variable + ", \"" + property_name + "\")"
+                else:
+                    # 返回值节点的有效时间，调用scypher.getValueInterval，第一个参数为对象节点，第二个参数为属性名
+                    at_t_expression_string = "scypher.getPropertyInterval(" + object_variable + ", \"" + property_name + "\")"
+
+                if self.clause_converter.current_clause in ["WITH", "RETURN"]:
+                    unwind_variable = self.variables_manager.get_random_variable()
+                    self.clause_converter.unwind_variables_dict[at_t_expression_string] = unwind_variable
+                    at_t_expression_string = unwind_variable
+
         for index, time_property in enumerate(at_t_expression.time_property_chains):
-            at_t_expression_string = at_t_expression_string + '.' + time_property
+            if index == 0 and (property_name is None or flag is True):
+                if time_property == "from":
+                    at_t_expression_string = object_variable + ".intervalFrom"
+                elif time_property == "to":
+                    at_t_expression_string = object_variable + ".intervalTo"
+            else:
+                at_t_expression_string = at_t_expression_string + '.' + time_property
+
         return at_t_expression_string
 
     def convert_atom(self, atom: Atom) -> str:
@@ -237,7 +223,7 @@ class ExpressionConverter:
             pass
 
     def convert_literal(self, literal: str) -> str:
-        if literal.upper() == "NOW" and literal not in self.variables_manager.variables_dict.keys():
+        if literal.upper() == "NOW" and literal not in self.variables_manager.user_variables:
             return "\"" + literal + "\""
         # property属性类型，包括数值类，字符类，布尔类，空间类和时间类（时间点和时间段）
         return literal
