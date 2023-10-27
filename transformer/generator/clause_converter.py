@@ -8,10 +8,17 @@ class ClauseConverter:
         self.variables_manager = None
         self.expression_converter = None
         self.graph_converter = None
-        # unwind表达式字符串：unwind变量
+        # 带添加的unwind表达式字符串：unwind变量
         self.unwind_variables_dict = {}
-        # 当前分析的语句
-        self.current_clause = None
+
+    def get_additional_unwind_clause_string(self):
+        unwind_clause_string = ""
+        for index, (unwind_expression_string, unwind_variable) in enumerate(self.unwind_variables_dict.items()):
+            if index != 0:
+                unwind_clause_string = unwind_clause_string + '\n'
+            unwind_clause_string = unwind_clause_string + "UNWIND " + unwind_expression_string + "\nAS " + unwind_variable
+        self.unwind_variables_dict = {}
+        return unwind_clause_string
 
     def convert_s_cypher_clause(self, s_cypher_clause: SCypherClause) -> str:
         query_clause = s_cypher_clause.query_clause
@@ -45,13 +52,18 @@ class ClauseConverter:
                 input_string = input_string + ", "
             input_string = input_string + self.expression_converter.convert_expression(input_item)
         call_clause_string = call_clause_string + '(' + input_string + ')'
+
+        additional_unwind_clause_string = self.get_additional_unwind_clause_string()
+        if additional_unwind_clause_string != "":
+            # 此时call子句一定是内部查询
+            call_clause_string = additional_unwind_clause_string + '\n' + call_clause_string
+
         if call_clause.yield_clause:
             call_clause_string = call_clause_string + '\n' + self.convert_yield_clause(call_clause.yield_clause)
+
         return call_clause_string
 
     def convert_yield_clause(self, yield_clause: YieldClause) -> str:
-        self.variables_manager.update_yield_clause_variables(yield_clause)
-
         yield_clause_string = "YIELD "
         if yield_clause.is_all:
             yield_clause_string = "YIELD *, "
@@ -62,54 +74,49 @@ class ClauseConverter:
             if yield_item.variable:
                 yield_clause_string = yield_clause_string + " as " + yield_item.variable
         if yield_clause.where_expression:
-            yield_clause_string = yield_clause_string + "\nWHERE " + self.expression_converter.convert_expression(
-                yield_clause.where_expression)
+            where_clause_string = "WHERE " + self.expression_converter.convert_expression(yield_clause.where_expression)
+            additional_unwind_clause_string = self.get_additional_unwind_clause_string()
+            if additional_unwind_clause_string != "":
+                yield_clause_string = yield_clause_string + '\n' + additional_unwind_clause_string + "\n WITH *"
+            yield_clause_string = yield_clause_string + '\n' + where_clause_string
+
+        self.variables_manager.update_yield_clause_variables(yield_clause)
+
         return yield_clause_string
 
     def convert_time_window_limit_clause(self, time_window_limit_clause: TimeWindowLimitClause) -> str:
         time_window_limit = time_window_limit_clause.time_window_limit
         if time_window_limit.__class__ == SnapshotClause:
-            return "CALL scypher.snapshot(" + self.expression_converter.convert_expression(
-                time_window_limit.time_point) + ')'
+            time_point_expression_string = self.expression_converter.convert_expression(time_window_limit.time_point)
+            return "CALL scypher.snapshot(" + time_point_expression_string + ')'
         elif time_window_limit.__class__ == ScopeClause:
-            return "CALL scypher.scope(" + self.expression_converter.convert_expression(
-                time_window_limit.interval) + ')'
+            interval_expression_string = self.expression_converter.convert_expression(time_window_limit.interval)
+            return "CALL scypher.scope(" + interval_expression_string + ')'
 
     def convert_multi_query_clause(self, multi_query_clause: MultiQueryClause) -> str:
         multi_query_clause_string = ""
         # with连接的查询部分
         for with_query_clause in multi_query_clause.with_query_clauses:
-            if multi_query_clause_string != "":
-                multi_query_clause_string = multi_query_clause_string + '\n'
-            multi_query_clause_string = multi_query_clause_string + self.convert_with_query_clause(with_query_clause)
+            with_query_clause_string = self.convert_with_query_clause(with_query_clause)
+            multi_query_clause_string = multi_query_clause_string + with_query_clause_string + '\n'
         # 最后一个查询部分
-        if multi_query_clause_string != "":
-            multi_query_clause_string = multi_query_clause_string + '\n'
         multi_query_clause_string = multi_query_clause_string + self.convert_single_query_clause(
             multi_query_clause.single_query_clause)
-
         return multi_query_clause_string
 
     def convert_with_query_clause(self, with_query_clause: WithQueryClause) -> str:
         with_query_clause_string = ""
         # reading_clauses部分
         for reading_clause in with_query_clause.reading_clauses:
-            if with_query_clause_string != "":
-                with_query_clause_string = with_query_clause_string + '\n'
-            with_query_clause_string = with_query_clause_string + self.convert_reading_clause(reading_clause)
+            with_query_clause_string = with_query_clause_string + self.convert_reading_clause(reading_clause) + '\n'
         # updating_clauses部分
         for updating_clause in with_query_clause.updating_clauses:
-            if with_query_clause_string != "":
-                with_query_clause_string = with_query_clause_string + '\n'
-            with_query_clause_string = with_query_clause_string + self.convert_updating_clause(updating_clause)
+            with_query_clause_string = with_query_clause_string + self.convert_updating_clause(updating_clause) + '\n'
         # with_clause部分
-        if with_query_clause_string != "":
-            with_query_clause_string = with_query_clause_string + '\n'
         with_query_clause_string = with_query_clause_string + self.convert_with_clause(with_query_clause.with_clause)
         return with_query_clause_string
 
     def convert_with_clause(self, with_clause: WithClause):
-        self.current_clause = "WITH"
         with_clause_string = "WITH "
         if with_clause.is_distinct:
             with_clause_string = "WITH DISTINCT "
@@ -118,27 +125,27 @@ class ClauseConverter:
         for projection_item in with_clause.projection_items:
             if with_clause_string not in ["WITH ", "WITH DISTINCT "]:
                 with_clause_string = with_clause_string + ", "
-            with_clause_string = with_clause_string + self.expression_converter.convert_expression(
-                projection_item.expression)
+            projection_item_expression_string = self.expression_converter.convert_expression(projection_item.expression)
+            with_clause_string = with_clause_string + projection_item_expression_string
             if projection_item.variable:
                 with_clause_string = with_clause_string + " as " + projection_item.variable
         if with_clause.order_by_clause:
             with_clause_string = with_clause_string + '\n' + self.convert_order_by_clause(with_clause.order_by_clause)
         if with_clause.skip_expression:
-            with_clause_string = with_clause_string + "\nSKIP " + self.expression_converter.convert_expression(
-                with_clause.skip_expression)
+            skip_expression_string = self.expression_converter.convert_expression(with_clause.skip_expression)
+            with_clause_string = with_clause_string + "\nSKIP " + skip_expression_string
         if with_clause.limit_expression:
-            with_clause_string = with_clause_string + "\nLIMIT " + self.expression_converter.convert_expression(
-                with_clause.limit_expression)
-
-        unwind_clause_string = ""
-        for index, (unwind_expression_string, unwind_variable) in enumerate(self.unwind_variables_dict.items()):
-            unwind_clause_string = unwind_clause_string + "UNWIND " + unwind_expression_string + "\nAS " + unwind_variable + '\n'
+            limit_expression_string = self.expression_converter.convert_expression(with_clause.limit_expression)
+            with_clause_string = with_clause_string + "\nLIMIT " + limit_expression_string
 
         self.variables_manager.clear_variables()
-        self.unwind_variables_dict = {}
         self.variables_manager.update_with_clause_variables(with_clause)
-        return unwind_clause_string + with_clause_string
+
+        additional_unwind_clause_string = self.get_additional_unwind_clause_string()
+        if additional_unwind_clause_string != "":
+            with_clause_string = additional_unwind_clause_string + '\n' + with_clause_string
+
+        return with_clause_string
 
     def convert_single_query_clause(self, single_query_clause: SingleQueryClause) -> str:
         single_query_clause_string = ""
@@ -167,9 +174,11 @@ class ClauseConverter:
         if reading_clause.__class__ == MatchClause:
             return self.convert_match_clause(reading_clause)
         elif reading_clause.__class__ == UnwindClause:
-            # 更新可返回的变量名/别名
-            return "UNWIND " + self.expression_converter.convert_expression(
-                reading_clause.expression) + "\nAS " + reading_clause.variable
+            unwind_expression_string = self.expression_converter.convert_expression(reading_clause.expression)
+            additional_unwind_clause_string = self.get_additional_unwind_clause_string()
+            if additional_unwind_clause_string != "":
+                return additional_unwind_clause_string + '\n' + "UNWIND " + unwind_expression_string + "\nAS " + reading_clause.variable
+            return "UNWIND" + unwind_expression_string + "\nAS " + reading_clause.variable
         elif reading_clause.__class__ == CallClause:
             return self.convert_call_clause(reading_clause)
 
@@ -180,38 +189,30 @@ class ClauseConverter:
         call_string = ""
         interval_conditions = []
         for pattern in match_clause.patterns:
+            if match_clause_string not in ["MATCH ", "OPTIONAL MATCH "]:
+                match_clause_string = match_clause_string + ", "
             pattern = pattern.pattern
             if pattern.__class__ == SPath:
                 path_pattern, property_patterns, path_interval_conditions = self.graph_converter.match_path(pattern,
                                                                                                             match_clause.time_window)
-                if match_clause_string not in ["MATCH ", "OPTIONAL MATCH "]:
-                    match_clause_string = match_clause_string + ", "
                 match_clause_string = match_clause_string + path_pattern
                 # 添加节点属性模式的匹配
                 for property_pattern in property_patterns:
                     match_clause_string = match_clause_string + ", " + property_pattern
+                # 添加路径的时态条件限制
                 interval_conditions.extend(path_interval_conditions)
             elif pattern.__class__ == TemporalPathCall:
-                if call_string != "":
-                    call_string = call_string + '\n'
                 start_node_pattern, start_node_property_patterns, start_node_interval_conditions = self.graph_converter.match_object_node(
                     pattern.path.nodes[0], match_clause.time_window)
                 end_node_pattern, end_node_property_patterns, end_node_interval_conditions = self.graph_converter.match_object_node(
                     pattern.path.nodes[1], match_clause.time_window)
-                call_string = call_string + "MATCH " + start_node_pattern + ", " + end_node_pattern
+                match_clause_string = match_clause_string + start_node_pattern + ", " + end_node_pattern
                 # 添加节点属性模式的匹配
-                property_patterns, interval_conditions = start_node_property_patterns, start_node_interval_conditions
-                property_patterns.extend(end_node_property_patterns)
-                interval_conditions.extend(end_node_interval_conditions)
-                for property_pattern in start_node_property_patterns:
-                    call_string = call_string + ", " + property_pattern
+                for property_pattern in start_node_property_patterns + end_node_property_patterns:
+                    match_clause_string = match_clause_string + ", " + property_pattern
                 # 添加时态路径的时态条件限制
-                if len(interval_conditions) != 0:
-                    call_string = call_string + "\nWHERE "
-                    for index, interval_condition in enumerate(interval_conditions):
-                        if index != 0:
-                            call_string = call_string + " and "
-                        call_string = call_string + interval_condition
+                interval_conditions.extend(start_node_interval_conditions)
+                interval_conditions.extend(end_node_interval_conditions)
                 # 限制路径的开始节点和结束节点
                 if pattern.path.edges[0].direction == SEdge.LEFT:
                     parameters_string = pattern.path.nodes[1].variable + ", " + pattern.path.nodes[0].variable
@@ -247,19 +248,19 @@ class ClauseConverter:
                     parameters_string = parameters_string + ", NULL"
                 call_string = call_string + "\nCALL scypher." + pattern.function_name + '(' + parameters_string + ')' + \
                               "\nYIELD " + pattern.variable
-        if match_clause_string not in ["MATCH ", "OPTIONAL MATCH "]:
-            if call_string != "":
-                match_clause_string = call_string + '\n' + match_clause_string
-            if match_clause.where_expression or len(interval_conditions) != 0:
-                where_string = self.convert_where_clause(match_clause.where_expression, interval_conditions)
-                match_clause_string = match_clause_string + '\n' + where_string
-            return match_clause_string
-        else:
-            return call_string
+
+        if match_clause.where_expression or len(interval_conditions) != 0:
+            where_expression_string = self.convert_where_clause(match_clause.where_expression, interval_conditions)
+
+            additional_unwind_clause_string = self.get_additional_unwind_clause_string()
+            if additional_unwind_clause_string != "":
+                match_clause_string = additional_unwind_clause_string + '\n' + match_clause_string
+
+            match_clause_string = match_clause_string + '\n' + where_expression_string
+
+        return match_clause_string + call_string
 
     def convert_where_clause(self, where_expression: Expression = None, interval_conditions: List[str] = None) -> str:
-        self.current_clause = "WHERE"
-
         if where_expression is None and (interval_conditions is None or len(interval_conditions) == 0):
             raise ValueError("The where expression and the interval conditions can't be None at the same time.")
         where_clause_string = "WHERE "
@@ -270,8 +271,6 @@ class ClauseConverter:
                 if where_clause_string != "WHERE ":
                     where_clause_string = where_clause_string + " and "
                 where_clause_string = where_clause_string + interval_condition
-
-        self.unwind_variables_dict = {}
 
         return where_clause_string
 
@@ -309,17 +308,23 @@ class ClauseConverter:
 
     def convert_delete_clause(self, delete_clause: DeleteClause) -> str:
         delete_clause_string = "DELETE "
+        if delete_clause.is_detach:
+            delete_clause_string = "DETACH DELETE "
+
+        with_clause_string = "WITH *, "
         for delete_item in delete_clause.delete_items:
+            object_string = self.expression_converter.convert_expression(delete_item.expression)
             if delete_item.property_name is None and delete_item.is_value is None:
-                # 删除对象节点，以及相连的属性节点，值节点和边
-                pass
+                # 删除对象节点/边/路径，删除对象节点时，删除相连的属性节点，值节点和边
+                with_clause_string = with_clause_string + "scypher.deleteObject(" + object_string + ')'
             elif delete_item.property_name is not None and delete_item.is_value is None:
-                # 删除属性节点，以及相连的值节点和边
-                pass
+                # 删除边属性/属性节点，删除属性节点时，删除相连的值节点和边
+                with_clause_string = with_clause_string + "scypher.deleteProperty(" + object_string + ", \"" + delete_item.property_name + "\")"
             elif delete_item.property_name is not None and delete_item.is_value is not None:
                 # 删除值节点，以及相连的边
-                pass
-        pass
+                with_clause_string = with_clause_string + "scypher.deleteValue(" + object_string + ", \"" + delete_item.property_name + "\")"
+
+        return delete_clause_string
 
     def convert_stale_clause(self, stale_clause: StaleClause) -> str:
         pass
@@ -334,7 +339,6 @@ class ClauseConverter:
         pass
 
     def convert_return_clause(self, return_clause: ReturnClause) -> str:
-        self.current_clause = "RETURN"
         return_clause_string = "RETURN "
         if return_clause.is_distinct:
             return_clause_string = "RETURN DISTINCT "
@@ -344,37 +348,37 @@ class ClauseConverter:
                 if index != 0:
                     return_clause_string = return_clause_string + ", "
                 return_clause_string = return_clause_string + variable
-        for projection_item in return_clause.projection_items:
-            if return_clause_string not in ["RETURN ", "RETURN DISTINCT "]:
+        for index, projection_item in enumerate(return_clause.projection_items):
+            if index != 0:
                 return_clause_string = return_clause_string + ", "
-            return_clause_string = return_clause_string + self.expression_converter.convert_expression(
-                projection_item.expression)
+            projection_item_expression_string = self.expression_converter.convert_expression(projection_item.expression)
+            return_clause_string = return_clause_string + projection_item_expression_string
             if projection_item.variable:
                 return_clause_string = return_clause_string + " as " + projection_item.variable
         if return_clause.order_by_clause:
-            return_clause_string = return_clause_string + '\n' + self.convert_order_by_clause(
-                return_clause.order_by_clause)
+            order_by_clause_string = self.convert_order_by_clause(return_clause.order_by_clause)
+            return_clause_string = return_clause_string + '\n' + order_by_clause_string
         if return_clause.skip_expression:
-            return_clause_string = return_clause_string + "\nSKIP " + self.expression_converter.convert_expression(
-                return_clause.skip_expression)
+            skip_expression_string = self.expression_converter.convert_expression(return_clause.skip_expression)
+            return_clause_string = return_clause_string + "\nSKIP " + skip_expression_string
         if return_clause.limit_expression:
-            return_clause_string = return_clause_string + "\nLIMIT " + self.expression_converter.convert_expression(
-                return_clause.limit_expression)
+            limit_expression_string = self.expression_converter.convert_expression(return_clause.limit_expression)
+            return_clause_string = return_clause_string + "\nLIMIT " + limit_expression_string
 
-        unwind_clause_string = ""
-        for index, (unwind_expression_string, unwind_variable) in enumerate(self.unwind_variables_dict.items()):
-            unwind_clause_string = unwind_clause_string + "UNWIND " + unwind_expression_string + "\nAS " + unwind_variable + '\n'
+        additional_unwind_clause_string = self.get_additional_unwind_clause_string()
+        if additional_unwind_clause_string != "":
+            return_clause_string = additional_unwind_clause_string + '\n' + return_clause_string
 
         self.variables_manager.clear_variables()
-        self.unwind_variables_dict = {}
-        return unwind_clause_string + return_clause_string
+
+        return return_clause_string
 
     def convert_order_by_clause(self, order_by_clause: OrderByClause) -> str:
         order_by_clause_string = "ORDER BY "
-        for index, (key, value) in enumerate(order_by_clause.sort_items.items()):
+        for index, (expression, sort_method) in enumerate(order_by_clause.sort_items.items()):
             if index != 0:
                 order_by_clause_string = order_by_clause_string + '\n'
-            order_by_clause_string = order_by_clause_string + self.expression_converter.convert_expression(key)
-            if value:
-                order_by_clause_string = order_by_clause_string + ' ' + value
+            order_by_clause_string = order_by_clause_string + self.expression_converter.convert_expression(expression)
+            if sort_method:
+                order_by_clause_string = order_by_clause_string + ' ' + sort_method
         return order_by_clause_string

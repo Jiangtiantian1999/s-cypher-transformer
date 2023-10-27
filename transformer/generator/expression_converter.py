@@ -124,7 +124,7 @@ class ExpressionConverter:
             if properties_labels_expression_string in self.variables_manager.user_object_nodes_dict.keys():
                 # 查找对象节点的属性
                 object_node = self.variables_manager.user_object_nodes_dict[properties_labels_expression_string]
-                for property_node, value_node in object_node.properties:
+                for property_node, value_node in object_node.properties.items():
                     # 所有属性节点都被赋予过变量名（无论是用户赋予的还是系统赋予的）
                     if property_node.variable == property_name:
                         flag = True
@@ -133,12 +133,13 @@ class ExpressionConverter:
 
             if flag is False:
                 # 没有指定过属性节点，调用scypher.getPropertyValue，第一个参数为对象节点，第二个参数为属性名
-                # 不确定是否查找对象节点的属性，也可能是查找Map类型数据的键值，scypher.getPropertyValue能够自动识别
+                # 不确定是否查找对象节点的属性，也可能是查找Map, Point, Duration, Date, Time, LocalTime, LocalDateTime or DateTime的属性，scypher.getPropertyValue能够自动识别
                 properties_labels_expression_string = "scypher.getPropertyValue(" + properties_labels_expression_string + ", \"" + property_name + "\")"
-                if self.clause_converter.current_clause in ["WITH", "RETURN"]:
-                    unwind_variable = self.variables_manager.get_random_variable()
-                    self.clause_converter.unwind_variables_dict[properties_labels_expression_string] = unwind_variable
-                    properties_labels_expression_string = unwind_variable
+
+                unwind_variable = self.variables_manager.get_random_variable()
+                self.clause_converter.unwind_variables_dict[properties_labels_expression_string] = unwind_variable
+                properties_labels_expression_string = unwind_variable
+
         for label in properties_labels_expression.labels:
             # 判断某节点/边是否有某（些）标签
             properties_labels_expression_string = properties_labels_expression_string + ':' + label
@@ -179,9 +180,8 @@ class ExpressionConverter:
                     at_t_expression_string = "scypher.getPropertyInterval(" + object_variable + ", \"" + property_name + "\")"
                 else:
                     # 返回值节点的有效时间，调用scypher.getValueInterval，第一个参数为对象节点，第二个参数为属性名
-                    at_t_expression_string = "scypher.getPropertyInterval(" + object_variable + ", \"" + property_name + "\")"
+                    at_t_expression_string = "scypher.getValueInterval(" + object_variable + ", \"" + property_name + "\")"
 
-                if self.clause_converter.current_clause in ["WITH", "RETURN"]:
                     unwind_variable = self.variables_manager.get_random_variable()
                     self.clause_converter.unwind_variables_dict[at_t_expression_string] = unwind_variable
                     at_t_expression_string = unwind_variable
