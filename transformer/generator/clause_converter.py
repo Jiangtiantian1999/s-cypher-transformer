@@ -73,14 +73,15 @@ class ClauseConverter:
             yield_clause_string = yield_clause_string + yield_item.procedure_result
             if yield_item.variable:
                 yield_clause_string = yield_clause_string + " as " + yield_item.variable
+
+        self.variables_manager.update_yield_clause_variables_dict(yield_clause)
+
         if yield_clause.where_expression:
             where_clause_string = "WHERE " + self.expression_converter.convert_expression(yield_clause.where_expression)
             additional_unwind_clause_string = self.get_additional_unwind_clause_string()
             if additional_unwind_clause_string != "":
                 yield_clause_string = yield_clause_string + '\n' + additional_unwind_clause_string + "\n WITH *"
             yield_clause_string = yield_clause_string + '\n' + where_clause_string
-
-        self.variables_manager.update_yield_clause_variables(yield_clause)
 
         return yield_clause_string
 
@@ -129,6 +130,9 @@ class ClauseConverter:
             with_clause_string = with_clause_string + projection_item_expression_string
             if projection_item.variable:
                 with_clause_string = with_clause_string + " as " + projection_item.variable
+
+        self.variables_manager.update_with_clause_variables_dict(with_clause)
+
         if with_clause.order_by_clause:
             with_clause_string = with_clause_string + '\n' + self.convert_order_by_clause(with_clause.order_by_clause)
         if with_clause.skip_expression:
@@ -137,9 +141,6 @@ class ClauseConverter:
         if with_clause.limit_expression:
             limit_expression_string = self.expression_converter.convert_expression(with_clause.limit_expression)
             with_clause_string = with_clause_string + "\nLIMIT " + limit_expression_string
-
-        self.variables_manager.clear_variables()
-        self.variables_manager.update_with_clause_variables(with_clause)
 
         additional_unwind_clause_string = self.get_additional_unwind_clause_string()
         if additional_unwind_clause_string != "":
@@ -163,18 +164,16 @@ class ClauseConverter:
         if single_query_clause.return_clause:
             if single_query_clause_string != "":
                 single_query_clause_string = single_query_clause_string + '\n'
-            single_query_clause_string = single_query_clause_string + self.convert_return_clause(
-                single_query_clause.return_clause)
+            single_query_clause_string = single_query_clause_string + self.convert_return_clause(single_query_clause.return_clause)
         return single_query_clause_string
 
     def convert_reading_clause(self, reading_clause: ReadingClause) -> str:
-        # 更新可返回的变量名/别名
-        self.variables_manager.update_reading_clause_variables(reading_clause)
         reading_clause = reading_clause.reading_clause
         if reading_clause.__class__ == MatchClause:
             return self.convert_match_clause(reading_clause)
         elif reading_clause.__class__ == UnwindClause:
             unwind_expression_string = self.expression_converter.convert_expression(reading_clause.expression)
+            self.variables_manager.update_unwind_clause_variable_dict(reading_clause)
             additional_unwind_clause_string = self.get_additional_unwind_clause_string()
             if additional_unwind_clause_string != "":
                 return additional_unwind_clause_string + '\n' + "UNWIND " + unwind_expression_string + "\nAS " + reading_clause.variable
@@ -188,6 +187,7 @@ class ClauseConverter:
             match_clause_string = "OPTIONAL MATCH "
         call_string = ""
         interval_conditions = []
+        self.variables_manager.update_match_variables_dict(match_clause)
         for pattern in match_clause.patterns:
             if match_clause_string not in ["MATCH ", "OPTIONAL MATCH "]:
                 match_clause_string = match_clause_string + ", "
@@ -276,9 +276,6 @@ class ClauseConverter:
 
     def convert_updating_clause(self, updating_clause: UpdatingClause) -> str:
         updating_clause = updating_clause.updating_clause
-
-        self.variables_manager.update_updating_clause_variables(updating_clause)
-
         if updating_clause.__class__ == CreateClause:
             return self.convert_create_clause(updating_clause)
         elif updating_clause.__class__ == DeleteClause:
@@ -294,6 +291,7 @@ class ClauseConverter:
 
     def convert_create_clause(self, create_clause: CreateClause) -> str:
         create_clause_string = "CREATE "
+        self.variables_manager.update_create_variables_dict(create_clause)
         for index, pattern in enumerate(create_clause.patterns):
             # create clause的pattern均为SPath类型
             pattern = pattern.pattern
@@ -344,7 +342,7 @@ class ClauseConverter:
             return_clause_string = "RETURN DISTINCT "
         if return_clause.is_all:
             # 返回所有用户指定的可返回的变量
-            for index, variable in enumerate(self.variables_manager.variables):
+            for index, variable in enumerate(self.variables_manager.user_variables_dict.keys()):
                 if index != 0:
                     return_clause_string = return_clause_string + ", "
                 return_clause_string = return_clause_string + variable
@@ -355,6 +353,9 @@ class ClauseConverter:
             return_clause_string = return_clause_string + projection_item_expression_string
             if projection_item.variable:
                 return_clause_string = return_clause_string + " as " + projection_item.variable
+
+        self.variables_manager.update_return_clause_variables_dict(return_clause)
+
         if return_clause.order_by_clause:
             order_by_clause_string = self.convert_order_by_clause(return_clause.order_by_clause)
             return_clause_string = return_clause_string + '\n' + order_by_clause_string
@@ -369,7 +370,7 @@ class ClauseConverter:
         if additional_unwind_clause_string != "":
             return_clause_string = additional_unwind_clause_string + '\n' + return_clause_string
 
-        self.variables_manager.clear_variables()
+        self.variables_manager.clear_variables_dict()
 
         return return_clause_string
 
