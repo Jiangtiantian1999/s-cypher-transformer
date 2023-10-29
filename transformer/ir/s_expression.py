@@ -5,14 +5,12 @@ class ListLiteral:
     # 注意：该处expressions为List[Expression]类型，由于与Expression相互引用，故此处不写明类型。
     def __init__(self, expressions: List):
         self.expressions = expressions
-        self.data_type = None
 
 
 class MapLiteral:
     # 注意：该处key_values为dict[str, Expression]类型，由于与Expression相互引用，故此处不写明类型。
     def __init__(self, keys_values: dict):
         self.keys_values = keys_values
-        self.data_type = None
 
 
 class CaseExpression:
@@ -62,7 +60,6 @@ class Atom:
                  particle: str | ListLiteral | MapLiteral | CaseExpression | ListComprehension | PatternComprehension | Quantifier | PatternPredicate | ParenthesizedExpression | FunctionInvocation | ExistentialSubquery):
         # BooleanLiteral、NULL、NumberLiteral、StringLiteral、COUNT(*)和Parameter类型可以直接用str存储
         self.particle = particle
-        self.data_type = None
 
 
 class PropertiesLabelsExpression:
@@ -74,7 +71,6 @@ class PropertiesLabelsExpression:
         if labels is None:
             labels = []
         self.labels = labels
-        self.data_type = None
 
 
 class AtTExpression:
@@ -90,7 +86,6 @@ class AtTExpression:
         if time_property_chains is None:
             time_property_chains = []
         self.time_property_chains = time_property_chains
-        self.data_type = None
 
 
 class IndexExpression:
@@ -111,13 +106,11 @@ class ListIndexExpression:
         if index_expressions is None:
             index_expressions = []
         self.index_expressions = index_expressions
-        self.data_type = None
 
 
 class PowerExpression:
     def __init__(self, list_index_expressions: List[ListIndexExpression]):
         self.list_index_expressions = list_index_expressions
-        self.data_type = None
 
 
 class MultiplyDivideExpression:
@@ -132,7 +125,6 @@ class MultiplyDivideExpression:
             if multiply_divide_operation not in ['*', '/', '%']:
                 raise ValueError("The multiply/divide operation must be '*', '/' or '%' .")
         self.multiply_divide_operations = multiply_divide_operations
-        self.data_type = None
 
 
 class AddSubtractExpression:
@@ -148,7 +140,6 @@ class AddSubtractExpression:
             if add_subtract_operation not in ['-', '+']:
                 raise ValueError("The add/subtract operation must be '+' or '-'.")
         self.add_subtract_operations = add_subtract_operations
-        self.data_type = None
 
 
 class TimePredicateExpression:
@@ -157,7 +148,6 @@ class TimePredicateExpression:
             raise ValueError("The time operation must be 'during' or 'overlaps'.")
         self.time_operation = time_operation
         self.add_subtract_expression = add_subtract_expression
-        self.data_type = None
 
 
 class StringPredicateExpression:
@@ -166,20 +156,17 @@ class StringPredicateExpression:
             raise ValueError("The string operation must in 'starts with', 'ends with' and 'contains'.")
         self.string_operation = string_operation
         self.add_subtract_expression = add_subtract_expression
-        self.data_type = None
 
 
 class ListPredicateExpression:
     def __init__(self, add_subtract_expression: AddSubtractExpression):
         self.add_subtract_expression = add_subtract_expression
-        self.data_type = None
 
 
 class NullPredicateExpression:
     def __init__(self, is_null: bool = True):
         # is_null为True表示IS NULL操作，反之表示IS NOT NULL操作
         self.is_null = is_null
-        self.data_type = None
 
 
 # 相当于StringListNullPredicateExpression
@@ -188,7 +175,6 @@ class SubjectExpression:
                  predicate_expression: TimePredicateExpression | StringPredicateExpression | ListPredicateExpression | NullPredicateExpression = None):
         self.add_or_subtract_expression = add_subtract_expression
         self.predicate_expression = predicate_expression
-        self.data_type = None
 
 
 class ComparisonExpression:
@@ -202,7 +188,6 @@ class ComparisonExpression:
             if comparison_operation not in ['=', "<>", '<', '>', "<=", ">="]:
                 raise ValueError("The comparison operation must be '=', '<>', '<', '>', '<=' or '>='.")
         self.comparison_operations = comparison_operations
-        self.data_type = None
 
 
 class NotExpression:
@@ -210,28 +195,23 @@ class NotExpression:
         self.comparison_expression = comparison_expression
         # 是否有not操作
         self.is_not = is_not
-        self.data_type = None
 
 
 class AndExpression:
     def __init__(self, not_expressions: List[NotExpression]):
         self.not_expressions = not_expressions
-        self.data_type = None
 
 
 class XorExpression:
     def __init__(self, and_expressions: List[AndExpression]):
         self.and_expressions = and_expressions
-        self.data_type = None
 
 
 class OrExpression:
     def __init__(self, xor_expressions: List[XorExpression]):
         self.xor_expressions = xor_expressions
-        self.data_type = None
 
 
 class Expression:
     def __init__(self, or_expression):
         self.or_expression = or_expression
-        self.data_type = None
