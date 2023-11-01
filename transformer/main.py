@@ -1,5 +1,6 @@
+from __future__ import annotations
 from antlr4 import *
-
+from transformer.exceptions.s_exception import SCypherErrorListener, SCypherErrorStrategy
 from transformer.generator.cypher_generator import CypherGenerator
 from transformer.grammar_parser.s_cypherLexer import s_cypherLexer
 from transformer.grammar_parser.s_cypherParser import s_cypherParser
@@ -13,6 +14,11 @@ def transform_to_cypher(s_cypher_query: InputStream | str):
     lexer = s_cypherLexer(s_cypher_query)
     # 语法分析
     parser = s_cypherParser(CommonTokenStream(lexer))
+    # 语法错误报告
+    parser.removeErrorListeners()
+    parser.addErrorListener(SCypherErrorListener())
+    # 语法错误恢复
+    parser._errHandler = SCypherErrorStrategy()
     # 转换为中间形式
     translator = CypherTranslator(parser)
     s_cypher_entity = translator.translate_s_cypher_query()
