@@ -124,7 +124,7 @@ class GraphConverter:
             time_window_string, time_window_type = self.expression_converter.convert_expression(time_window)
             interval_condition = "scypher.limitInterval(" + edge.variable + ", " + time_window_string + ')'
         else:
-            interval_condition = "scypher.limitInterval(" + edge.variable + ", null)"
+            interval_condition = "scypher.limitInterval(" + edge.variable + ", NULL)"
 
         return edge_pattern, interval_condition
 
@@ -176,7 +176,7 @@ class GraphConverter:
                 time_window.time_point)
             node_pattern = node_pattern + ", intervalTo: scypher.timePoint(\"NOW\")"
         else:
-            node_pattern = node_pattern + ", intervalFrom: scypher.createTimePoint(), intervalTo: scypher.timePoint(\"NOW\")"
+            node_pattern = node_pattern + ", intervalFrom: scypher.timePoint(), intervalTo: scypher.timePoint(\"NOW\")"
         node_pattern = '(' + node_pattern + "})"
         return node_pattern
 
@@ -203,7 +203,7 @@ class GraphConverter:
             edge_pattern = edge_pattern + "intervalFrom: " + self.expression_converter.convert_expression(
                 time_window.time_point) + ", intervalTo: scypher.timePoint(\"NOW\")"
         else:
-            edge_pattern = edge_pattern + "intervalFrom: scypher.createTimePoint(), intervalTo: scypher.timePoint(\"NOW\")"
+            edge_pattern = edge_pattern + "intervalFrom: scypher.timePoint(), intervalTo: scypher.timePoint(\"NOW\")"
 
         edge_pattern = '-[' + edge_pattern + '}]-'
         if edge.direction == edge.LEFT:

@@ -127,29 +127,25 @@ class SetClause:
 
 
 class MergeClause:
-    def __init__(self, patterns: List[Pattern], actions: dict[str, SetClause] = None,
-                 at_time_clause: AtTimeClause = None):
-        if len(patterns) == 0:
-            raise ValueError("The patterns can't be empty.")
-        self.patterns = patterns
+    ON_MATCH = "ON MATCH"
+    ON_CREATE = "ON CREATE"
+
+    def __init__(self, pattern: Pattern, actions: dict[str, SetClause] = None, at_time_clause: AtTimeClause = None):
+        self.pattern = pattern
         if actions is None:
-            actions = []
+            actions = {}
+        for action in actions.keys():
+            if action not in [MergeClause.ON_MATCH, MergeClause.ON_CREATE]:
+                raise ValueError("Uncertain action.")
         self.actions = actions
         self.at_time_clause = at_time_clause
 
 
 class RemoveClause:
-    def __init__(self, object_variable: Atom, property_variable: str = None, labels: List[str] = None,
-                 at_time_clause: AtTimeClause = None):
-        if property_variable is None and labels is None:
-            raise ValueError("Only can remove the labels or properties of object nodes.")
-        self.object_variable = object_variable
-        # 为(SP? oC_PropertyLookup) + 的字符串表示
-        self.property_variable = property_variable
-        if labels is None:
-            labels = []
-        self.labels = labels
-        self.at_time_clause = at_time_clause
+    def __init__(self, remove_items: List[RemoveItem]):
+        if len(remove_items) == 0:
+            raise ValueError("The remove items can't be empty.")
+        self.remove_items = remove_items
 
 
 # 更新查询

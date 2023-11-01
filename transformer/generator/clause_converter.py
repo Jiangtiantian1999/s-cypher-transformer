@@ -8,13 +8,13 @@ class ClauseConverter:
         self.variables_manager = None
         self.expression_converter = None
         self.graph_converter = None
-        # 带添加的unwind表达式字符串：unwind变量
+        # unwind变量：待添加的unwind表达式字符串
         self.unwind_clause_dict = {}
         self.is_reading = True
 
     def get_additional_unwind_clause_string(self):
         unwind_clause_string = ""
-        for unwind_expression_string, unwind_variable in self.unwind_clause_dict.items():
+        for unwind_variable, unwind_expression_string in self.unwind_clause_dict.items():
             unwind_clause_string = unwind_clause_string + "UNWIND " + unwind_expression_string + "\nAS " + unwind_variable + '\n'
         self.unwind_clause_dict = {}
         return unwind_clause_string.rstrip()
@@ -71,7 +71,7 @@ class ClauseConverter:
             if yield_item.variable:
                 yield_clause_string = yield_clause_string + " as " + yield_item.variable
 
-        self.variables_manager.update_yield_clause_variables(yield_clause)
+        self.variables_manager.update_yield_clause_variables_dict(yield_clause)
 
         if yield_clause.where_expression:
             where_clause_string = "WHERE " + self.expression_converter.convert_expression(yield_clause.where_expression)
@@ -292,7 +292,8 @@ class ClauseConverter:
 
     def convert_create_clause(self, create_clause: CreateClause) -> str:
         create_clause_string = "CREATE "
-        self.variables_manager.update_create_variables(create_clause)
+        # 待解决：create时检查约束
+        self.variables_manager.update_match_variables(create_clause)
         for pattern in create_clause.patterns:
             # create clause的pattern均为SPath类型
             pattern = pattern.pattern
@@ -317,26 +318,153 @@ class ClauseConverter:
                 unwind_expression_string = unwind_expression_string + ", " + delete_item.property_name
             else:
                 unwind_expression_string = unwind_expression_string + ", NULL"
+            # 为在delete时检查约束和删除对象节点，调用scypher.getItemToDelete，但如果delete_item里有变量是在create或merge的时候定义的，就会报错
             unwind_expression_string = unwind_expression_string + ", " + str(delete_item.is_value)
-            unwind_expression_string = "scypher.getItemToDelete(" + unwind_expression_string + ')'
-            self.unwind_clause_dict[unwind_expression_string] = unwind_variable
+            unwind_expression_string = "scypher.getItemToDelete(" + unwind_expression_string + "), "
+            self.unwind_clause_dict[unwind_variable] = unwind_expression_string
             delete_clause_string = delete_clause_string + unwind_variable
-
         self.is_reading = True
 
-        return delete_clause_string
+        return delete_clause_string.rstrip(", ")
 
     def convert_stale_clause(self, stale_clause: StaleClause) -> str:
-        pass
+        stale_clause_string = "SET "
+
+        self.is_reading = False
+        if stale_clause.at_time_clause:
+            time_point_string = self.expression_converter.convert_expression(stale_clause.at_time_clause.time_point)
+        else:
+            time_point_string = "NULL"
+        for stale_item in stale_clause.stale_items:
+            stale_item_expression_string = self.expression_converter.convert_expression(stale_item.expression)
+            unwind_variable = self.variables_manager.get_random_variable()
+            unwind_expression_string = stale_item_expression_string
+            if stale_item.property_name:
+                unwind_expression_string = unwind_expression_string + ", " + stale_item.property_name
+            else:
+                unwind_expression_string = unwind_expression_string + ", NULL"
+            # 为在stale时检查约束，调用scypher.getItemToStale，但如果stale_item里有变量是在create或merge的时候定义的，就会报错
+            unwind_expression_string = unwind_expression_string + ", " + str(stale_item.is_value)
+            unwind_expression_string = unwind_expression_string + ", " + time_point_string
+            unwind_expression_string = "scypher.getItemToStale(" + unwind_expression_string + ')'
+            self.unwind_clause_dict[unwind_variable] = unwind_expression_string
+            stale_clause_string = stale_clause_string + unwind_variable + ".intervalTo = scypher.timePoint(\"NOW\"), "
+        self.is_reading = True
+
+        return stale_clause_string.rstrip(", ")
 
     def convert_set_clause(self, set_clause: SetClause) -> str:
-        pass
+        set_clause_string = "SET "
+        for set_item in set_clause.set_items:
+            item = set_item.item
+            # 为在set时检查约束和设置对象节点的属性，调用scypher.getItemToSetX，但如果set_item里有变量是在create或merge的时候定义的，就会报错
+            if item.__class__ == IntervalSetting:
+                # 设置节点/边的有效时间
+                unwind_variable = self.variables_manager.get_random_variable()
+                unwind_expression_string = item.object_variable + ", "
+                if item.object_interval:
+                    unwind_expression_string = unwind_expression_string + "scypher.interval(" + self.graph_converter.convert_time_point_literal(
+                        item.object_interval.interval_from) + ", " + self.graph_converter.convert_time_point_literal(
+                        item.object_interval.interval_to) + "), "
+                else:
+                    unwind_expression_string = unwind_expression_string + "NULL, "
+                if item.property_variable:
+                    unwind_expression_string = unwind_expression_string + item.property_variable + ", "
+                else:
+                    unwind_expression_string = unwind_expression_string + "NULL, "
+                if item.property_interval:
+                    unwind_expression_string = unwind_expression_string + "scypher.interval(" + self.graph_converter.convert_time_point_literal(
+                        item.property_interval.interval_from) + ", " + self.graph_converter.convert_time_point_literal(
+                        item.property_interval.interval_to) + "), "
+                else:
+                    unwind_expression_string = unwind_expression_string + "NULL, "
+                if item.value_expression:
+                    value_expression = self.expression_converter.convert_expression(item.value_expression)
+                    unwind_expression_string = unwind_expression_string + value_expression + ", "
+                else:
+                    unwind_expression_string = unwind_expression_string + "NULL, "
+                if item.value_interval:
+                    unwind_expression_string = unwind_expression_string + "scypher.interval(" + self.graph_converter.convert_time_point_literal(
+                        item.value_interval.interval_from) + ", " + self.graph_converter.convert_time_point_literal(
+                        item.value_interval.interval_to) + "), "
+                else:
+                    unwind_expression_string = unwind_expression_string + "NULL, "
+                if set_clause.at_time_clause:
+                    unwind_expression_string = unwind_expression_string + self.expression_converter.convert_expression(
+                        set_clause.at_time_clause.time_point)
+                else:
+                    unwind_expression_string = unwind_expression_string + "NULL"
+                unwind_expression_string = "scypher.getItemToSetInterval(" + unwind_expression_string + ')'
+                set_clause_string = set_clause_string + unwind_variable + ".left = " + unwind_variable + ".right"
+                self.unwind_clause_dict[unwind_variable] = unwind_expression_string
+            elif item.__class__ == ExpressionSetting:
+                # 修改节点/边的属性
+                unwind_variable = self.variables_manager.get_random_variable()
+                property_name = None
+                if item.expression_left.__class__ == PropertyExpression:
+                    expression_left_string = self.expression_converter.convert_atom(item.expression_left.atom)
+                    object_variable = expression_left_string
+                    for property in item.expression_left.property_chains:
+                        object_variable, property_name = expression_left_string, property
+                        expression_left_string = expression_left_string + '.' + property
+                else:
+                    object_variable = item.expression_left
+                unwind_expression_string = object_variable
+                if property_name:
+                    unwind_expression_string = unwind_expression_string + ", " + property_name
+                else:
+                    unwind_expression_string = unwind_expression_string + ", NULL"
+                unwind_expression_string = unwind_expression_string + self.expression_converter.convert_expression(
+                    item.expression_right)
+                unwind_expression_string = unwind_expression_string + ", " + str(item.is_added) + ", "
+                if set_clause.at_time_clause:
+                    unwind_expression_string = unwind_expression_string + self.expression_converter.convert_expression(
+                        set_clause.at_time_clause.time_point)
+                else:
+                    unwind_expression_string = unwind_expression_string + "NULL"
+                unwind_expression_string = "scypher.getItemToSetExpression(" + unwind_expression_string + ')'
+                set_clause_string = set_clause_string + unwind_variable + ".left = " + unwind_variable + ".right"
+                self.unwind_clause_dict[unwind_variable] = unwind_expression_string
+            else:
+                # 设置节点/边的标签
+                set_clause_string = set_clause_string + item.variable
+                for label in item.labels:
+                    set_clause_string = set_clause_string + ':' + label
+            set_clause_string = set_clause_string + ", "
+
+        return set_clause_string.rstrip(", ")
 
     def convert_merge_clause(self, merge_clause: MergeClause) -> str:
-        pass
+        merge_clause_string = "MERGE "
+        # 待解决：若创建，检查约束；图模式中的@T是用于匹配还是用于创建？
+        self.variables_manager.update_pattern_variables(merge_clause.pattern)
+        pattern = merge_clause.pattern
+        path_pattern, property_patterns = self.graph_converter.create_path(pattern, merge_clause.at_time_clause)
+        merge_clause_string = merge_clause_string + path_pattern + '\n'
+        # 添加节点属性模式的匹配
+        for property_pattern in property_patterns:
+            merge_clause_string = merge_clause_string + "MERGE " + property_pattern + '\n'
+
+        for key, value in merge_clause.actions.items():
+            merge_clause_string = key + ' ' + self.convert_set_clause(value) + '\n'
+
+        return merge_clause_string.rstrip()
 
     def convert_remove_clause(self, remove_clause: RemoveClause) -> str:
-        pass
+        remove_clause_string = "REMOVE "
+        for remove_item in remove_clause.remove_items:
+            item = remove_item.item
+            if item.__class__ == LabelSetting:
+                remove_clause_string = remove_clause_string + item.variable
+                for label in item.labels:
+                    remove_clause_string = remove_clause_string + ':' + label
+            else:
+                # 移除边的属性
+                remove_clause_string = remove_clause_string + self.expression_converter.convert_atom(item.atom)
+                for property in item.property_chains:
+                    remove_clause_string = remove_clause_string + '.' + property
+            remove_clause_string = remove_clause_string + ", "
+        return remove_clause_string.rstrip(", ")
 
     def convert_return_clause(self, return_clause: ReturnClause) -> str:
         return_clause_string = "RETURN "

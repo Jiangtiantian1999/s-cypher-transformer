@@ -48,39 +48,50 @@ class DeleteItem:
         self.is_value = is_value
 
 
-class SetItem:
-    def __init__(self, operator: str, object: str | Atom, labels: List[str] = None, object_interval: AtTElement = None,
-                 property_variable: str = None, property_interval: AtTElement = None, value_interval: AtTElement = None,
-                 value_expression: Expression = None):
+class PropertyExpression:
+    def __init__(self, atom: Atom, property_chains: List[str]):
+        self.atom = atom
+        self.property_chains = property_chains
 
-        if operator == '=':
-            if value_expression is None or labels:
-                raise ValueError("The combination of the set item is incorrect.")
-        elif operator == "+=":
-            if value_expression is None or labels or object_interval or property_variable or property_interval or value_interval:
-                raise ValueError("The combination of the set item is incorrect.")
-        elif operator == "@T":
-            if value_expression or labels or (property_variable is None and property_interval):
-                raise ValueError("The combination of the set item is incorrect.")
-        elif operator == ':':
-            if labels is None or value_expression or object_interval or property_variable or property_interval or value_interval:
-                raise ValueError("The combination of the set item is incorrect.")
-        else:
-            raise ValueError("Unknown set operation.")
-        self.operator = operator
-        # object为对象节点变量名或者Atom表达式
-        self.object = object
-        if labels:
-            labels = []
-        # 设置对象节点的label
+
+class LabelSetting:
+    def __init__(self, variable: str, labels: List[str]):
+        self.variable = variable
         self.labels = labels
-        # 设置对象节点的有效时间
+
+
+class RemoveItem:
+    def __init__(self, item: LabelSetting | PropertyExpression):
+        self.item = item
+
+
+class IntervalSetting:
+
+    def __init__(self, object_variable: str, object_interval: AtTElement = None, property_variable: str = None,
+                 property_interval: AtTElement = None, value_expression: Expression = None,
+                 value_interval: AtTElement = None):
+        if property_variable is None and property_interval is not None:
+            raise ValueError("The property name must be specified before specifying the effective time.")
+        if object_interval is None and property_interval is None and value_expression is None and value_interval is None:
+            raise ValueError("Either set the effective time or set the property value.")
+        self.object_variable = object_variable
         self.object_interval = object_interval
-        # 为属性节点名称，或者( SP? oC_PropertyLookup )+的字符串表示
         self.property_variable = property_variable
-        # 设置属性节点的有效时间
         self.property_interval = property_interval
-        # 设置值节点的有效时间
-        self.value_interval = value_interval
-        # 设置值节点的值，或者表达式赋值
         self.value_expression = value_expression
+        self.value_interval = value_interval
+
+
+class ExpressionSetting:
+    def __init__(self, expression_left: PropertyExpression | str, expression_right: Expression, is_added: False):
+        if expression_left.__class__ == PropertyExpression and is_added is True:
+            raise ValueError("The property expression can't be added.")
+        self.expression_left = expression_left
+        self.expression_right = expression_right
+        # 是否为+=，默认为=
+        self.is_added = is_added
+
+
+class SetItem:
+    def __init__(self, item: IntervalSetting | ExpressionSetting | LabelSetting):
+        self.item = item

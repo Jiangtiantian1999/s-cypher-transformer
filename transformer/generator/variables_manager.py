@@ -1,3 +1,5 @@
+from copy import copy
+
 from transformer.ir.s_cypher_clause import *
 from transformer.ir.s_graph import *
 
@@ -9,6 +11,12 @@ class VariablesManager:
         self.user_variables = []
         # 当前有效的用户定义的对象节点名：对象节点
         self.user_object_nodes_dict = {}
+        self.user_edges_dict = {}
+        self.user_paths_dict = {}
+        # 当前有效的在updating语句中定义的对象节点名：对象节点
+        self.updating_object_nodes_dict = {}
+        self.updating_edges_dict = {}
+        self.user_paths_dict = {}
         self.expression_converter = None
 
     # 获取新的变量名
@@ -23,6 +31,8 @@ class VariablesManager:
     def clear(self):
         self.user_variables = []
         self.user_object_nodes_dict = {}
+        self.user_edges_dict = {}
+        self.user_paths_dict = {}
 
     def update_yield_clause_variables_dict(self, yield_clause: YieldClause):
         for yield_item in yield_clause.yield_items:
@@ -46,12 +56,8 @@ class VariablesManager:
     def update_unwind_clause_variable(self, unwind_clause: UnwindClause):
         self.user_variables.append(unwind_clause.variable)
 
-    def update_match_variables(self, match_clause: MatchClause):
+    def update_match_variables(self, match_clause: MatchClause | CreateClause):
         for pattern in match_clause.patterns:
-            self.update_pattern_variables(pattern)
-
-    def update_create_variables(self, create_clause: CreateClause):
-        for pattern in create_clause.patterns:
             self.update_pattern_variables(pattern)
 
     def update_pattern_variables(self, pattern: Pattern):
@@ -61,15 +67,26 @@ class VariablesManager:
             self.update_path_variables(pattern)
         elif pattern.__class__ == TemporalPathCall:
             self.user_variables.append(pattern.variable)
+            self.user_paths_dict[pattern.variable] = pattern
             self.update_path_variables(pattern.path)
 
     def update_path_variables(self, path: SPath):
         if path.variable:
             self.user_variables.append(path.variable)
+            self.user_paths_dict[path.variable] = path
         for object_node in path.nodes:
             if object_node.variable:
-                self.user_variables.append(object_node.variable)
-                self.user_object_nodes_dict[object_node.variable] = object_node
+                if object_node.variable in self.user_object_nodes_dict.keys():
+                    object_node_in_dict = self.user_object_nodes_dict[object_node.variable]
+                    object_node_in_dict.properties.update(object_node.properties)
+                else:
+                    self.user_variables.append(object_node.variable)
+                    self.user_object_nodes_dict[object_node.variable] = copy(object_node)
         for edge in path.edges:
             if edge.variable:
-                self.user_variables.append(edge.variable)
+                if edge.variable in self.user_edges_dict.keys():
+                    edge_in_dict = self.user_edges_dict[edge.variable]
+                    edge_in_dict.properties.update(edge.properties)
+                else:
+                    self.user_variables.append(edge.variable)
+                    self.user_edges_dict[edge.variable] = copy(edge)
