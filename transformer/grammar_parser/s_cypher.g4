@@ -40,7 +40,7 @@ s_StaleItem : oC_Expression '.' oC_PropertyKeyName SP? PoundValue
             | oC_Expression
             ;
 
-s_Delete :  ( DETACH SP )? DELETE SP? s_DeleteItem ( SP? ',' SP? s_DeleteItem )* ( SP? ( s_AtTime | s_Between ) )? ;
+s_Delete :  ( DETACH SP )? DELETE SP? s_DeleteItem ( SP? ',' SP? s_DeleteItem )* ;
 
 s_DeleteItem : oC_Expression '.' oC_PropertyKeyName SP? PoundValue
              | oC_Expression

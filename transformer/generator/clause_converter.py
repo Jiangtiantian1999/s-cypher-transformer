@@ -355,6 +355,10 @@ class ClauseConverter:
 
     def convert_set_clause(self, set_clause: SetClause) -> str:
         set_clause_string = "SET "
+        if set_clause.at_time_clause:
+            time_point_string = self.expression_converter.convert_expression(set_clause.at_time_clause.time_point)
+        else:
+            time_point_string = "NULL"
         for set_item in set_clause.set_items:
             item = set_item.item
             # 为在set时检查约束和设置对象节点的属性，调用scypher.getItemToSetX，但如果set_item里有变量是在create或merge的时候定义的，就会报错
@@ -389,11 +393,7 @@ class ClauseConverter:
                         item.value_interval.interval_to) + "), "
                 else:
                     unwind_expression_string = unwind_expression_string + "NULL, "
-                if set_clause.at_time_clause:
-                    unwind_expression_string = unwind_expression_string + self.expression_converter.convert_expression(
-                        set_clause.at_time_clause.time_point)
-                else:
-                    unwind_expression_string = unwind_expression_string + "NULL"
+                unwind_expression_string = unwind_expression_string + time_point_string
                 unwind_expression_string = "scypher.getItemToSetInterval(" + unwind_expression_string + ')'
                 set_clause_string = set_clause_string + unwind_variable + ".left = " + unwind_variable + ".right"
                 self.unwind_clause_dict[unwind_variable] = unwind_expression_string
