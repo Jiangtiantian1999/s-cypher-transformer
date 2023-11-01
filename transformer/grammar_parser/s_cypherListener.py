@@ -1,4 +1,4 @@
-# Generated from .\s_cypher.g4 by ANTLR 4.13.0
+# Generated from s_cypher.g4 by ANTLR 4.13.0
 from antlr4 import *
 if "." in __name__:
     from .s_cypherParser import s_cypherParser
@@ -59,15 +59,6 @@ class s_cypherListener(ParseTreeListener):
 
     # Exit a parse tree produced by s_cypherParser#s_Set.
     def exitS_Set(self, ctx:s_cypherParser.S_SetContext):
-        pass
-
-
-    # Enter a parse tree produced by s_cypherParser#s_Remove.
-    def enterS_Remove(self, ctx:s_cypherParser.S_RemoveContext):
-        pass
-
-    # Exit a parse tree produced by s_cypherParser#s_Remove.
-    def exitS_Remove(self, ctx:s_cypherParser.S_RemoveContext):
         pass
 
 

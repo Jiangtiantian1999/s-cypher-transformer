@@ -8,15 +8,13 @@ oC_Query : oC_RegularQuery
 
 oC_Match : ( OPTIONAL SP )? MATCH SP? oC_Pattern ( SP? ( s_AtTime | s_Between ) )? ( SP? s_Where )? ;
 
-oC_UpdatingClause : s_Create | s_Merge | s_Set | s_Remove | s_Stale | s_Delete ;
+oC_UpdatingClause : s_Create | s_Merge | s_Set | oC_Remove | s_Stale | s_Delete ;
 
 s_Create : CREATE SP? oC_Pattern ( SP? s_AtTime )? ;
 
 s_Merge : MERGE SP? oC_PatternPart ( SP oC_MergeAction )* ( SP? s_AtTime )? ;
 
 s_Set : SET SP? oC_SetItem ( SP? ',' SP? oC_SetItem )* ( SP? s_AtTime )? ;
-
-s_Remove : REMOVE SP oC_RemoveItem ( SP? ',' SP? oC_RemoveItem )* ;
 
 s_Stale : STALE SP? s_StaleItem ( SP? ',' SP? s_StaleItem )* ( SP? s_AtTime )? ;
 
