@@ -92,6 +92,7 @@ class SCypherWalker(s_cypherListener):
         self.index_expressions = []
         self.AtT_expression = None
         self.properties_labels_expression = None
+        self.property_expression = None
 
         # where expression
         self.where_skip_expression = None  # Expression类型
@@ -1120,16 +1121,22 @@ class SCypherWalker(s_cypherListener):
         self.create_clause = CreateClause(patterns, at_time_clause)
 
     def exitS_Merge(self, ctx: s_cypherParser.S_MergeContext):
-        # patterns: List[Pattern],
+        # pattern: Pattern,
         # actions: dict[str, SetClause] = None,
         # at_time_clause: AtTimeClause = None
-        patterns = self.patterns
-        actions = self.merge_actions
+        if len(self.patterns) == 1:
+            pattern = self.patterns[0]
+            self.patterns = []  # 退出清空
+        else:
+            raise ValueError("The number of pattern in Merge Tree should be 1.")
+        if len(self.merge_actions) > 0:
+            actions = self.merge_actions
+            self.merge_actions = dict()  # 退出清空
+        else:
+            actions = None
         at_time_clause = self.at_time_clause
-        self.merge_clause = MergeClause(patterns, actions, at_time_clause)
-        self.patterns = []  # 退出时清空
-        self.merge_actions = dict()
         self.at_time_clause = None  # 退出清空
+        self.merge_clause = MergeClause(pattern, actions, at_time_clause)
 
     def exitOC_MergeAction(self, ctx: s_cypherParser.OC_MergeActionContext):
         merge_flag = 'CREATE'
@@ -1140,18 +1147,10 @@ class SCypherWalker(s_cypherListener):
     def exitS_Delete(self, ctx: s_cypherParser.S_DeleteContext):
         # delete_items: List[DeleteItem],
         # is_detach=False,
-        # time_window: AtTimeClause | BetweenClause = None
-        time_window = None
         is_detach = False
         if 'DETACH' in ctx.getText():
             is_detach = True
-        if ctx.s_AtTime() is not None and ctx.s_Between() is None:
-            time_window = self.at_time_clause
-            self.at_time_clause = None  # 退出清空
-        elif ctx.s_AtTime() is None and ctx.s_Between() is not None:
-            time_window = self.between_clause
-            self.between_clause = None  # 退出清空
-        self.delete_clause = DeleteClause(self.delete_items, is_detach, time_window)
+        self.delete_clause = DeleteClause(self.delete_items, is_detach)
         self.delete_items = []  # 退出时清空，避免重复记录
 
     def exitS_DeleteItem(self, ctx: s_cypherParser.S_DeleteItemContext):
@@ -1177,93 +1176,114 @@ class SCypherWalker(s_cypherListener):
         self.set_items = []  # 退出清空
 
     def exitOC_SetItem(self, ctx: s_cypherParser.OC_SetItemContext):
-        # 设置运算符
-        set_item_str = ctx.getText()
-        if '=' in set_item_str:
-            operator = '='
-        elif '+=' in set_item_str:
-            operator = '+='
-        elif '@T' in set_item_str:
-            operator = '@T'
-        elif ':' in set_item_str:
-            operator = ':'
-        else:
-            raise ValueError("Cannot extract set operation.")
-
-        # object为对象节点变量名或者Atom表达式
-        if ctx.oC_Variable() is not None:
-            object_ = ctx.oC_Variable().getText()
-        else:
-            object_ = self.atom
-            self.atom = None
-
-        # 设置对象节点的label
-        labels = None
-        if ctx.oC_NodeLabels() is not None:
+        # item: IntervalSetting | ExpressionSetting | LabelSetting
+        if ctx.s_AtTElement() is not None:
+            # IntervalSetting
+            #   object_variable: str,
+            #   object_interval: AtTElement = None,
+            #   property_variable: str = None,
+            #   property_interval: AtTElement = None,
+            #   value_expression: Expression = None,
+            #   value_interval: AtTElement = None
+            # 对象节点变量名
+            object_variable = ctx.oC_Variable().getText()
+            # 对象节点的有效时间
+            object_interval = None
+            if ctx.s_AtTElement() is not None:
+                object_interval = self.getAtTElement(ctx.s_AtTElement().getText())
+            # 属性节点的有效时间
+            property_interval = None
+            if ctx.s_SetPropertyItemOne() is not None:
+                if ctx.s_SetPropertyItemOne().s_AtTElement() is not None:
+                    property_interval = self.getAtTElement(ctx.s_SetPropertyItemOne().s_AtTElement().getText())
+            elif ctx.s_SetPropertyItemTwo() is not None:
+                if ctx.s_SetPropertyItemTwo().s_AtTElement() is not None:
+                    property_interval = self.getAtTElement(ctx.s_SetPropertyItemTwo().s_AtTElement().getText())
+            # 为属性节点名称，或者( SP? oC_PropertyLookup )+的字符串表示
+            property_variable = None
+            if ctx.s_SetPropertyItemTwo() is not None:
+                if ctx.s_SetPropertyItemTwo().oC_PropertyKeyName() is not None:
+                    property_variable = ctx.s_SetPropertyItemTwo().oC_PropertyKeyName().getText()
+            elif ctx.oC_PropertyExpression() is not None:
+                if ctx.oC_PropertyExpression().oC_PropertyLookup() is not None:
+                    property_variable = ' '.join(self.property_look_up_list)
+                    self.property_look_up_list = []  # 退出清空
+            # 设置值节点的值，或者表达式赋值
+            value_expression = None
+            if ctx.oC_Expression() is not None:
+                value_expression = self.expression
+                self.expression = None
+            # 设置值节点的有效时间
+            value_interval = None
+            if ctx.s_SetValueItem() is not None:
+                if ctx.s_SetValueItem().s_AtTElement() is not None:
+                    value_interval = self.getAtTElement(ctx.s_SetValueItem().s_AtTElement().getText())
+            elif ctx.s_SetValueItemExpression() is not None:
+                if ctx.s_SetValueItemExpression().s_AtTElement() is not None:
+                    value_interval = self.getAtTElement(ctx.s_SetValueItemExpression().s_AtTElement().getText())
+            # 整合SetItem
+            item = IntervalSetting(object_variable, object_interval, property_variable, property_interval, value_expression, value_interval)
+            self.set_items.append(item)
+        elif ctx.oC_Expression() is not None:
+            # ExpressionSetting
+            #   expression_left: PropertyExpression | str,
+            #   expression_right: Expression,
+            #   is_added: False
+            if ctx.oC_PropertyExpression() is not None:
+                expression_left = self.property_expression
+                self.property_expression = None  # 退出清空
+            else:
+                expression_left = ctx.oC_Variable().getText()
+            expression_right = self.expression
+            self.expression = None  # 退出清空
+            is_added = False
+            if '=' in ctx.getText():
+                is_added = True
+            item = ExpressionSetting(expression_left, expression_right, is_added)
+            self.set_items.append(item)
+        elif ctx.oC_NodeLabels() is not None:
+            # LabelSetting
+            #   variable: str,
+            #   labels: List[str]
+            # 设置对象节点的label
             labels = self.node_labels
             self.node_labels = []  # 退出清空
+            variable = ctx.oC_Variable().getText()
+            item = LabelSetting(variable, labels)
+            self.set_items.append(item)
+        else:
+            FormatError("Error SetItem format.")
 
-        # 设置值节点的值，或者表达式赋值
-        value_expression = None
-        if ctx.oC_Expression() is not None:
-            value_expression = self.expression
-            self.expression = None
-        # 设置对象节点的有效时间
-        object_interval = None
-        if ctx.s_AtTElement() is not None:
-            object_interval = self.getAtTElement(ctx.s_AtTElement().getText())
-        # 设置属性节点的有效时间
-        property_interval = None
-        if ctx.s_SetPropertyItemOne() is not None:
-            if ctx.s_SetPropertyItemOne().s_AtTElement() is not None:
-                property_interval = self.getAtTElement(ctx.s_SetPropertyItemOne().s_AtTElement().getText())
-        elif ctx.s_SetPropertyItemTwo() is not None:
-            if ctx.s_SetPropertyItemTwo().s_AtTElement() is not None:
-                property_interval = self.getAtTElement(ctx.s_SetPropertyItemTwo().s_AtTElement().getText())
-        # 设置值节点的有效时间
-        value_interval = None
-        if ctx.s_SetValueItem() is not None:
-            if ctx.s_SetValueItem().s_AtTElement() is not None:
-                value_interval = self.getAtTElement(ctx.s_SetValueItem().s_AtTElement().getText())
-        elif ctx.s_SetValueItemExpression() is not None:
-            if ctx.s_SetValueItemExpression().s_AtTElement() is not None:
-                value_interval = self.getAtTElement(ctx.s_SetValueItemExpression().s_AtTElement().getText())
-        # 为属性节点名称，或者( SP? oC_PropertyLookup )+的字符串表示
-        property_variable = None
-        if ctx.s_SetPropertyItemTwo() is not None:
-            if ctx.s_SetPropertyItemTwo().oC_PropertyKeyName() is not None:
-                property_variable = ctx.s_SetPropertyItemTwo().oC_PropertyKeyName().getText()
-        elif ctx.oC_PropertyExpression() is not None:
-            if ctx.oC_PropertyExpression().oC_PropertyLookup() is not None:
-                property_variable = ' '.join(self.property_look_up_list)
-                self.property_look_up_list = []  # 退出清空
-        self.set_items.append(
-            SetItem(operator, object_, labels, object_interval, property_variable, property_interval, value_interval,
-                    value_expression))
+    def exitOC_PropertyExpression(self, ctx:s_cypherParser.OC_PropertyExpressionContext):
+        pass
 
     def exitS_Remove(self, ctx: s_cypherParser.S_RemoveContext):
-        # object_variable: str | Atom,
-        # property_variable: str = None,
-        # labels: List[str] = None
-        # at_time_clause: AtTimeClause = None
-        at_time_clause = self.at_time_clause
-        self.at_time_clause = None  # 退出清空
-        object_variable = None
-        if ctx.oC_RemoveItem().oC_Variable() is not None:
-            object_variable = ctx.oC_RemoveItem().oC_Variable().getText()
-        elif ctx.oC_RemoveItem().oC_PropertyExpression() is not None:
-            object_variable = self.atom
-            self.atom = None
-        # 为(SP? oC_PropertyLookup) + 的字符串表示
-        property_variable = None
-        if ctx.oC_RemoveItem().oC_PropertyExpression().oC_PropertyLookup() is not None:
-            property_variable = ' '.join(self.property_look_up_list)
-            self.property_look_up_list = []  # 退出清空
-        labels = None
-        if ctx.oC_RemoveItem().oC_NodeLabels() is not None:
+        # remove_items: List[RemoveItem]
+        remove_items = self.remove_items
+        self.remove_items = []  # 退出清空
+        self.remove_clause = RemoveClause(remove_items)
+
+    def exitOC_RemoveItem(self, ctx:s_cypherParser.OC_RemoveItemContext):
+        # item: LabelSetting | PropertyExpression
+        # LabelSetting
+        #   variable: str,
+        #   labels: List[str]
+        # PropertyExpression
+        #   atom: Atom,
+        #   property_chains: List[str]
+        if ctx.oC_Variable() is not None and ctx.oC_NodeLabels() is not None:
+            variable = ctx.oC_Variable().getText()
             labels = self.node_labels
             self.node_labels = []  # 退出清空
-        self.remove_clause = RemoveClause(object_variable, property_variable, labels, at_time_clause)
+            self.remove_items.append(RemoveItem(LabelSetting(variable, labels)))
+        elif ctx.oC_PropertyExpression() is not None:
+            atom = self.atom
+            self.atom = None
+            property_chains = self.property_look_up_list
+            self.property_look_up_list = []  # 退出清空
+            self.remove_items.append(RemoveItem(PropertyExpression(atom, property_chains)))
+        else:
+            raise FormatError("RemoveItem format error.")
 
     def exitS_Stale(self, ctx: s_cypherParser.S_StaleContext):
         # stale_items: List[DeleteItem]
