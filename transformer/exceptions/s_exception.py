@@ -4,13 +4,15 @@ from antlr4.error.ErrorListener import *
 from antlr4.error.Errors import RecognitionException
 from antlr4 import InputStream
 
+
 # 语法错误报告
-class SCypherErrorListener(ErrorListener) :
+class SCypherErrorListener(ErrorListener):
     def syntaxError(self, recognizer, offendingSymbol, line, column, msg, e):
+        # offendingSymbol:The offending token in the input token stream, unless recognizer is a lexer (then it's null).
         stack = recognizer.getRuleInvocationStack()
         stack.reverse()
-        print("rule stack: ", str(stack))
-        print("line", line, ":", column, "at", offendingSymbol, ":", msg)
+        print("\033[0;31mrule stack , {}\033[0m".format(str(stack)))
+        print("\033[0;31mline {} , column {} at {} : {}\033[0m".format(line, column, offendingSymbol, msg))
 
     def underlineError(self, recognizer, offending_token: Token, line, column):
         tokens = recognizer.getInputStream()
@@ -27,11 +29,13 @@ class SCypherErrorListener(ErrorListener) :
                 print("^")
         print("\n")
 
+
 # 语法错误恢复
 class SCypherErrorStrategy(BailErrorStrategy):
-    def recover(self, recognizer: Parser, e: RecognitionException):
-        recognizer.errHandler.reportError(recognizer, e)
+    def recover(self, recognizer, e: RecognitionException):
+        recognizer._errHandler.reportError(recognizer, e)
         super().recover(recognizer, e)
+
 
 class FormatError(Exception):
     def __int__(self, message):

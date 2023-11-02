@@ -213,7 +213,7 @@ class SCypherWalker(s_cypherListener):
             update_clause = self.delete_clause
         elif ctx.s_Set() is not None:
             update_clause = self.set_clause
-        elif ctx.s_Remove() is not None:
+        elif ctx.oC_Remove() is not None:
             update_clause = self.remove_clause
         elif ctx.s_Stale() is not None:
             update_clause = self.stale_clause
@@ -1254,16 +1254,22 @@ class SCypherWalker(s_cypherListener):
         else:
             FormatError("Error SetItem format.")
 
-    def exitOC_PropertyExpression(self, ctx:s_cypherParser.OC_PropertyExpressionContext):
-        pass
+    def exitOC_PropertyExpression(self, ctx: s_cypherParser.OC_PropertyExpressionContext):
+        # atom: Atom,
+        # property_chains: List[str]
+        atom = self.atom
+        self.atom = None  # 退出清空
+        property_chains = self.property_look_up_list
+        self.property_look_up_list = []  # 退出清空
+        self.property_expression = PropertyExpression(atom, property_chains)
 
-    def exitS_Remove(self, ctx: s_cypherParser.S_RemoveContext):
+    def exitOC_Remove(self, ctx: s_cypherParser.OC_RemoveContext):
         # remove_items: List[RemoveItem]
         remove_items = self.remove_items
         self.remove_items = []  # 退出清空
         self.remove_clause = RemoveClause(remove_items)
 
-    def exitOC_RemoveItem(self, ctx:s_cypherParser.OC_RemoveItemContext):
+    def exitOC_RemoveItem(self, ctx: s_cypherParser.OC_RemoveItemContext):
         # item: LabelSetting | PropertyExpression
         # LabelSetting
         #   variable: str,
