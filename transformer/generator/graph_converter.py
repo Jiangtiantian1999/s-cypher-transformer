@@ -157,10 +157,9 @@ class GraphConverter:
         return object_pattern, property_patterns
 
     def create_node(self, node: SNode, time_window: AtTimeClause = None) -> str:
-        if node.variable:
-            node_pattern = node.variable
-        else:
-            node_pattern = ""
+        if node.variable is None:
+            node.variable = self.variables_manager.get_random_variable()
+        node_pattern = node.variable
         for label in node.labels:
             node_pattern = node_pattern + ':' + label
         if node.__class__ == PropertyNode:
@@ -181,14 +180,14 @@ class GraphConverter:
         return node_pattern
 
     def create_edge(self, edge: SEdge, time_window: AtTimeClause = None) -> str:
-        if edge.variable:
-            edge_pattern = edge.variable
-        else:
-            edge_pattern = ""
-
         if len(edge.labels) == 0:
             raise SyntaxError(
                 "Exactly one relationship type must be specified for CREATE. Did you forget to prefix your relationship type with a ':'?")
+
+        if edge.variable is None:
+            edge.variable = self.variables_manager.get_random_variable()
+        edge_pattern = edge.variable
+
         for label in edge.labels:
             edge_pattern = edge_pattern + ':' + label
 
@@ -218,5 +217,4 @@ class GraphConverter:
         if time_point.__class__ == str:
             return '\"' + time_point + '\"'
         else:
-            time_point_string, time_point_type = self.expression_converter.convert_map_literal(time_point, None)
-            return time_point_string
+            return self.expression_converter.convert_map_literal(time_point, None)

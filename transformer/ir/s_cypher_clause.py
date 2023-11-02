@@ -6,7 +6,7 @@ from transformer.ir.s_expression import Expression
 
 
 class OrderByClause:
-    # dict[排序的元素，排序方式
+    # dict[排序的元素，排序方式]
     def __init__(self, sort_items: dict[Expression, str]):
         if len(sort_items) == 0:
             raise ValueError("The sort items can't be empty.")

@@ -10,7 +10,6 @@ class ClauseConverter:
         self.graph_converter = None
         # unwind变量：待添加的unwind表达式字符串
         self.unwind_clause_dict = {}
-        self.is_reading = True
 
     def get_additional_unwind_clause_string(self):
         unwind_clause_string = ""
@@ -71,7 +70,7 @@ class ClauseConverter:
             if yield_item.variable:
                 yield_clause_string = yield_clause_string + " as " + yield_item.variable
 
-        self.variables_manager.update_yield_clause_variables_dict(yield_clause)
+        self.variables_manager.update_yield_clause_variables(yield_clause)
 
         if yield_clause.where_expression:
             where_clause_string = "WHERE " + self.expression_converter.convert_expression(yield_clause.where_expression)
@@ -293,7 +292,7 @@ class ClauseConverter:
     def convert_create_clause(self, create_clause: CreateClause) -> str:
         create_clause_string = "CREATE "
         # 待解决：create时检查约束
-        self.variables_manager.update_match_variables(create_clause)
+        self.variables_manager.update_create_variables(create_clause)
         for pattern in create_clause.patterns:
             # create clause的pattern均为SPath类型
             pattern = pattern.pattern
@@ -309,47 +308,43 @@ class ClauseConverter:
         if delete_clause.is_detach:
             delete_clause_string = "DETACH DELETE "
 
-        self.is_reading = False
         for delete_item in delete_clause.delete_items:
             delete_item_expression_string = self.expression_converter.convert_expression(delete_item.expression)
+            # 物理删除对象节点/属性节点/值节点/边，调用scypher.getItemToDelete，第一个参数为对象节点，第二个参数为属性名，第三个参数为【是否逻辑删除值节点】
             unwind_variable = self.variables_manager.get_random_variable()
             unwind_expression_string = delete_item_expression_string
             if delete_item.property_name:
                 unwind_expression_string = unwind_expression_string + ", " + delete_item.property_name
             else:
                 unwind_expression_string = unwind_expression_string + ", NULL"
-            # 为在delete时检查约束和删除对象节点，调用scypher.getItemToDelete，但如果delete_item里有变量是在create或merge的时候定义的，就会报错
             unwind_expression_string = unwind_expression_string + ", " + str(delete_item.is_value)
             unwind_expression_string = "scypher.getItemToDelete(" + unwind_expression_string + "), "
             self.unwind_clause_dict[unwind_variable] = unwind_expression_string
             delete_clause_string = delete_clause_string + unwind_variable
-        self.is_reading = True
 
         return delete_clause_string.rstrip(", ")
 
     def convert_stale_clause(self, stale_clause: StaleClause) -> str:
         stale_clause_string = "SET "
 
-        self.is_reading = False
         if stale_clause.at_time_clause:
             time_point_string = self.expression_converter.convert_expression(stale_clause.at_time_clause.time_point)
         else:
             time_point_string = "NULL"
         for stale_item in stale_clause.stale_items:
             stale_item_expression_string = self.expression_converter.convert_expression(stale_item.expression)
+            # 逻辑删除对象节点/属性节点/值节点/边，调用scypher.getItemToStale，第一个参数为对象节点，第二个参数为属性名，第三个参数为【是否逻辑删除值节点】，第四个参数为逻辑删除时间
             unwind_variable = self.variables_manager.get_random_variable()
             unwind_expression_string = stale_item_expression_string
             if stale_item.property_name:
                 unwind_expression_string = unwind_expression_string + ", " + stale_item.property_name
             else:
                 unwind_expression_string = unwind_expression_string + ", NULL"
-            # 为在stale时检查约束，调用scypher.getItemToStale，但如果stale_item里有变量是在create或merge的时候定义的，就会报错
             unwind_expression_string = unwind_expression_string + ", " + str(stale_item.is_value)
             unwind_expression_string = unwind_expression_string + ", " + time_point_string
             unwind_expression_string = "scypher.getItemToStale(" + unwind_expression_string + ')'
             self.unwind_clause_dict[unwind_variable] = unwind_expression_string
             stale_clause_string = stale_clause_string + unwind_variable + ".intervalTo = scypher.timePoint(\"NOW\"), "
-        self.is_reading = True
 
         return stale_clause_string.rstrip(", ")
 
