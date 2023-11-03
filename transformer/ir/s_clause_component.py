@@ -90,8 +90,3 @@ class ExpressionSetting:
         self.expression_right = expression_right
         # 是否为+=，默认为=
         self.is_added = is_added
-
-
-class SetItem:
-    def __init__(self, item: IntervalSetting | ExpressionSetting | LabelSetting):
-        self.item = item

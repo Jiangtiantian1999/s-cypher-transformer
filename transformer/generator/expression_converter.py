@@ -218,7 +218,7 @@ class ExpressionConverter:
                     break
                 if element_variable in self.variables_manager.updating_object_nodes_dict.keys() and flag is False:
                     raise ValueError('\'' + element_variable + "' doesn't have property '" + property_name + '\'')
-            elif element_variable in self.variables_manager.user_edges_dict.keys() + self.variables_manager.user_paths_dict.keys():
+            elif element_variable in list(self.variables_manager.user_edges_dict.keys()) + list(self.variables_manager.user_paths_dict.keys()):
                 # 边/路径的属性没有有效时间（实际上路径没有属性）
                 raise ValueError(
                     "Only the property of node has a effective time. '" + element_variable + "' is not a node.")

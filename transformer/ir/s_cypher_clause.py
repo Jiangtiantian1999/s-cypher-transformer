@@ -116,7 +116,7 @@ class StaleClause:
 
 
 class SetClause:
-    def __init__(self, set_items: List[SetItem], at_time_clause: AtTimeClause = None):
+    def __init__(self, set_items: List[IntervalSetting | ExpressionSetting | LabelSetting], at_time_clause: AtTimeClause = None):
         if len(set_items) == 0:
             raise ValueError("The set items can't be empty.")
         self.set_items = set_items

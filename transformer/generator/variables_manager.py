@@ -104,5 +104,3 @@ class VariablesManager:
                 else:
                     self.user_variables.append(edge.variable)
                     self.user_edges_dict[edge.variable] = copy(edge)
-                    if is_creating:
-                        self.updating_paths_dict[edge.variable] = copy(edge)

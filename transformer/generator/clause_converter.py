@@ -318,7 +318,7 @@ class ClauseConverter:
             else:
                 unwind_expression_string = unwind_expression_string + ", NULL"
             unwind_expression_string = unwind_expression_string + ", " + str(delete_item.is_value)
-            unwind_expression_string = "scypher.getItemToDelete(" + unwind_expression_string + "), "
+            unwind_expression_string = "scypher.getItemToDelete(" + unwind_expression_string + ')'
             self.unwind_clause_dict[unwind_variable] = unwind_expression_string
             delete_clause_string = delete_clause_string + unwind_variable
 
@@ -355,63 +355,62 @@ class ClauseConverter:
         else:
             time_point_string = "NULL"
         for set_item in set_clause.set_items:
-            item = set_item.item
             # 为在set时检查约束和设置对象节点的属性，调用scypher.getItemToSetX，但如果set_item里有变量是在create或merge的时候定义的，就会报错
-            if item.__class__ == IntervalSetting:
+            if set_item.__class__ == IntervalSetting:
                 # 设置节点/边的有效时间
                 unwind_variable = self.variables_manager.get_random_variable()
-                unwind_expression_string = item.object_variable + ", "
-                if item.object_interval:
+                unwind_expression_string = set_item.object_variable + ", "
+                if set_item.object_interval:
                     unwind_expression_string = unwind_expression_string + "scypher.interval(" + self.graph_converter.convert_time_point_literal(
-                        item.object_interval.interval_from) + ", " + self.graph_converter.convert_time_point_literal(
-                        item.object_interval.interval_to) + "), "
+                        set_item.object_interval.interval_from) + ", " + self.graph_converter.convert_time_point_literal(
+                        set_item.object_interval.interval_to) + "), "
                 else:
                     unwind_expression_string = unwind_expression_string + "NULL, "
-                if item.property_variable:
-                    unwind_expression_string = unwind_expression_string + item.property_variable + ", "
+                if set_item.property_variable:
+                    unwind_expression_string = unwind_expression_string + set_item.property_variable + ", "
                 else:
                     unwind_expression_string = unwind_expression_string + "NULL, "
-                if item.property_interval:
+                if set_item.property_interval:
                     unwind_expression_string = unwind_expression_string + "scypher.interval(" + self.graph_converter.convert_time_point_literal(
-                        item.property_interval.interval_from) + ", " + self.graph_converter.convert_time_point_literal(
-                        item.property_interval.interval_to) + "), "
+                        set_item.property_interval.interval_from) + ", " + self.graph_converter.convert_time_point_literal(
+                        set_item.property_interval.interval_to) + "), "
                 else:
                     unwind_expression_string = unwind_expression_string + "NULL, "
-                if item.value_expression:
-                    value_expression = self.expression_converter.convert_expression(item.value_expression)
+                if set_item.value_expression:
+                    value_expression = self.expression_converter.convert_expression(set_item.value_expression)
                     unwind_expression_string = unwind_expression_string + value_expression + ", "
                 else:
                     unwind_expression_string = unwind_expression_string + "NULL, "
-                if item.value_interval:
+                if set_item.value_interval:
                     unwind_expression_string = unwind_expression_string + "scypher.interval(" + self.graph_converter.convert_time_point_literal(
-                        item.value_interval.interval_from) + ", " + self.graph_converter.convert_time_point_literal(
-                        item.value_interval.interval_to) + "), "
+                        set_item.value_interval.interval_from) + ", " + self.graph_converter.convert_time_point_literal(
+                        set_item.value_interval.interval_to) + "), "
                 else:
                     unwind_expression_string = unwind_expression_string + "NULL, "
                 unwind_expression_string = unwind_expression_string + time_point_string
                 unwind_expression_string = "scypher.getItemToSetInterval(" + unwind_expression_string + ')'
                 set_clause_string = set_clause_string + unwind_variable + ".left = " + unwind_variable + ".right"
                 self.unwind_clause_dict[unwind_variable] = unwind_expression_string
-            elif item.__class__ == ExpressionSetting:
+            elif set_item.__class__ == ExpressionSetting:
                 # 修改节点/边的属性
                 unwind_variable = self.variables_manager.get_random_variable()
                 property_name = None
-                if item.expression_left.__class__ == PropertyExpression:
-                    expression_left_string = self.expression_converter.convert_atom(item.expression_left.atom)
+                if set_item.expression_left.__class__ == PropertyExpression:
+                    expression_left_string = self.expression_converter.convert_atom(set_item.expression_left.atom)
                     object_variable = expression_left_string
-                    for property in item.expression_left.property_chains:
+                    for property in set_item.expression_left.property_chains:
                         object_variable, property_name = expression_left_string, property
                         expression_left_string = expression_left_string + '.' + property
                 else:
-                    object_variable = item.expression_left
+                    object_variable = set_item.expression_left
                 unwind_expression_string = object_variable
                 if property_name:
                     unwind_expression_string = unwind_expression_string + ", " + property_name
                 else:
                     unwind_expression_string = unwind_expression_string + ", NULL"
                 unwind_expression_string = unwind_expression_string + self.expression_converter.convert_expression(
-                    item.expression_right)
-                unwind_expression_string = unwind_expression_string + ", " + str(item.is_added) + ", "
+                    set_item.expression_right)
+                unwind_expression_string = unwind_expression_string + ", " + str(set_item.is_added) + ", "
                 if set_clause.at_time_clause:
                     unwind_expression_string = unwind_expression_string + self.expression_converter.convert_expression(
                         set_clause.at_time_clause.time_point)
@@ -422,8 +421,8 @@ class ClauseConverter:
                 self.unwind_clause_dict[unwind_variable] = unwind_expression_string
             else:
                 # 设置节点/边的标签
-                set_clause_string = set_clause_string + item.variable
-                for label in item.labels:
+                set_clause_string = set_clause_string + set_item.variable
+                for label in set_item.labels:
                     set_clause_string = set_clause_string + ':' + label
             set_clause_string = set_clause_string + ", "
 
