@@ -51,6 +51,8 @@ class DeleteItem:
 class PropertyExpression:
     def __init__(self, atom: Atom, property_chains: List[str]):
         self.atom = atom
+        if len(property_chains) == 0:
+            raise ValueError("The property chains can't be empty.")
         self.property_chains = property_chains
 
 

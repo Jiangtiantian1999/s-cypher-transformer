@@ -48,7 +48,6 @@ class GraphConverter:
     def match_node(self, node: SNode, time_window: AtTimeClause | BetweenClause = None) -> (str, List[str]):
         if node.variable is None:
             node.variable = self.variables_manager.get_random_variable()
-        # 点模式
         node_pattern = node.variable
         for label in node.labels:
             node_pattern = node_pattern + ':' + label
@@ -128,83 +127,115 @@ class GraphConverter:
 
         return edge_pattern, interval_condition
 
-    def create_path(self, path: SPath, time_window: AtTimeClause = None) -> (str, List[str], List[str]):
+    def create_path(self, path: SPath, time_window: AtTimeClause = None) -> (List[str], str):
         # 路径模式，属性节点和值节点的模式
-        path_pattern, property_patterns = self.create_object_node(path.nodes[0], time_window)
+        if path.nodes[0].variable is None and path.variable or len(path.nodes) > 1:
+            path.nodes[0].variable = self.variables_manager.get_random_variable()
+        if path.variable or len(path.nodes) > 1:
+            path_pattern = '(' + path.nodes[0].variable + ')'
+        else:
+            path_pattern = None
+        node_patterns = self.create_object_node(path.nodes[0], time_window)
         for index, edge in enumerate(path.edges):
-            # 生成边模式
-            edge_pattern = self.create_edge(edge, time_window)
-            path_pattern = path_pattern + edge_pattern
-            # 生成节点模式
-            node_pattern, node_property_patterns = self.create_object_node(path.nodes[index + 1], time_window)
-            path_pattern = path_pattern + node_pattern
-            property_patterns.extend(node_property_patterns)
-
+            if path.nodes[index + 1].variable is None:
+                path.nodes[index + 1].variable = self.variables_manager.get_random_variable()
+            if edge.variable is None:
+                edge.variable = self.variables_manager.get_random_variable()
+            node_patterns.extend(self.create_object_node(path.nodes[index + 1], time_window))
+            edge_pattern = self.create_edge(edge, path.nodes[index], path.nodes[index + 1], time_window)
+            path_pattern = path_pattern + edge_pattern + '(' + path.nodes[index + 1].variable + ')'
         if path.variable:
             path_pattern = path.variable + " = " + path_pattern
-        return path_pattern, property_patterns
+        return node_patterns, path_pattern
 
-    def create_object_node(self, object_node: ObjectNode, time_window: Expression = None) -> (str, List[str]):
-        object_pattern = self.create_node(object_node, time_window)
+    def create_object_node(self, object_node: ObjectNode, time_window: Expression = None) -> (List[str]):
+        if object_node.variable in self.variables_manager.updating_object_nodes_dict.keys():
+            # 该对象节点是在更新语句中定义的，直接创建属性节点和值节点（和相连边）即可
+            object_pattern = self.create_node(object_node, None, time_window)
+            create_patterns = [object_pattern]
+            for property_node, value_node in object_node.properties.items():
+                property_pattern = self.create_node(property_node, time_window, object_node)
+                create_patterns.append('(' + object_node.variable + ")-[:OBJECT_PROPERTY]->" + property_pattern)
+                value_pattern = self.create_node(value_node, time_window, object_node)
+                create_patterns.append('(' + object_node.variable + ")-[:PROPERTY_VALUE]->" + value_pattern)
+        else:
+            # 该对象节点是在查询语句中定义的，在更新语句中调用时不能设置其标签或属性
+            if len(object_node.labels) > 1 or len(object_node.properties) > 0:
+                raise ValueError("Variable `" + object_node.variable + "` already declared.")
+            create_patterns = ['(' + object_node.variable + ')']
+        return create_patterns
 
-        property_patterns = []
-        for key, value in object_node.properties.items():
-            property_pattern = self.create_node(key, time_window)
-            value_pattern = self.create_node(value, time_window)
-            property_patterns.append(
-                object_pattern + "-[:OBJECT_PROPERTY]->" + property_pattern + "-[:PROPERTY_VALUE]->" + value_pattern)
-
-        return object_pattern, property_patterns
-
-    def create_node(self, node: SNode, time_window: AtTimeClause = None) -> str:
-        if node.variable is None:
+    def create_node(self, node: SNode, time_window: AtTimeClause = None, parent_node: SNode = None) -> str:
+        if node.variable is None and (
+                node.__class__ == PropertyNode or (node.__class__ == ObjectNode and len(node.properties) > 0)):
             node.variable = self.variables_manager.get_random_variable()
-        node_pattern = node.variable
+        if node.variable:
+            node_pattern = node.variable
+        else:
+            node_pattern = ""
+        # 添加节点标签
         for label in node.labels:
             node_pattern = node_pattern + ':' + label
+        # 添加节点内容
         if node.__class__ == PropertyNode:
             node_pattern = node_pattern + "{content: \"" + node.content + "\""
         elif node.__class__ == ValueNode:
             node_pattern = node_pattern + "{content: " + self.expression_converter.convert_expression(node.content)
-        if node.interval:
-            node_pattern = node_pattern + ", intervalFrom: " + self.convert_time_point_literal(
-                node.interval.interval_from)
-            node_pattern = node_pattern + ", intervalTo: " + self.convert_time_point_literal(node.interval.interval_to)
-        elif time_window:
-            node_pattern = node_pattern + ", intervalFrom: " + self.expression_converter.convert_expression(
-                time_window.time_point)
-            node_pattern = node_pattern + ", intervalTo: scypher.timePoint(\"NOW\")"
-        else:
-            node_pattern = node_pattern + ", intervalFrom: scypher.timePoint(), intervalTo: scypher.timePoint(\"NOW\")"
-        node_pattern = '(' + node_pattern + "})"
+        # 添加节点有效时间
+        if node.__class__ == ObjectNode:
+            if node.interval:
+                node_pattern = node_pattern + "{intervalFrom: scypher.timePoint(" + self.convert_time_point_literal(
+                    node.interval.interval_from) + "), intervalTo: scypher.timePoint(" + self.convert_time_point_literal(
+                    node.interval.interval_to) + ")}"
+            elif time_window:
+                node_pattern = node_pattern + "{intervalFrom: " + self.expression_converter.convert_expression(
+                    time_window.time_point) + ", intervalTo: scypher.timePoint(\"NOW\")}"
+            else:
+                node_pattern = node_pattern + "{intervalFrom: scypher.timePoint(), intervalTo: scypher.timePoint(\"NOW\")}"
+        elif node.__class__ in [PropertyNode, ValueNode]:
+            if node.interval:
+                node_pattern = node_pattern + "{intervalFrom: scypher.getIntervalFromOfSubordinateNode(" + parent_node.variable + ", " + self.convert_time_point_literal(
+                    node.interval.interval_from) + "), intervalTo: scypher.getIntervalToOfSubordinateNode(" + parent_node.variable + ", " + self.convert_time_point_literal(
+                    node.interval.interval_to) + ")}"
+            elif time_window:
+                node_pattern = node_pattern + "{intervalFrom: scypher.getIntervalFromOfSubordinateNode(" + parent_node.variable + ", " + self.expression_converter.convert_expression(
+                    time_window.time_point) + "), intervalTo: scypher.getIntervalToOfSubordinateNode(" + parent_node.variable + ", \"NOW\")}"
+            else:
+                node_pattern = node_pattern + "{intervalFrom: scypher.getIntervalFromOfSubordinateNode(" + parent_node.variable + ", NULL), "
+                node_pattern = node_pattern + "intervalTo: scypher.getIntervalToOfSubordinateNode(" + parent_node.variable + ", \"NOW\")}"
+
+        node_pattern = '(' + node_pattern + ')'
         return node_pattern
 
-    def create_edge(self, edge: SEdge, time_window: AtTimeClause = None) -> str:
+    def create_edge(self, edge: SEdge, from_node: ObjectNode = None, to_node: ObjectNode = None,
+                    time_window: AtTimeClause = None) -> str:
         if len(edge.labels) == 0:
             raise SyntaxError(
                 "Exactly one relationship type must be specified for CREATE. Did you forget to prefix your relationship type with a ':'?")
-
-        if edge.variable is None:
-            edge.variable = self.variables_manager.get_random_variable()
-        edge_pattern = edge.variable
-
+        if edge.variable:
+            edge_pattern = edge.variable
+        else:
+            edge_pattern = ""
+        # 添加边标签
         for label in edge.labels:
             edge_pattern = edge_pattern + ':' + label
-
+        # 添加边属性
         edge_pattern = edge_pattern + '{'
         for key, value in edge.properties.items():
-            edge_pattern = edge_pattern + key + " : " + self.expression_converter.convert_expression(value) + ", "
+            edge_pattern = edge_pattern + key + ": " + self.expression_converter.convert_expression(value) + ", "
+        # 需要检查边的有效时间，以及是否有重复边
         if edge.interval:
-            edge_pattern = edge_pattern + "intervalFrom: scypher.timePoint(" + self.convert_time_point_literal(
-                edge.interval.interval_from) + "), intervalTo: scypher.timePoint(" + self.convert_time_point_literal(
-                edge.interval.interval_to) + ')'
+            edge_pattern = edge_pattern + "intervalFrom: scypher.getIntervalFromOfEdge(" + from_node.variable + ", " + to_node.variable + ", " + self.convert_time_point_literal(
+                edge.interval.interval_from) + "), intervalTo: scypher.getIntervalToOfEdge(" + from_node.variable + ", " + to_node.variable + ", " + self.convert_time_point_literal(
+                edge.interval.interval_to) + ")}"
         elif time_window:
-            edge_pattern = edge_pattern + "intervalFrom: " + self.expression_converter.convert_expression(
-                time_window.time_point) + ", intervalTo: scypher.timePoint(\"NOW\")"
+            edge_pattern = edge_pattern + "intervalFrom: scypher.getIntervalFromOfEdge(" + from_node.variable + ", " + to_node.variable + ", " + self.expression_converter.convert_expression(
+                time_window.time_point) + "), intervalTo: scypher.getIntervalToOfEdge(" + from_node.variable + ", " + to_node.variable + ", \"NOW\")}"
         else:
-            edge_pattern = edge_pattern + "intervalFrom: scypher.timePoint(), intervalTo: scypher.timePoint(\"NOW\")"
+            edge_pattern = edge_pattern + "intervalFrom: scypher.getIntervalFromOfEdge(" + from_node.variable + ", " + to_node.variable + ", NULL), "
+            edge_pattern = edge_pattern + "intervalTo: scypher.getIntervalToOfEdge(" + from_node.variable + ", " + to_node.variable + ", \"NOW\")}"
 
-        edge_pattern = '-[' + edge_pattern + '}]-'
+        edge_pattern = '-[' + edge_pattern + ']-'
         if edge.direction == edge.LEFT:
             edge_pattern = '<' + edge_pattern
         elif edge.direction == edge.RIGHT:

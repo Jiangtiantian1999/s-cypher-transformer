@@ -290,18 +290,24 @@ class ClauseConverter:
             return self.convert_remove_clause(updating_clause)
 
     def convert_create_clause(self, create_clause: CreateClause) -> str:
-        create_clause_string = "CREATE "
+        create_clause_string = ""
         # 待解决：create时检查约束
         self.variables_manager.update_create_variables(create_clause)
         for pattern in create_clause.patterns:
             # create clause的pattern均为SPath类型
             pattern = pattern.pattern
-            path_pattern, property_patterns = self.graph_converter.create_path(pattern, create_clause.at_time_clause)
-            create_clause_string = create_clause_string + path_pattern + ", "
+            if create_clause_string == "":
+                create_clause_string = "CREATE "
+            else:
+                create_clause_string = create_clause_string + "\nCREATE "
+            node_patterns, path_pattern = self.graph_converter.create_path(pattern, create_clause.at_time_clause)
+            for node_pattern in node_patterns:
+                create_clause_string = create_clause_string + node_pattern + ", "
+            create_clause_string = create_clause_string.rstrip(", ")
             # 添加节点属性模式的匹配
-            for property_pattern in property_patterns:
-                create_clause_string = create_clause_string + ", " + property_pattern + ", "
-        return create_clause_string.rstrip(", ")
+            if path_pattern:
+                create_clause_string = '\n' + "CREATE " + path_pattern
+        return create_clause_string
 
     def convert_delete_clause(self, delete_clause: DeleteClause) -> str:
         delete_clause_string = "DELETE "
@@ -357,7 +363,8 @@ class ClauseConverter:
         for set_item in set_clause.set_items:
             # 为在set时检查约束和设置对象节点的属性，调用scypher.getItemToSetX，但如果set_item里有变量是在create或merge的时候定义的，就会报错
             if set_item.__class__ == IntervalSetting:
-                # 设置节点/边的有效时间
+                # 设置节点/边的有效时间，调用scypher.getItemToSetInterval，第一个参数为对象节点，第二个参数为对象节点的有效时间，
+                # 第三个参数为属性名，第四个参数为属性节点的有效时间，第五个参数属性值，第六个参数为值节点的有效时间，第七个参数为set的操作时间
                 unwind_variable = self.variables_manager.get_random_variable()
                 unwind_expression_string = set_item.object_variable + ", "
                 if set_item.object_interval:
@@ -392,30 +399,22 @@ class ClauseConverter:
                 set_clause_string = set_clause_string + unwind_variable + ".left = " + unwind_variable + ".right"
                 self.unwind_clause_dict[unwind_variable] = unwind_expression_string
             elif set_item.__class__ == ExpressionSetting:
-                # 修改节点/边的属性
+                # 修改节点/边的属性，调用scypher.getItemToSetExpression，第一个参数为对象节点，第二个参数为属性名，
+                # 第三个参数为表达式，第四个参数为【是否为+=】，第五个参数为set的操作时间
                 unwind_variable = self.variables_manager.get_random_variable()
-                property_name = None
                 if set_item.expression_left.__class__ == PropertyExpression:
-                    expression_left_string = self.expression_converter.convert_atom(set_item.expression_left.atom)
-                    object_variable = expression_left_string
-                    for property in set_item.expression_left.property_chains:
-                        object_variable, property_name = expression_left_string, property
-                        expression_left_string = expression_left_string + '.' + property
+                    object_variable = self.expression_converter.convert_atom(set_item.expression_left.atom)
+                    for index, property_name in enumerate(set_item.expression_left.property_chains):
+                        if index != len(set_item.expression_left.property_chains) - 1:
+                            object_variable = self.expression_converter.get_property_value(object_variable,
+                                                                                           property_name)
+                    unwind_expression_string = object_variable + ", " + set_item.expression_left.property_chains[-1]
                 else:
-                    object_variable = set_item.expression_left
-                unwind_expression_string = object_variable
-                if property_name:
-                    unwind_expression_string = unwind_expression_string + ", " + property_name
-                else:
-                    unwind_expression_string = unwind_expression_string + ", NULL"
+                    unwind_expression_string = set_item.expression_left + ", NULL"
                 unwind_expression_string = unwind_expression_string + self.expression_converter.convert_expression(
                     set_item.expression_right)
                 unwind_expression_string = unwind_expression_string + ", " + str(set_item.is_added) + ", "
-                if set_clause.at_time_clause:
-                    unwind_expression_string = unwind_expression_string + self.expression_converter.convert_expression(
-                        set_clause.at_time_clause.time_point)
-                else:
-                    unwind_expression_string = unwind_expression_string + "NULL"
+                unwind_expression_string = unwind_expression_string + time_point_string
                 unwind_expression_string = "scypher.getItemToSetExpression(" + unwind_expression_string + ')'
                 set_clause_string = set_clause_string + unwind_variable + ".left = " + unwind_variable + ".right"
                 self.unwind_clause_dict[unwind_variable] = unwind_expression_string
@@ -430,14 +429,14 @@ class ClauseConverter:
 
     def convert_merge_clause(self, merge_clause: MergeClause) -> str:
         merge_clause_string = "MERGE "
-        # 待解决：若创建，检查约束；图模式中的@T是用于匹配还是用于创建？
-        self.variables_manager.update_pattern_variables(merge_clause.pattern)
+        self.variables_manager.update_pattern_variables(merge_clause.pattern, True)
         pattern = merge_clause.pattern
-        path_pattern, property_patterns = self.graph_converter.create_path(pattern, merge_clause.at_time_clause)
-        merge_clause_string = merge_clause_string + path_pattern + '\n'
-        # 添加节点属性模式的匹配
-        for property_pattern in property_patterns:
-            merge_clause_string = merge_clause_string + "MERGE " + property_pattern + '\n'
+        node_patterns, path_pattern = self.graph_converter.create_path(pattern, merge_clause.at_time_clause)
+        for node_pattern in node_patterns:
+            merge_clause_string = merge_clause_string + node_pattern + ", "
+        merge_clause_string = merge_clause_string.rstrip(", ")
+        if path_pattern:
+            merge_clause_string = merge_clause_string + "\nMERGE" + path_pattern + '\n'
 
         for key, value in merge_clause.actions.items():
             merge_clause_string = key + ' ' + self.convert_set_clause(value) + '\n'

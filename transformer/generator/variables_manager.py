@@ -34,7 +34,6 @@ class VariablesManager:
         self.user_paths_dict = {}
         self.updating_object_nodes_dict = {}
         self.updating_edges_dict = {}
-        self.updating_paths_dict = {}
 
     def update_yield_clause_variables(self, yield_clause: YieldClause):
         for yield_item in yield_clause.yield_items:
@@ -66,16 +65,16 @@ class VariablesManager:
         for pattern in create_clause.patterns:
             self.update_pattern_variables(pattern, True)
 
-    def update_pattern_variables(self, pattern: Pattern, is_creating=False):
+    def update_pattern_variables(self, pattern: Pattern, is_updating=False):
         pattern = pattern.pattern
         if pattern.__class__ == SPath:
-            self.update_path_variables(pattern, is_creating)
+            self.update_path_variables(pattern, is_updating)
         elif pattern.__class__ == TemporalPathCall:
             self.user_variables.append(pattern.variable)
             self.user_paths_dict[pattern.variable] = pattern
-            self.update_path_variables(pattern.path, is_creating)
+            self.update_path_variables(pattern.path, is_updating)
 
-    def update_path_variables(self, path: SPath, is_creating=False):
+    def update_path_variables(self, path: SPath, is_updating=False):
         if path.variable:
             self.user_variables.append(path.variable)
             self.user_paths_dict[path.variable] = path
@@ -84,13 +83,13 @@ class VariablesManager:
                 if object_node.variable in self.user_object_nodes_dict.keys():
                     object_node_in_dict = self.user_object_nodes_dict[object_node.variable]
                     object_node_in_dict.properties.update(object_node.properties)
-                    if is_creating and object_node.variable in self.updating_object_nodes_dict.keys():
+                    if is_updating and object_node.variable in self.updating_object_nodes_dict.keys():
                         updating_object_node_in_dict = self.updating_object_nodes_dict[object_node.variable]
                         updating_object_node_in_dict.properties.update(object_node.properties)
                 else:
                     self.user_variables.append(object_node.variable)
                     self.user_object_nodes_dict[object_node.variable] = copy(object_node)
-                    if is_creating:
+                    if is_updating:
                         self.updating_object_nodes_dict[object_node.variable] = copy(object_node)
 
         for edge in path.edges:
@@ -98,9 +97,11 @@ class VariablesManager:
                 if edge.variable in self.user_edges_dict.keys():
                     edge_in_dict = self.user_edges_dict[edge.variable]
                     edge_in_dict.properties.update(edge.properties)
-                    if is_creating and edge.variable in self.updating_edges_dict.keys():
+                    if is_updating and edge.variable in self.updating_edges_dict.keys():
                         updating_edge_in_dict = self.updating_edges_dict[edge.variable]
                         updating_edge_in_dict.properties.update(edge.properties)
                 else:
                     self.user_variables.append(edge.variable)
                     self.user_edges_dict[edge.variable] = copy(edge)
+                    if is_updating:
+                        self.updating_edges_dict[edge.variable] = copy(edge)
