@@ -1,3 +1,4 @@
 antlr4-python3-runtime==4.13.0
 pytz==2022.7
 tzlocal==2.1
+neo4j==5.14.1
