@@ -114,6 +114,10 @@ class ExpressionConverter:
         return list_index_expression_string
 
     def get_property_value(self, variable_name, property_name):
+        if variable_name in self.variables_manager.property_value.keys() and property_name in \
+                self.variables_manager.property_value[variable_name].keys():
+            return self.variables_manager.property_value[variable_name][property_name]
+        self.variables_manager.property_value[variable_name] = {}
         if variable_name in self.variables_manager.user_object_nodes_dict.keys():
             # 查找对象节点的属性
             object_node = self.variables_manager.user_object_nodes_dict[variable_name]
@@ -122,9 +126,12 @@ class ExpressionConverter:
                 if property_node.variable == property_name:
                     if variable_name in self.variables_manager.updating_object_nodes_dict.keys():
                         # 查找在更新语句中定义的对象节点的属性
-                        return self.convert_expression(value_node.content)
+                        self.variables_manager.property_value[variable_name][property_name] = self.convert_expression(
+                            value_node.content)
                     else:
-                        return value_node.variable + ".content"
+                        self.variables_manager.property_value[variable_name][
+                            property_name] = value_node.variable + ".content"
+                    return self.variables_manager.property_value[variable_name][property_name]
             if variable_name in self.variables_manager.updating_object_nodes_dict.keys():
                 raise ValueError('\'' + variable_name + "' doesn't have property '" + property_name + '\'')
         elif variable_name in self.variables_manager.user_edges_dict.keys():
@@ -132,9 +139,12 @@ class ExpressionConverter:
             if variable_name in self.variables_manager.updating_edges_dict.keys():
                 # 查找在更新语句中定义的边的属性
                 edge = self.variables_manager.updating_edges_dict[variable_name]
-                return self.convert_expression(edge.properties[property_name])
+                self.variables_manager.property_value[variable_name][property_name] = self.convert_expression(
+                    edge.properties[property_name])
             else:
-                return variable_name + '.' + property_name
+                self.variables_manager.property_value[variable_name][
+                    property_name] = variable_name + '.' + property_name
+            return self.variables_manager.property_value[variable_name][property_name]
         elif variable_name in self.variables_manager.user_paths_dict.keys():
             # 查找路径的属性，但实际上路径没有属性，报错
             raise ValueError("Paths have no properties.")
@@ -143,6 +153,7 @@ class ExpressionConverter:
         unwind_variable = self.variables_manager.get_random_variable()
         self.clause_converter.unwind_clause_dict[
             unwind_variable] = "scypher.getPropertyValue(" + variable_name + ", \"" + property_name + "\")"
+        self.variables_manager.property_value[variable_name][property_name] = unwind_variable
         return unwind_variable
 
     def convert_properties_labels_expression(self, properties_labels_expression: PropertiesLabelsExpression) -> str:
@@ -218,7 +229,8 @@ class ExpressionConverter:
                     break
                 if element_variable in self.variables_manager.updating_object_nodes_dict.keys() and flag is False:
                     raise ValueError('\'' + element_variable + "' doesn't have property '" + property_name + '\'')
-            elif element_variable in list(self.variables_manager.user_edges_dict.keys()) + list(self.variables_manager.user_paths_dict.keys()):
+            elif element_variable in list(self.variables_manager.user_edges_dict.keys()) + list(
+                    self.variables_manager.user_paths_dict.keys()):
                 # 边/路径的属性没有有效时间（实际上路径没有属性）
                 raise ValueError(
                     "Only the property of node has a effective time. '" + element_variable + "' is not a node.")
@@ -228,12 +240,20 @@ class ExpressionConverter:
                     # 实际上object_variable.property_name也可能为对象节点，scypher.getPropertyInterval函数内部应该加以区分
                     at_t_expression_string = "scypher.getPropertyInterval(" + element_variable + ", \"" + property_name + "\")"
                 else:
-                    # 返回值节点的有效时间，调用scypher.getValueInterval，第一个参数为对象节点，第二个参数为属性名
-                    at_t_expression_string = "scypher.getValueInterval(" + element_variable + ", \"" + property_name + "\")"
-                    # 只有返回值节点的有效时间时可能返回多个值
-                    unwind_variable = self.variables_manager.get_random_variable()
-                    self.clause_converter.unwind_clause_dict[unwind_variable] = at_t_expression_string
-                    at_t_expression_string = unwind_variable
+                    # 返回值节点的有效时间
+                    if element_variable in self.variables_manager.effective_time.keys() and property_name in self.variables_manager.effective_time[element_variable].keys():
+                        at_t_expression_string = self.variables_manager.effective_time[element_variable][property_name]
+                    else:
+                        # 调用scypher.getValueInterval，第一个参数为对象节点，第二个参数为属性名
+                        at_t_expression_string = "scypher.getValueInterval(" + element_variable + ", \"" + property_name + "\")"
+                        # 只有返回值节点的有效时间时可能返回多个值
+                        unwind_variable = self.variables_manager.get_random_variable()
+                        self.clause_converter.unwind_clause_dict[unwind_variable] = at_t_expression_string
+                        at_t_expression_string = unwind_variable
+                        if element_variable in self.variables_manager.effective_time.keys():
+                            self.variables_manager.effective_time[element_variable][property_name] = unwind_variable
+                        else:
+                            self.variables_manager.effective_time[element_variable] = {property_name: unwind_variable}
 
         for index, time_property in enumerate(at_t_expression.time_property_chains):
             if index == 0 and flag is True:

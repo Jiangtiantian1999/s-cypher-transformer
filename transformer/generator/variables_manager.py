@@ -17,6 +17,10 @@ class VariablesManager:
         self.updating_object_nodes_dict = {}
         self.updating_edges_dict = {}
         self.expression_converter = None
+        # 记录已查询过的对象属性
+        self.property_value = {}
+        # 记录已查询过的有效时间
+        self.effective_time = {}
 
     # 获取新的变量名
     def get_random_variable(self) -> str:
@@ -34,6 +38,8 @@ class VariablesManager:
         self.user_paths_dict = {}
         self.updating_object_nodes_dict = {}
         self.updating_edges_dict = {}
+        self.property_value = {}
+        self.effective_time = {}
 
     def update_yield_clause_variables(self, yield_clause: YieldClause):
         for yield_item in yield_clause.yield_items:
@@ -43,7 +49,8 @@ class VariablesManager:
                 self.user_variables.append(yield_item.procedure_result)
 
     def update_with_clause_variables(self, with_clause: WithClause):
-        self.clear()
+        if with_clause.is_all is None:
+            self.clear()
         for projection_item in with_clause.projection_items:
             if projection_item.variable:
                 self.user_variables.append(projection_item.variable)
