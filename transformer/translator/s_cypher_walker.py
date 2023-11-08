@@ -410,10 +410,10 @@ class SCypherWalker(s_cypherListener):
                 interval_to += interval_str[index]
             index = index + 1
         if interval_to == "NOW":
-            at_t_element = AtTElement(TimePointLiteral(interval_from.strip('"')), TimePointLiteral("NOW"))
+            at_t_element = AtTElement(TimePointLiteral(interval_from), TimePointLiteral("NOW"))
         else:
-            at_t_element = AtTElement(TimePointLiteral(interval_from.strip('"')),
-                                      TimePointLiteral(interval_to.strip('"')))
+            at_t_element = AtTElement(TimePointLiteral(interval_from),
+                                      TimePointLiteral(interval_to))
         return at_t_element
 
     # 获取对象节点
@@ -493,7 +493,7 @@ class SCypherWalker(s_cypherListener):
             self.at_t_element = AtTElement(self.time_point_literals[0], self.time_point_literals[1])
         elif len(self.time_point_literals) == 1 and ctx.NOW() is not None:
             self.at_t_element = AtTElement(self.time_point_literals[0],
-                                           TimePointLiteral(ctx.NOW().getText().strip('"')))
+                                           TimePointLiteral(ctx.NOW().getText()))
         else:
             raise FormatError("Invalid time format!")
         self.time_point_literals = []  # 退出清空
@@ -503,7 +503,7 @@ class SCypherWalker(s_cypherListener):
             self.time_point_literals.append(TimePointLiteral(self.map_literal))
             self.map_literal = None
         else:
-            self.time_point_literals.append(TimePointLiteral(ctx.StringLiteral().getText().strip('"')))
+            self.time_point_literals.append(TimePointLiteral(ctx.StringLiteral().getText()))
 
     def exitOC_RelationshipDetail(self, ctx: s_cypherParser.OC_RelationshipDetailContext):
         variable = None
