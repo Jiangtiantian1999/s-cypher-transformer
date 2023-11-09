@@ -18,33 +18,28 @@ s_Set : SET SP? oC_SetItem ( SP? ',' SP? oC_SetItem )* ( SP? s_AtTime )? ;
 
 s_Stale : STALE SP? s_StaleItem ( SP? ',' SP? s_StaleItem )* ( SP? s_AtTime )? ;
 
-oC_SetItem : ( oC_Variable SP? s_AtTElement )
-           | ( oC_Variable ( SP? s_AtTElement )? '.' s_SetPropertyItemOne )
-           | ( oC_Variable ( SP? s_AtTElement )? '.' s_SetPropertyItemTwo SP? s_SetValueItem )
-           | ( oC_Variable ( SP? s_AtTElement )? '.' s_SetPropertyItemTwo SP? '=' SP? s_SetValueItemExpression )
-           | ( oC_PropertyExpression SP? '=' SP? oC_Expression )
+oC_SetItem : ( s_SetPropertyExpression SP? '=' SP? oC_Expression )
            | ( oC_Variable SP? '=' SP? oC_Expression )
            | ( oC_Variable SP? '+=' SP? oC_Expression )
            | ( oC_Variable SP? oC_NodeLabels )
+           | ( oC_Variable SP? AtT SP? '=' SP? oC_Expression )
+           | ( oC_Variable SP? '.' SP? oC_PropertyKeyName SP? AtT SP? '=' SP? oC_Expression )
+           | ( oC_Variable SP? '.' SP? oC_PropertyKeyName SP? ( PoundValue | s_AtTElement ) SP? AtT SP? '=' SP? oC_Expression )
            ;
 
-s_SetPropertyItemOne : oC_PropertyKeyName SP? s_AtTElement ;
+s_SetPropertyExpression : oC_Atom ( (SP? s_AtTElement)? | ( SP? oC_PropertyLookup )+ ) ;
 
-s_SetPropertyItemTwo : oC_PropertyKeyName ( SP? s_AtTElement )? ;
+s_StaleItem : oC_Expression ( '.' oC_PropertyKeyName SP? PoundValue )? ;
 
-s_SetValueItem : PoundValue SP? s_AtTElement ;
+s_Delete : ( DETACH SP )? DELETE SP? s_DeleteItem ( SP? ',' SP? s_DeleteItem )* ;
 
-s_SetValueItemExpression : oC_Expression ( SP? s_AtTElement )? ;
+s_DeleteItem : oC_Expression ( SP? s_PropertyValueAtTElement )? ;
 
-s_StaleItem : oC_Expression '.' oC_PropertyKeyName SP? PoundValue
-            | oC_Expression
-            ;
+oC_RemoveItem : ( oC_Variable oC_NodeLabels )
+              | s_RemovePropertyExpression
+              ;
 
-s_Delete :  ( DETACH SP )? DELETE SP? s_DeleteItem ( SP? ',' SP? s_DeleteItem )* ;
-
-s_DeleteItem : oC_Expression '.' oC_PropertyKeyName SP? PoundValue
-             | oC_Expression
-             ;
+s_RemovePropertyExpression : oC_Atom ( SP? oC_PropertyLookup )* SP? '.'  SP? oC_PropertyKeyName ;
 
 s_AtTime : AT_TIME SP? oC_Expression;
 
@@ -117,16 +112,17 @@ s_LeftExpression : oC_Expression ;
 
 s_RightExpression : oC_Expression ;
 
-s_AtTExpression : oC_Atom ( ( SP? oC_PropertyLookup )+ ( SP? PoundValue )? )? SP? s_PropertyLookupTime ;
+s_AtTExpression : oC_Atom ( ( SP? oC_PropertyLookup )* SP? s_PropertyValueAtTElement )? SP? s_PropertyLookupTime ;
 
-s_PropertyLookupTime: AtT ( SP? s_PropertyLookup )* ;
+s_PropertyValueAtTElement :  '.' SP? oC_PropertyKeyName ( SP? PoundValue | s_AtTElement)? ;
 
-s_PropertyLookup
-              :  '.' SP? ( oC_PropertyKeyName ) ;
+s_PropertyLookupTime: AtT ( SP? oC_PropertyLookup )* ;
+
+oC_PropertyLookup : '.' SP? oC_PropertyKeyName ( SP? s_AtTElement )? ;
 
 s_TimePredicateExpression : SP ( DURING | OVERLAPS ) SP oC_AddOrSubtractExpression ;
 
-s_AtTElement : AtT SP? '(' SP? s_TimePointLiteral SP? ',' SP? ( s_TimePointLiteral | NOW ) SP? ')';
+s_AtTElement : AtT SP? '(' ( SP? s_TimePointLiteral SP? ',' )? SP? ( s_TimePointLiteral | NOW ) SP? ')';
 
 s_Where
      :  WHERE SP s_WhereExpression ;

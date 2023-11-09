@@ -1,34 +1,20 @@
 from typing import List, Tuple
 
 from transformer.exceptions.s_exception import GraphError
-from transformer.ir.s_expression import Expression, MapLiteral
-
-
-class TimePointLiteral:
-    def __init__(self, time_point: str | MapLiteral):
-        self.time_point = time_point
-
-
-class AtTElement:
-    def __init__(self, interval_from: TimePointLiteral, interval_to: TimePointLiteral):
-        if interval_from is None or interval_to is None:
-            raise ValueError("The interval_from and interval_to can't be None.")
-        self.interval_from = interval_from
-        self.interval_to = interval_to
+from transformer.ir.s_expression import Expression, AtTElement
 
 
 class SNode:
     def __init__(self, labels: List[str], content: str | Expression = None, variable: str = None,
-                 interval: AtTElement = None):
+                 time_window: AtTElement = None):
         # 节点标签，至少有一个区别节点类型的标签（Object, Property或Value），对象节点的内容以标签形式存储
         self.labels = labels
         # 节点内容, 对象节点的内容以标签形式存储，即对象节点的content属性为null; 属性节点的内容为属性名，为str类型; 值节点的内容为属性值，为Expression类型
         self.content = content
         # 表示节点的变量名
         self.variable = variable
-        # 节点有效时间
-        self.interval = interval
-        self.time_window = None
+        # 节点在图模式中被限制的有效时间
+        self.time_window = time_window
 
 
 class PropertyNode(SNode):
@@ -60,7 +46,7 @@ class SEdge:
     UNDIRECTED = 'UNDIRECTED'
 
     def __init__(self, direction: str, variable: str = None, labels: List[str] = None, length: Tuple[int, int] = (1, 1),
-                 interval: AtTElement = None, properties: dict[str, Expression] = None):
+                 time_window: AtTElement = None, properties: dict[str, Expression] = None):
         if direction.upper() not in [self.LEFT, self.RIGHT, self.UNDIRECTED]:
             raise ValueError("Direction of edges must be 'LEFT', 'RIGHT' or 'UNDIRECTED'.")
         if length[0] is not None and length[1] is not None and (length[0] < 0 or length[0] > length[1]):
@@ -72,7 +58,7 @@ class SEdge:
         self.labels = labels  # 相当于content
         # 没有指名长度时设为None，例如，*2.. -> (2, None)， * -> (None, None) *..2 -> (None, 2)
         self.length = length
-        self.interval = interval
+        self.time_window = time_window
         if properties is None:
             properties = {}
         self.properties = properties

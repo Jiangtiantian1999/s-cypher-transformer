@@ -62,8 +62,25 @@ class Atom:
         self.particle = particle
 
 
+class TimePointLiteral:
+    def __init__(self, time_point: str | MapLiteral):
+        self.time_point = time_point
+
+
+class AtTElement:
+    def __init__(self, interval_from: TimePointLiteral, interval_to: TimePointLiteral = None):
+        self.interval_from = interval_from
+        self.interval_to = interval_to
+
+
+class PropertyLookup:
+    def __init__(self, property_name: str, time_window: AtTElement = None):
+        self.property_name = property_name
+        self.time_window = time_window
+
+
 class PropertiesLabelsExpression:
-    def __init__(self, atom: Atom, property_chains: List[str] = None, labels: List[str] = None):
+    def __init__(self, atom: Atom, property_chains: List[PropertyLookup] = None, labels: List[str] = None):
         self.atom = atom
         if property_chains is None:
             property_chains = []
@@ -73,15 +90,21 @@ class PropertiesLabelsExpression:
         self.labels = labels
 
 
+class PropertyValueAtTElement:
+    def __init__(self, property_name: str, time_window: bool | AtTElement = None):
+        self.property_name = property_name
+        self.time_window = time_window
+
+
 class AtTExpression:
-    def __init__(self, atom: Atom, property_chains: List[str] = None, is_value: bool = False,
+    def __init__(self, atom: Atom, property_chains: List[PropertyLookup] = None,
+                 property_value_at_t_element: PropertyValueAtTElement = None,
                  time_property_chains: List[str] = None):
         self.atom = atom
         if property_chains is None:
             property_chains = []
         self.property_chains = property_chains
-        # 是否获取值节点的有效时间
-        self.is_value = is_value
+        self.property_value_at_t_element = property_value_at_t_element
         # 获取有效时间的属性
         if time_property_chains is None:
             time_property_chains = []

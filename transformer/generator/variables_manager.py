@@ -1,26 +1,14 @@
-from copy import copy
-
 from transformer.ir.s_cypher_clause import *
 from transformer.ir.s_graph import *
 
 
 class VariablesManager:
-    def __init__(self):
+    def __init__(self, s_cypher_clause: SCypherClause):
         self.count_num = 99
         # 当前有效的用户定义的变量名
         self.user_variables = []
-        # 当前有效的用户定义的对象节点名：对象节点
-        self.user_object_nodes_dict = {}
-        self.user_edges_dict = {}
-        self.user_paths_dict = {}
-        # 当前有效的在updating语句中定义的对象节点名：对象节点
-        self.updating_object_nodes_dict = {}
-        self.updating_edges_dict = {}
-        self.expression_converter = None
-        # 记录已查询过的对象属性
-        self.property_value = {}
-        # 记录已查询过的有效时间
-        self.effective_time = {}
+        self.updating_variables = []
+        self.update_s_cypher_clause_variables(s_cypher_clause)
 
     # 获取新的变量名
     def get_random_variable(self) -> str:
@@ -33,13 +21,15 @@ class VariablesManager:
 
     def clear(self):
         self.user_variables = []
-        self.user_object_nodes_dict = {}
-        self.user_edges_dict = {}
-        self.user_paths_dict = {}
-        self.updating_object_nodes_dict = {}
-        self.updating_edges_dict = {}
-        self.property_value = {}
-        self.effective_time = {}
+        self.updating_variables = []
+
+    def update_s_cypher_clause_variables(self, s_cypher_clause: SCypherClause):
+        query_clause = s_cypher_clause.query_clause
+        if query_clause.__class__ == UnionQueryClause:
+            for multi_query_clause in query_clause.multi_query_clauses:
+                self.update_multi_query_clause_variables(multi_query_clause)
+        elif query_clause.__class__ == CallClause and query_clause.yield_clause:
+            self.update_yield_clause_variables(query_clause.yield_clause)
 
     def update_yield_clause_variables(self, yield_clause: YieldClause):
         for yield_item in yield_clause.yield_items:
@@ -48,6 +38,42 @@ class VariablesManager:
             else:
                 self.user_variables.append(yield_item.procedure_result)
 
+    def update_multi_query_clause_variables(self, multi_query_clause: MultiQueryClause):
+        for with_query_clause in multi_query_clause.with_query_clauses:
+            self.update_with_query_clause_variables(with_query_clause)
+        self.update_single_query_clause_variables(multi_query_clause.single_query_clause)
+
+    def update_single_query_clause_variables(self, single_query_clause: SingleQueryClause):
+        for reading_clause in single_query_clause.reading_clauses:
+            self.update_reading_clause_variables(reading_clause)
+        for updating_clause in single_query_clause.updating_clauses:
+            self.update_updating_clause_variables(updating_clause)
+        if single_query_clause.return_clause:
+            self.update_return_clause_variables(single_query_clause.return_clause)
+
+    def update_reading_clause_variables(self, reading_clause: ReadingClause):
+        if reading_clause.reading_clause.__class__ == MatchClause:
+            for pattern in reading_clause.reading_clause.patterns:
+                self.update_pattern_variables(pattern)
+        elif reading_clause.reading_clause.__class__ == UnwindClause:
+            self.user_variables.append(reading_clause.reading_clause.variable)
+        elif reading_clause.reading_clause.__class__ == CallClause and reading_clause.reading_clause.yield_clause:
+            self.update_yield_clause_variables(reading_clause.reading_clause.yield_clause)
+
+    def update_updating_clause_variables(self, updating_clause: UpdatingClause):
+        if updating_clause.updating_clause.__class__ == CreateClause:
+            for pattern in updating_clause.updating_clause.patterns:
+                self.update_pattern_variables(pattern, True)
+        elif updating_clause.updating_clause.__class__ == MergeClause:
+            self.update_pattern_variables(updating_clause.updating_clause.pattern, True)
+
+    def update_with_query_clause_variables(self, with_query_clause: WithQueryClause):
+        for reading_clause in with_query_clause.reading_clauses:
+            self.update_reading_clause_variables(reading_clause)
+        for updating_clause in with_query_clause.updating_clauses:
+            self.update_updating_clause_variables(updating_clause)
+        self.update_with_clause_variables(with_query_clause.with_clause)
+
     def update_with_clause_variables(self, with_clause: WithClause):
         if with_clause.is_all is None:
             self.clear()
@@ -55,22 +81,11 @@ class VariablesManager:
             if projection_item.variable:
                 self.user_variables.append(projection_item.variable)
 
-    def update_return_clause_variables(self, return_clause: WithClause):
+    def update_return_clause_variables(self, return_clause: ReturnClause):
         self.clear()
         for projection_item in return_clause.projection_items:
             if projection_item.variable:
                 self.user_variables.append(projection_item.variable)
-
-    def update_unwind_clause_variable(self, unwind_clause: UnwindClause):
-        self.user_variables.append(unwind_clause.variable)
-
-    def update_match_variables(self, match_clause: MatchClause):
-        for pattern in match_clause.patterns:
-            self.update_pattern_variables(pattern)
-
-    def update_create_variables(self, create_clause: CreateClause):
-        for pattern in create_clause.patterns:
-            self.update_pattern_variables(pattern, True)
 
     def update_pattern_variables(self, pattern: Pattern, is_updating=False):
         pattern = pattern.pattern
@@ -78,37 +93,18 @@ class VariablesManager:
             self.update_path_variables(pattern, is_updating)
         elif pattern.__class__ == TemporalPathCall:
             self.user_variables.append(pattern.variable)
-            self.user_paths_dict[pattern.variable] = pattern
-            self.update_path_variables(pattern.path, is_updating)
 
     def update_path_variables(self, path: SPath, is_updating=False):
         if path.variable:
             self.user_variables.append(path.variable)
-            self.user_paths_dict[path.variable] = path
         for object_node in path.nodes:
             if object_node.variable:
-                if object_node.variable in self.user_object_nodes_dict.keys():
-                    object_node_in_dict = self.user_object_nodes_dict[object_node.variable]
-                    object_node_in_dict.properties.update(object_node.properties)
-                    if is_updating and object_node.variable in self.updating_object_nodes_dict.keys():
-                        updating_object_node_in_dict = self.updating_object_nodes_dict[object_node.variable]
-                        updating_object_node_in_dict.properties.update(object_node.properties)
-                else:
-                    self.user_variables.append(object_node.variable)
-                    self.user_object_nodes_dict[object_node.variable] = copy(object_node)
-                    if is_updating:
-                        self.updating_object_nodes_dict[object_node.variable] = copy(object_node)
+                if is_updating and object_node.variable not in self.user_variables:
+                    self.updating_variables.append(object_node.variable)
+                self.user_variables.append(object_node.variable)
 
         for edge in path.edges:
             if edge.variable:
-                if edge.variable in self.user_edges_dict.keys():
-                    edge_in_dict = self.user_edges_dict[edge.variable]
-                    edge_in_dict.properties.update(edge.properties)
-                    if is_updating and edge.variable in self.updating_edges_dict.keys():
-                        updating_edge_in_dict = self.updating_edges_dict[edge.variable]
-                        updating_edge_in_dict.properties.update(edge.properties)
-                else:
-                    self.user_variables.append(edge.variable)
-                    self.user_edges_dict[edge.variable] = copy(edge)
-                    if is_updating:
-                        self.updating_edges_dict[edge.variable] = copy(edge)
+                if is_updating and edge.variable not in self.user_variables:
+                    self.updating_variables.append(edge.variable)
+                self.user_variables.append(edge.variable)

@@ -1,23 +1,18 @@
 from transformer.conf.config_reader import ConfigReader
+from transformer.generator.expression_converter import ExpressionConverter
+from transformer.generator.graph_converter import GraphConverter
 from transformer.generator.utils import convert_dict_to_str
+from transformer.generator.variables_manager import VariablesManager
 from transformer.ir.s_cypher_clause import *
 from transformer.ir.s_graph import *
 
 
 class ClauseConverter:
-    def __init__(self):
-        self.variables_manager = None
-        self.expression_converter = None
-        self.graph_converter = None
-        # unwind变量：待添加的unwind表达式字符串
-        self.unwind_clause_dict = {}
-
-    def get_additional_unwind_clause_string(self):
-        unwind_clause_string = ""
-        for unwind_variable, unwind_expression_string in self.unwind_clause_dict.items():
-            unwind_clause_string = unwind_clause_string + "UNWIND " + unwind_expression_string + "\nAS " + unwind_variable + '\n'
-        self.unwind_clause_dict = {}
-        return unwind_clause_string.rstrip()
+    def __init__(self, variables_manager: VariablesManager, expression_converter: ExpressionConverter,
+                 graph_converter: GraphConverter):
+        self.variables_manager = variables_manager
+        self.expression_converter = expression_converter
+        self.graph_converter = graph_converter
 
     def convert_s_cypher_clause(self, s_cypher_clause: SCypherClause) -> str:
         query_clause = s_cypher_clause.query_clause
@@ -50,11 +45,6 @@ class ClauseConverter:
             input_string = input_string + self.expression_converter.convert_expression(input_item) + ", "
         call_clause_string = call_clause_string + '(' + input_string.rstrip(", ") + ')'
 
-        additional_unwind_clause_string = self.get_additional_unwind_clause_string()
-        if additional_unwind_clause_string != "":
-            # 此时call子句一定是内部查询
-            call_clause_string = additional_unwind_clause_string + '\n' + call_clause_string
-
         if call_clause.yield_clause:
             call_clause_string = call_clause_string + '\n' + self.convert_yield_clause(call_clause.yield_clause)
 
@@ -71,13 +61,8 @@ class ClauseConverter:
             if yield_item.variable:
                 yield_clause_string = yield_clause_string + " as " + yield_item.variable
 
-        self.variables_manager.update_yield_clause_variables(yield_clause)
-
         if yield_clause.where_expression:
             where_clause_string = "WHERE " + self.expression_converter.convert_expression(yield_clause.where_expression)
-            additional_unwind_clause_string = self.get_additional_unwind_clause_string()
-            if additional_unwind_clause_string != "":
-                yield_clause_string = yield_clause_string + '\n' + additional_unwind_clause_string + "\n WITH *"
             yield_clause_string = yield_clause_string + '\n' + where_clause_string
 
         return yield_clause_string
@@ -111,9 +96,6 @@ class ClauseConverter:
         updating_clause_string = ""
         for updating_clause in with_query_clause.updating_clauses:
             updating_clause_string = updating_clause_string + self.convert_updating_clause(updating_clause) + '\n'
-        additional_unwind_clause_string = self.get_additional_unwind_clause_string()
-        if additional_unwind_clause_string != "":
-            updating_clause_string = additional_unwind_clause_string + '\n' + updating_clause_string
         # with_clause部分
         with_clause_string = self.convert_with_clause(with_query_clause.with_clause)
 
@@ -133,8 +115,6 @@ class ClauseConverter:
             with_clause_string = with_clause_string + ", "
         with_clause_string = with_clause_string.rstrip(", ")
 
-        self.variables_manager.update_with_clause_variables(with_clause)
-
         if with_clause.order_by_clause:
             with_clause_string = with_clause_string + '\n' + self.convert_order_by_clause(with_clause.order_by_clause)
         if with_clause.skip_expression:
@@ -143,10 +123,6 @@ class ClauseConverter:
         if with_clause.limit_expression:
             limit_expression_string = self.expression_converter.convert_expression(with_clause.limit_expression)
             with_clause_string = with_clause_string + "\nLIMIT " + limit_expression_string
-
-        additional_unwind_clause_string = self.get_additional_unwind_clause_string()
-        if additional_unwind_clause_string != "":
-            with_clause_string = additional_unwind_clause_string + '\n' + with_clause_string
 
         return with_clause_string
 
@@ -159,9 +135,6 @@ class ClauseConverter:
         updating_clause_string = ""
         for updating_clause in single_query_clause.updating_clauses:
             updating_clause_string = updating_clause_string + self.convert_updating_clause(updating_clause) + '\n'
-        additional_unwind_clause_string = self.get_additional_unwind_clause_string()
-        if additional_unwind_clause_string != "":
-            updating_clause_string = additional_unwind_clause_string + '\n' + updating_clause_string
         # return_clause部分
         return_clause_string = ""
         if single_query_clause.return_clause:
@@ -169,18 +142,14 @@ class ClauseConverter:
         return (reading_clause_string + updating_clause_string + return_clause_string).rstrip()
 
     def convert_reading_clause(self, reading_clause: ReadingClause) -> str:
-        reading_clause = reading_clause.reading_clause
-        if reading_clause.__class__ == MatchClause:
-            return self.convert_match_clause(reading_clause)
-        elif reading_clause.__class__ == UnwindClause:
-            unwind_expression_string = self.expression_converter.convert_expression(reading_clause.expression)
-            self.variables_manager.update_unwind_clause_variable(reading_clause)
-            additional_unwind_clause_string = self.get_additional_unwind_clause_string()
-            if additional_unwind_clause_string != "":
-                return additional_unwind_clause_string + '\n' + "UNWIND " + unwind_expression_string + "\nAS " + reading_clause.variable
-            return "UNWIND" + unwind_expression_string + "\nAS " + reading_clause.variable
-        elif reading_clause.__class__ == CallClause:
-            return self.convert_call_clause(reading_clause)
+        if reading_clause.reading_clause.__class__ == MatchClause:
+            return self.convert_match_clause(reading_clause.reading_clause)
+        elif reading_clause.reading_clause.__class__ == UnwindClause:
+            unwind_expression_string = self.expression_converter.convert_expression(
+                reading_clause.reading_clause.expression)
+            return "UNWIND" + unwind_expression_string + "\nAS " + reading_clause.reading_clause.variable
+        elif reading_clause.reading_clause.__class__ == CallClause:
+            return self.convert_call_clause(reading_clause.reading_clause)
 
     def convert_match_clause(self, match_clause: MatchClause) -> str:
         match_clause_string = "MATCH "
@@ -188,7 +157,6 @@ class ClauseConverter:
             match_clause_string = "OPTIONAL MATCH "
         pattern_interval_info = {}
         call_string = ""
-        self.variables_manager.update_match_variables(match_clause)
         for pattern in match_clause.patterns:
             pattern = pattern.pattern
             if pattern.__class__ == SPath:
@@ -218,9 +186,6 @@ class ClauseConverter:
                 if len(temporal_path_interval_info) > 0 or match_clause.time_window:
                     where_expression_string = self.convert_where_clause(None, temporal_path_interval_info,
                                                                         match_clause.time_window)
-                    additional_unwind_clause_string = self.get_additional_unwind_clause_string()
-                    if additional_unwind_clause_string != "":
-                        call_string = call_string + '\n' + additional_unwind_clause_string + "\n WITH *"
                     call_string = call_string + '\n' + where_expression_string
                 edge_info = {}
                 # 限制路径的标签
@@ -232,13 +197,10 @@ class ClauseConverter:
                 if pattern.path.edges[0].length[1] is not None:
                     edge_info["maxLength"] = pattern.path.edges[0].length[1]
                 # 限制路径的有效时间
-                if pattern.path.edges[0].interval:
-                    interval_from_string = self.graph_converter.convert_time_point_literal(
-                        pattern.path.edges[0].interval.interval_from)
-                    interval_to_string = self.graph_converter.convert_time_point_literal(
-                        pattern.path.edges[0].interval.interval_to)
+                if pattern.path.edges[0].time_window:
                     edge_info[
-                        "effectiveTime"] = "scypher.interval(" + interval_from_string + ", " + interval_to_string + ')'
+                        "effectiveTime"] = self.expression_converter.convert_at_t_element(
+                        pattern.path.edges[0].time_window)
                 elif match_clause.time_window:
                     if match_clause.time_window.__class__ == AtTimeClause:
                         edge_info["effectiveTime"] = self.expression_converter.convert_expression(
@@ -263,11 +225,6 @@ class ClauseConverter:
         if match_clause.where_expression or len(pattern_interval_info) != 0 or match_clause.time_window:
             where_expression_string = self.convert_where_clause(match_clause.where_expression, pattern_interval_info,
                                                                 match_clause.time_window)
-
-            additional_unwind_clause_string = self.get_additional_unwind_clause_string()
-            if additional_unwind_clause_string != "":
-                match_clause_string = match_clause_string + '\n' + additional_unwind_clause_string + "\n WITH *"
-
             match_clause_string = match_clause_string + '\n' + where_expression_string
 
         return match_clause_string + call_string
@@ -296,24 +253,21 @@ class ClauseConverter:
         return where_clause_string
 
     def convert_updating_clause(self, updating_clause: UpdatingClause) -> str:
-        updating_clause = updating_clause.updating_clause
-        if updating_clause.__class__ == CreateClause:
-            return self.convert_create_clause(updating_clause)
-        elif updating_clause.__class__ == DeleteClause:
-            return self.convert_delete_clause(updating_clause)
-        elif updating_clause.__class__ == StaleClause:
-            return self.convert_stale_clause(updating_clause)
-        elif updating_clause.__class__ == SetClause:
-            return self.convert_set_clause(updating_clause)
-        elif updating_clause.__class__ == MergeClause:
-            return self.convert_merge_clause(updating_clause)
-        elif updating_clause.__class__ == RemoveClause:
-            return self.convert_remove_clause(updating_clause)
+        if updating_clause.updating_clause.__class__ == CreateClause:
+            return self.convert_create_clause(updating_clause.updating_clause)
+        elif updating_clause.updating_clause.__class__ == DeleteClause:
+            return self.convert_delete_clause(updating_clause.updating_clause)
+        elif updating_clause.updating_clause.__class__ == StaleClause:
+            return self.convert_stale_clause(updating_clause.updating_clause)
+        elif updating_clause.updating_clause.__class__ == SetClause:
+            return self.convert_set_clause(updating_clause.updating_clause)
+        elif updating_clause.updating_clause.__class__ == MergeClause:
+            return self.convert_merge_clause(updating_clause.updating_clause)
+        elif updating_clause.updating_clause.__class__ == RemoveClause:
+            return self.convert_remove_clause(updating_clause.updating_clause)
 
     def convert_create_clause(self, create_clause: CreateClause) -> str:
         create_clause_string = ""
-        # 待解决：create时检查约束
-        self.variables_manager.update_create_variables(create_clause)
         for pattern in create_clause.patterns:
             # create clause的pattern均为SPath类型
             pattern = pattern.pattern
@@ -344,147 +298,154 @@ class ClauseConverter:
         return create_clause_string
 
     def convert_delete_clause(self, delete_clause: DeleteClause) -> str:
-        delete_clause_string = "DELETE "
-        if delete_clause.is_detach:
-            delete_clause_string = "DETACH DELETE "
+        delete_clause_string = ""
 
         for delete_item in delete_clause.delete_items:
-            delete_item_expression_string = self.expression_converter.convert_expression(delete_item.expression)
-            # 物理删除对象节点/属性节点/值节点/边，调用scypher.getItemToDelete，第一个参数为对象节点，第二个参数为属性名，第三个参数为【是否逻辑删除值节点】
-            unwind_variable = self.variables_manager.get_random_variable()
-            unwind_expression_string = delete_item_expression_string
-            if delete_item.property_name:
-                unwind_expression_string = unwind_expression_string + ", " + delete_item.property_name
+            if delete_item.property_value_at_t_element is None:
+                # 物理删除对象节点/路径/边，调用scypher.getItemToDelete，参数为对象节点/路径/边
+                # 删除对象节点/路径时，返回已删除了属性节点和值节点的对象节点/路径；删除边时，返回边。
+                delete_clause_string = delete_clause_string + "\nDELETE "
+                if delete_clause.is_detach:
+                    delete_clause_string = delete_clause_string + "\nDETACH DELETE "
+                delete_clause_string = delete_clause_string + "scypher.getObjectToDelete(" + self.expression_converter.convert_expression(
+                    delete_item.expression) + ")"
             else:
-                unwind_expression_string = unwind_expression_string + ", NULL"
-            unwind_expression_string = unwind_expression_string + ", " + str(delete_item.is_value)
-            unwind_expression_string = "scypher.getItemToDelete(" + unwind_expression_string + ')'
-            self.unwind_clause_dict[unwind_variable] = unwind_expression_string
-            delete_clause_string = delete_clause_string + unwind_variable
+                # 删除对象节点的属性，第一个参数为对象节点，第二个参数为属性名，第三个参数为删除的值节点的范围
+                # 以列表形式返回所有待物理删除的元素
+                delete_list_string = "scypher.getItemToDelete(" + self.expression_converter.convert_expression(
+                    delete_item.expression) + ", "
+                delete_list_string = delete_list_string + delete_item.property_value_at_t_element.property_name + ", "
+                if delete_item.property_value_at_t_element.time_window:
+                    if delete_item.property_value_at_t_element.time_window.__class__ == AtTElement:
+                        delete_list_string = delete_list_string + self.expression_converter.convert_at_t_element(
+                            delete_item.property_value_at_t_element.time_window) + ')'
+                    else:
+                        delete_list_string = delete_list_string + str(
+                            delete_item.property_value_at_t_element.time_window) + ')'
+                else:
+                    delete_list_string = delete_list_string + "NULL)"
+                delete_item_variable = self.variables_manager.get_random_variable()
+                delete_clause_string = delete_clause_string + "\nFOREACH (" + delete_item_variable + " IN " + delete_list_string + " | DELETE " + delete_item_variable + ')'
 
-        return delete_clause_string.rstrip(", ")
+        return delete_clause_string.lstrip()
 
     def convert_stale_clause(self, stale_clause: StaleClause) -> str:
-        stale_clause_string = "SET "
+        stale_clause_string = "FOREACH "
+        stale_list_string = ""
+        for stale_item in stale_clause.stale_items:
+            # 逻辑删除对象节点/属性节点/值节点/边，调用scypher.getItemToStale，第一个参数为对象节点，第二个参数为属性名，第三个参数为【是否仅逻辑删除值节点】，第四个参数为逻辑删除时间
+            # 以列表形式返回所有待逻辑删除的元素
+            stale_list_string = stale_list_string + "scypher.getItemToStale(" + self.expression_converter.convert_expression(
+                stale_item.expression)
+            if stale_item.property_name:
+                stale_list_string = stale_list_string + ", " + stale_item.property_name
+            else:
+                stale_list_string = stale_list_string + ", NULL"
+            stale_list_string = stale_list_string + ", " + str(stale_item.is_value) + ") + "
+
+        stale_list_string = stale_list_string.rstrip(" + ")
+        stale_item_variable = self.variables_manager.get_random_variable()
+        stale_clause_string = stale_clause_string + " (" + stale_item_variable + " IN " + stale_list_string + " | SET " + stale_item_variable + ".intervalTo = "
 
         if stale_clause.at_time_clause:
-            time_point_string = self.expression_converter.convert_expression(stale_clause.at_time_clause.time_point)
+            stale_clause_string = stale_clause_string + self.expression_converter.convert_expression(
+                stale_clause.at_time_clause.time_point) + ')'
         else:
-            time_point_string = "NULL"
-        for stale_item in stale_clause.stale_items:
-            stale_item_expression_string = self.expression_converter.convert_expression(stale_item.expression)
-            # 逻辑删除对象节点/属性节点/值节点/边，调用scypher.getItemToStale，第一个参数为对象节点，第二个参数为属性名，第三个参数为【是否逻辑删除值节点】，第四个参数为逻辑删除时间
-            unwind_variable = self.variables_manager.get_random_variable()
-            unwind_expression_string = stale_item_expression_string
-            if stale_item.property_name:
-                unwind_expression_string = unwind_expression_string + ", " + stale_item.property_name
-            else:
-                unwind_expression_string = unwind_expression_string + ", NULL"
-            unwind_expression_string = unwind_expression_string + ", " + str(stale_item.is_value)
-            unwind_expression_string = unwind_expression_string + ", " + time_point_string
-            unwind_expression_string = "scypher.getItemToStale(" + unwind_expression_string + ')'
-            self.unwind_clause_dict[unwind_variable] = unwind_expression_string
-            stale_clause_string = stale_clause_string + unwind_variable + ".intervalTo = scypher.timePoint(\"NOW\"), "
+            stale_clause_string = stale_clause_string + "scypher.operateTime())"
 
         return stale_clause_string.rstrip(", ")
 
     def convert_set_clause(self, set_clause: SetClause) -> str:
-        set_clause_string = "SET "
+        set_clause_string = ""
         if set_clause.at_time_clause:
             time_point = self.expression_converter.convert_expression(set_clause.at_time_clause.time_point)
         else:
-            time_point = None
+            time_point = "NULL"
         for set_item in set_clause.set_items:
-            # 为在set时检查约束和设置对象节点的属性，调用scypher.getItemToSetX，但如果set_item里有变量是在create或merge的时候定义的，就会报错
+            # 为在set时检查约束，调用scypher.getItemToSetX
             if set_item.__class__ == IntervalSetting:
-                # 设置节点/边的有效时间，调用scypher.getItemToSetInterval
-                set_info = {}
-                if set_item.object_interval:
-                    # 对象节点的有效时间
-                    set_info["objectInterval"] = "scypher.interval(" + self.graph_converter.convert_time_point_literal(
-                        set_item.object_interval.interval_from) + ", " + self.graph_converter.convert_time_point_literal(
-                        set_item.object_interval.interval_to) + ')'
-                if set_item.property_variable:
-                    # 属性名
-                    set_info["propertyName"] = set_item.property_variable
-                    if set_item.property_interval:
-                        # 属性节点的有效时间
-                        set_info[
-                            "propertyInterval"] = "scypher.interval(" + self.graph_converter.convert_time_point_literal(
-                            set_item.property_interval.interval_from) + ", " + self.graph_converter.convert_time_point_literal(
-                            set_item.property_interval.interval_to) + ')'
-                if set_item.value_expression:
-                    # 属性值
-                    set_info["propertyValue"] = self.expression_converter.convert_expression(set_item.value_expression)
-                    if set_item.value_interval:
-                        # 值节点的有效时间
-                        set_info[
-                            "valueInterval"] = "scypher.interval(" + self.graph_converter.convert_time_point_literal(
-                            set_item.value_interval.interval_from) + ", " + self.graph_converter.convert_time_point_literal(
-                            set_item.value_interval.interval_to) + ')'
-                if time_point:
-                    # set的操作时间
-                    set_info["setTime"] = time_point
-                unwind_variable = self.variables_manager.get_random_variable()
-                unwind_expression_string = "scypher.getItemToSetInterval(" + unwind_variable + ", " + convert_dict_to_str(
-                    set_info) + ')'
-                self.unwind_clause_dict[unwind_variable] = unwind_expression_string
-                set_clause_string = set_clause_string + unwind_variable + ".left = " + unwind_variable + ".right"
+                # 设置对象节点/属性节点/值节点/边的有效时间，调用scypher.getItemToSetInterval，第一个参数为对象节点，第二个参数为属性名，第三个参数为值节点有效时间，第四个参数为被设置的有效时间
+                set_item_variable = self.variables_manager.get_random_variable()
+                set_clause_string = set_clause_string + "\nFOREACH (" + set_item_variable + " IN scypher.getItemToSetInterval(" + set_item.object_variable + ", "
+                if set_item.property_value_at_t_element:
+                    set_clause_string = set_clause_string + set_item.property_value_at_t_element.property_name + ", "
+                else:
+                    set_clause_string = set_clause_string + "NULL, "
+                if set_item.property_value_at_t_element.time_window and set_item.property_value_at_t_element.time_window.__class__ == AtTElement:
+                    set_clause_string = set_clause_string + self.expression_converter.convert_at_t_element(
+                        set_item.property_value_at_t_element.time_window) + ", "
+                else:
+                    set_clause_string = set_clause_string + "NULL, "
+                set_clause_string = set_clause_string + self.expression_converter.convert_expression(
+                    set_item.interval) + ')'
+                set_clause_string = set_clause_string + " | SET " + set_item_variable + ".left = " + set_item_variable + ".right)"
             elif set_item.__class__ == ExpressionSetting:
                 # 修改节点/边的属性，调用scypher.getItemToSetExpression，第一个参数为对象节点，第二个参数为属性名，
-                # 第三个参数为表达式，第四个参数为【是否为+=】，第五个参数为set的操作时间
-                unwind_variable = self.variables_manager.get_random_variable()
-                if set_item.expression_left.__class__ == PropertyExpression:
+                # 第三个参数为set的操作时间，第四个参数为【是否为+=】，第五个参数为表达式
+                set_item_variable = self.variables_manager.get_random_variable()
+                set_clause_string = set_clause_string + "\nFOREACH (" + set_item_variable + " IN scypher.getItemToSetExpression("
+                if set_item.expression_left.__class__ == SetPropertyExpression:
                     object_variable = self.expression_converter.convert_atom(set_item.expression_left.atom)
-                    for index, property_name in enumerate(set_item.expression_left.property_chains):
-                        if index != len(set_item.expression_left.property_chains) - 1:
-                            object_variable = self.expression_converter.get_property_value(object_variable,
-                                                                                           property_name)
-                    unwind_expression_string = object_variable + ", " + set_item.expression_left.property_chains[-1]
+                    if set_item.expression_left.property_chains.__class__ == list:
+                        for index, property_lookup in enumerate(set_item.expression_left.property_chains):
+                            if index != len(set_item.expression_left.property_chains) - 1:
+                                object_variable = self.expression_converter.get_property_value(object_variable,
+                                                                                               property_lookup.property_name,
+                                                                                               property_lookup.time_window)
+                        set_clause_string = set_clause_string + object_variable + ", "
+                        if len(set_item.expression_left.property_chains) > 0:
+                            property_lookup = set_item.expression_left.property_chains[-1]
+                            set_clause_string = set_clause_string + property_lookup.property_name + ", "
+                            if property_lookup.time_window:
+                                set_clause_string = set_clause_string + self.expression_converter.convert_at_t_element(
+                                    property_lookup.time_window) + ", "
+                            else:
+                                set_clause_string = set_clause_string + time_point + ", "
+                        else:
+                            set_clause_string = set_clause_string + "NULL, " + time_point + ", "
+                    else:
+                        set_clause_string = set_clause_string + object_variable + "NULL, " + self.expression_converter.convert_at_t_element(
+                            set_item.expression_left.property_chains) + ", "
                 else:
-                    unwind_expression_string = set_item.expression_left + ", NULL"
-                unwind_expression_string = unwind_expression_string + self.expression_converter.convert_expression(
-                    set_item.expression_right)
-                unwind_expression_string = unwind_expression_string + ", " + str(set_item.is_added)
-                if time_point:
-                    unwind_expression_string = unwind_expression_string + ", " + time_point
-                else:
-                    unwind_expression_string = unwind_expression_string + ", NULL"
-                unwind_expression_string = "scypher.getItemToSetExpression(" + unwind_expression_string + ')'
-                self.unwind_clause_dict[unwind_variable] = unwind_expression_string
-                set_clause_string = set_clause_string + unwind_variable + ".left = " + unwind_variable + ".right"
+                    set_clause_string = set_clause_string + set_item.expression_left + ", NULL" + time_point + ", "
+                set_clause_string = set_clause_string + str(
+                    set_item.is_added) + ", " + self.expression_converter.convert_expression(
+                    set_item.expression_right) + ')'
+                set_clause_string = set_clause_string + " | SET " + set_item_variable + ".left = " + set_item_variable + ".right)"
             else:
                 # 设置节点/边的标签
-                set_clause_string = set_clause_string + set_item.variable
+                set_clause_string = set_clause_string + "\nSET " + set_item.variable
                 for label in set_item.labels:
                     set_clause_string = set_clause_string + ':' + label
-            set_clause_string = set_clause_string + ", "
 
-        return set_clause_string.rstrip(", ")
+        return set_clause_string.lstrip()
 
     def convert_merge_clause(self, merge_clause: MergeClause) -> str:
-        self.variables_manager.update_pattern_variables(merge_clause.pattern, True)
-        pattern = merge_clause.pattern
         merge_clause_string = "MERGE "
         object_node_patterns, property_node_patterns, value_node_patterns, path_pattern = self.graph_converter.create_path(
-            pattern, merge_clause.at_time_clause)
+            merge_clause.pattern, merge_clause.at_time_clause)
         if len(object_node_patterns) == 1 and path_pattern:
+            # merge一条长度为0的路径
             merge_clause_string = merge_clause_string + path_pattern
         else:
+            # merge一条长度>0的路径，先merge对象节点
             for object_node_pattern in object_node_patterns:
                 merge_clause_string = merge_clause_string + object_node_pattern + ", "
             merge_clause_string = merge_clause_string.rstrip(", ")
         if len(property_node_patterns) > 0:
+            # merge属性节点
             merge_clause_string = merge_clause_string + "\nMERGE"
             for property_node_pattern in property_node_patterns:
                 merge_clause_string = merge_clause_string + property_node_pattern + ", "
             merge_clause_string = merge_clause_string.rstrip(", ")
         if len(value_node_patterns) > 0:
+            # merge值节点
             merge_clause_string = merge_clause_string + "\nMERGE"
             for value_node_pattern in value_node_patterns:
                 merge_clause_string = merge_clause_string + value_node_pattern + ", "
             merge_clause_string = merge_clause_string.rstrip(", ")
         if len(object_node_patterns) > 1 and path_pattern:
+            # 当路径长度>0时，merge路径（创建对象节点之间的边）
             merge_clause_string = merge_clause_string + "\nMERGE" + path_pattern
 
         for action, set_clause in merge_clause.actions.items():
@@ -495,16 +456,18 @@ class ClauseConverter:
     def convert_remove_clause(self, remove_clause: RemoveClause) -> str:
         remove_clause_string = "REMOVE "
         for remove_item in remove_clause.remove_items:
-            item = remove_item.item
-            if item.__class__ == LabelSetting:
-                remove_clause_string = remove_clause_string + item.variable
-                for label in item.labels:
+            if remove_item.__class__ == LabelSetting:
+                remove_clause_string = remove_clause_string + remove_item.variable
+                for label in remove_item.labels:
                     remove_clause_string = remove_clause_string + ':' + label
             else:
                 # 移除边的属性
-                remove_clause_string = remove_clause_string + self.expression_converter.convert_atom(item.atom)
-                for property in item.property_chains:
-                    remove_clause_string = remove_clause_string + '.' + property
+                edge_variable = self.expression_converter.convert_atom(remove_item.atom)
+                for property_lookup in remove_item.property_chains:
+                    edge_variable = self.expression_converter.get_property_value(edge_variable,
+                                                                                 property_lookup.property_name,
+                                                                                 property_lookup.time_window)
+                remove_clause_string = remove_clause_string + edge_variable + '.' + remove_item.property_name
             remove_clause_string = remove_clause_string + ", "
         return remove_clause_string.rstrip(", ")
 
@@ -513,9 +476,14 @@ class ClauseConverter:
         if return_clause.is_distinct:
             return_clause_string = "RETURN DISTINCT "
         if return_clause.is_all:
+            property_item_expression_string_list = []
+            for property_item in return_clause.projection_items:
+                property_item_expression_string_list.append(
+                    self.expression_converter.convert_expression(property_item.expression))
             # 返回所有用户指定的可返回的变量
             for variable in self.variables_manager.user_variables:
-                return_clause_string = return_clause_string + variable + ", "
+                if variable not in property_item_expression_string_list:
+                    return_clause_string = return_clause_string + variable + ", "
             return_clause_string.rstrip(", ")
         for index, projection_item in enumerate(return_clause.projection_items):
             if index != 0:
@@ -524,8 +492,6 @@ class ClauseConverter:
             return_clause_string = return_clause_string + projection_item_expression_string
             if projection_item.variable:
                 return_clause_string = return_clause_string + " as " + projection_item.variable
-
-        self.variables_manager.update_return_clause_variables(return_clause)
 
         if return_clause.order_by_clause:
             order_by_clause_string = self.convert_order_by_clause(return_clause.order_by_clause)
@@ -536,12 +502,6 @@ class ClauseConverter:
         if return_clause.limit_expression:
             limit_expression_string = self.expression_converter.convert_expression(return_clause.limit_expression)
             return_clause_string = return_clause_string + "\nLIMIT " + limit_expression_string
-
-        additional_unwind_clause_string = self.get_additional_unwind_clause_string()
-        if additional_unwind_clause_string != "":
-            return_clause_string = additional_unwind_clause_string + '\n' + return_clause_string
-
-        self.variables_manager.clear()
 
         return return_clause_string
 

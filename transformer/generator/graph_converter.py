@@ -1,12 +1,14 @@
+from transformer.generator.expression_converter import ExpressionConverter
 from transformer.generator.utils import convert_dict_to_str
+from transformer.generator.variables_manager import VariablesManager
 from transformer.ir.s_cypher_clause import AtTimeClause, BetweenClause
 from transformer.ir.s_graph import *
 
 
 class GraphConverter:
-    def __init__(self):
-        self.variables_manager = None
-        self.expression_converter = None
+    def __init__(self, variables_manager: VariablesManager, expression_converter: ExpressionConverter):
+        self.variables_manager = variables_manager
+        self.expression_converter = expression_converter
 
     def match_path(self, path: SPath, time_window: AtTimeClause | BetweenClause = None) -> (str, List[str], List[str]):
         # 路径模式，属性节点和值节点的模式，路径有效时间限制
@@ -63,11 +65,8 @@ class GraphConverter:
 
         # 节点的有效时间限制
         node_interval_info = {}
-        if node.interval is not None:
-            interval_from_string = self.convert_time_point_literal(node.interval.interval_from)
-            interval_to_string = self.convert_time_point_literal(node.interval.interval_to)
-            node_interval_info = {
-                node.variable: "scypher.interval(" + interval_from_string + ", " + interval_to_string + ')'}
+        if node.time_window is not None:
+            node_interval_info = {node.variable: self.expression_converter.convert_at_t_element(node.time_window)}
         elif time_window is not None:
             node_interval_info = {node.variable: None}
 
@@ -110,11 +109,8 @@ class GraphConverter:
 
         # 边的有效时间限制
         edge_interval_info = {}
-        if edge.interval is not None:
-            interval_from_string = self.convert_time_point_literal(edge.interval.interval_from)
-            interval_to_string = self.convert_time_point_literal(edge.interval.interval_to)
-            edge_interval_info = {
-                edge.variable: "scypher.interval(" + interval_from_string + ", " + interval_to_string + ')'}
+        if edge.time_window is not None:
+            edge_interval_info = {edge.variable: self.expression_converter.convert_at_t_element(edge.time_window)}
         elif time_window is not None:
             edge_interval_info = {edge.variable: None}
 
@@ -153,7 +149,7 @@ class GraphConverter:
     def create_object_node(self, object_node: ObjectNode, time_window: Expression = None) -> (
             str, List[str], List[str]):
         property_node_patterns, value_node_patterns = [], []
-        if object_node.variable in self.variables_manager.updating_object_nodes_dict.keys():
+        if object_node.variable in self.variables_manager.updating_variables:
             # 该对象节点是在更新语句中定义的，直接创建属性节点和值节点（和相连边）即可
             object_node_pattern = self.create_node(object_node, None, time_window)
             for property_node, value_node in object_node.properties.items():
@@ -169,13 +165,9 @@ class GraphConverter:
         return object_node_pattern, property_node_patterns, value_node_patterns
 
     def create_node(self, node: SNode, time_window: AtTimeClause = None, parent_node: SNode = None) -> str:
-        if node.variable is None and (
-                node.__class__ == PropertyNode or (node.__class__ == ObjectNode and len(node.properties) > 0)):
+        if node.variable is None:
             node.variable = self.variables_manager.get_random_variable()
-        if node.variable:
-            node_pattern = node.variable
-        else:
-            node_pattern = ""
+        node_pattern = node.variable
         # 添加节点标签
         for label in node.labels:
             node_pattern = node_pattern + ':' + label
@@ -185,29 +177,21 @@ class GraphConverter:
         elif node.__class__ == ValueNode:
             node_pattern = node_pattern + "{content: " + self.expression_converter.convert_expression(node.content)
         # 添加节点有效时间
+        if node.time_window:
+            interval_from_string = "scypher.timePoint(" + self.expression_converter.convert_time_point_literal(
+                node.time_window.interval_from) + ')'
+            interval_to_string = "scypher.timePoint(" + self.expression_converter.convert_time_point_literal(
+                node.time_window.interval_to) + ')'
+        elif time_window:
+            interval_from_string = self.expression_converter.convert_expression(time_window.time_point)
+            interval_to_string = "scypher.timePoint(\"NOW\")"
+        else:
+            interval_from_string = "scypher.operateTime()"
+            interval_to_string = "scypher.timePoint(\"NOW\")"
         if node.__class__ == ObjectNode:
-            if node.interval:
-                interval_from_string = "scypher.timePoint(" + self.convert_time_point_literal(
-                    node.interval.interval_from) + ')'
-                interval_to_string = "scypher.timePoint(" + self.convert_time_point_literal(
-                    node.interval.interval_to) + ')'
-            elif time_window:
-                interval_from_string = self.expression_converter.convert_expression(time_window.time_point)
-                interval_to_string = "scypher.timePoint(\"NOW\")"
-            else:
-                interval_from_string = "scypher.timePoint()"
-                interval_to_string = "scypher.timePoint(\"NOW\")"
             node_pattern = node_pattern + "{intervalFrom: " + interval_from_string + ", intervalTo: " + interval_to_string + "}"
         elif node.__class__ in [PropertyNode, ValueNode]:
-            if node.interval:
-                interval_from_string = self.convert_time_point_literal(node.interval.interval_from)
-                interval_to_string = self.convert_time_point_literal(node.interval.interval_to)
-            elif time_window:
-                interval_from_string = self.expression_converter.convert_expression(time_window.time_point)
-                interval_to_string = "\"NOW\""
-            else:
-                interval_from_string = "NULL"
-                interval_to_string = "\"NOW\""
+            # 检查属性节点和值节点的有效时间是否满足约束
             node_pattern = node_pattern + "{intervalFrom: scypher.getIntervalFromOfSubordinateNode(" + parent_node.variable + ", " + interval_from_string + "), "
             node_pattern = node_pattern + "intervalTo: scypher.getIntervalToOfSubordinateNode(" + parent_node.variable + ", " + interval_to_string + ")}"
 
@@ -232,15 +216,17 @@ class GraphConverter:
             edge_pattern = edge_pattern + key + ": " + self.expression_converter.convert_expression(value) + ", "
         # 需要检查边的有效时间，以及是否有重复边
         edge_info = {"labels": edge.labels, "properties": list(edge.properties.keys())}
-        if edge.interval:
-            interval_from_string = self.convert_time_point_literal(edge.interval.interval_from)
-            interval_to_string = self.convert_time_point_literal(edge.interval.interval_to)
+        if edge.time_window:
+            interval_from_string = "scypher.timePoint(" + self.expression_converter.convert_time_point_literal(
+                edge.time_window.interval_from) + ')'
+            interval_to_string = "scypher.timePoint(" + self.expression_converter.convert_time_point_literal(
+                edge.time_window.interval_to) + ')'
         elif time_window:
             interval_from_string = self.expression_converter.convert_expression(time_window.time_point)
-            interval_to_string = "\"NOW\""
+            interval_to_string = "scypher.timePoint(\"NOW\")"
         else:
-            interval_from_string = "NULL"
-            interval_to_string = "\"NOW\""
+            interval_from_string = "scypher.operateTime()"
+            interval_to_string = "scypher.timePoint(\"NOW\")"
         edge_pattern = edge_pattern + "intervalFrom: scypher.getIntervalFromOfEdge(" + from_node.variable + ", " + to_node.variable + ", " + convert_dict_to_str(
             edge_info) + ", " + interval_from_string + "), "
         edge_pattern = edge_pattern + "intervalTo: scypher.getIntervalToOfEdge(" + from_node.variable + ", " + to_node.variable + ", " + convert_dict_to_str(
@@ -253,10 +239,3 @@ class GraphConverter:
             edge_pattern = edge_pattern + '>'
 
         return edge_pattern
-
-    def convert_time_point_literal(self, time_point_literal: TimePointLiteral) -> str:
-        time_point = time_point_literal.time_point
-        if time_point.__class__ == str:
-            return '\"' + time_point + '\"'
-        else:
-            return self.expression_converter.convert_map_literal(time_point, None)

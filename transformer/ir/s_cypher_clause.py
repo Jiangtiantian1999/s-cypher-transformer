@@ -108,7 +108,7 @@ class DeleteClause:
 
 
 class StaleClause:
-    def __init__(self, stale_items: List[DeleteItem], at_time_clause: AtTimeClause = None):
+    def __init__(self, stale_items: List[StaleItem], at_time_clause: AtTimeClause = None):
         if len(stale_items) == 0:
             raise ValueError("The stale items can't be empty.")
         self.stale_items = stale_items
@@ -139,7 +139,7 @@ class MergeClause:
 
 
 class RemoveClause:
-    def __init__(self, remove_items: List[RemoveItem]):
+    def __init__(self, remove_items: List[LabelSetting | RemovePropertyExpression]):
         if len(remove_items) == 0:
             raise ValueError("The remove items can't be empty.")
         self.remove_items = remove_items
