@@ -155,36 +155,36 @@ class ClauseConverter:
         match_clause_string = "MATCH "
         if match_clause.is_optional:
             match_clause_string = "OPTIONAL MATCH "
-        pattern_interval_info = {}
+        pattern_time_window_info = {}
         call_string = ""
         for pattern in match_clause.patterns:
             pattern = pattern.pattern
             if pattern.__class__ == SPath:
-                path_pattern, property_patterns, path_interval_info = self.graph_converter.match_path(pattern,
+                path_pattern, property_patterns, pattern_time_window_inf = self.graph_converter.match_path(pattern,
                                                                                                       match_clause.time_window)
                 match_clause_string = match_clause_string + path_pattern + ", "
                 for property_pattern in property_patterns:
                     match_clause_string = match_clause_string + property_pattern + ", "
                 # 添加路径的时态条件限制
-                pattern_interval_info.update(path_interval_info)
+                pattern_time_window_inf.update(pattern_time_window_inf)
             elif pattern.__class__ == TemporalPathCall:
                 if pattern.path.edges[0].direction == SEdge.LEFT:
                     start_node, end_node = pattern.path.nodes[1], pattern.path.nodes[0]
                 else:
                     start_node, end_node = pattern.path.nodes[0], pattern.path.nodes[1]
-                start_node_pattern, start_node_property_patterns, start_node_interval_info = self.graph_converter.match_object_node(
+                start_node_pattern, start_node_property_patterns, start_node_time_window_info = self.graph_converter.match_object_node(
                     start_node, match_clause.time_window)
-                end_node_pattern, end_node_property_patterns, end_node_interval_info = self.graph_converter.match_object_node(
+                end_node_pattern, end_node_property_patterns, end_node_time_window_info = self.graph_converter.match_object_node(
                     end_node, match_clause.time_window)
                 call_string = call_string + "\nMATCH " + start_node_pattern + ", " + end_node_pattern
                 # 添加节点属性模式的匹配
                 for property_pattern in start_node_property_patterns + end_node_property_patterns:
                     call_string = call_string + ", " + property_pattern
                 # 限制节点的有效时间
-                temporal_path_interval_info = start_node_interval_info
-                temporal_path_interval_info.update(end_node_interval_info)
-                if len(temporal_path_interval_info) > 0 or match_clause.time_window:
-                    where_expression_string = self.convert_where_clause(None, temporal_path_interval_info,
+                temporal_path_time_window_info = start_node_time_window_info
+                temporal_path_time_window_info.update(end_node_time_window_info)
+                if len(temporal_path_time_window_info) > 0 or match_clause.time_window:
+                    where_expression_string = self.convert_where_clause(None, temporal_path_time_window_info,
                                                                         match_clause.time_window)
                     call_string = call_string + '\n' + where_expression_string
                 edge_info = {}
@@ -205,7 +205,7 @@ class ClauseConverter:
                     if match_clause.time_window.__class__ == AtTimeClause:
                         edge_info["effectiveTime"] = self.expression_converter.convert_expression(
                             match_clause.time_window.time_point)
-                    elif match_clause.time_window.time_point == BetweenClause:
+                    elif match_clause.time_window.__class__ == BetweenClause:
                         edge_info["effectiveTime"] = self.expression_converter.convert_expression(
                             match_clause.time_window.interval)
                 # 限制路径的属性
@@ -222,23 +222,23 @@ class ClauseConverter:
             return call_string
         match_clause_string.rstrip(", ")
 
-        if match_clause.where_expression or len(pattern_interval_info) != 0 or match_clause.time_window:
-            where_expression_string = self.convert_where_clause(match_clause.where_expression, pattern_interval_info,
+        if match_clause.where_expression or len(pattern_time_window_info) != 0 or match_clause.time_window:
+            where_expression_string = self.convert_where_clause(match_clause.where_expression, pattern_time_window_info,
                                                                 match_clause.time_window)
             match_clause_string = match_clause_string + '\n' + where_expression_string
 
         return match_clause_string + call_string
 
     def convert_where_clause(self, where_expression: Expression = None,
-                             path_interval_info: dict[str, str] = None,
+                             path_time_window_info: dict[str, str] = None,
                              time_window: AtTimeClause | BetweenClause = None) -> str:
         if where_expression is None and (
-                path_interval_info is None or len(path_interval_info) == 0) and time_window is None:
-            raise ValueError("The where expression and the interval conditions can't be None at the same time.")
+                path_time_window_info is None or len(path_time_window_info) == 0) and time_window is None:
+            raise ValueError("The where expression and the time window conditions can't be None at the same time.")
         where_clause_string = "WHERE "
         if where_expression:
             where_clause_string = where_clause_string + self.expression_converter.convert_expression(where_expression)
-        if path_interval_info or time_window:
+        if path_time_window_info or time_window:
             if where_clause_string != "WHERE ":
                 where_clause_string = where_clause_string + " and "
             if time_window.__class__ == AtTimeClause:
@@ -248,7 +248,7 @@ class ClauseConverter:
             else:
                 time_window_string = "NULL"
             where_clause_string = where_clause_string + "scypher.limitEffectiveTime(" + convert_dict_to_str(
-                path_interval_info) + ", " + time_window_string + ')'
+                path_time_window_info) + ", " + time_window_string + ')'
 
         return where_clause_string
 
@@ -373,9 +373,9 @@ class ClauseConverter:
         for set_item in set_clause.set_items:
             # 为在set时检查约束，调用scypher.getItemToSetX
             if set_item.__class__ == EffectiveTimeSetting:
-                # 设置对象节点/属性节点/值节点/边的有效时间，调用scypher.getItemToSetInterval，第一个参数为对象节点/边及其有效时间，第二个参数为属性名及其有效时间，第三个参数为值节点及其有效时间，第四个参数为set语句的有效时间
+                # 设置对象节点/属性节点/值节点/边的有效时间，调用scypher.getItemToSetEffectiveTime，第一个参数为对象节点/边及其有效时间，第二个参数为属性名及其有效时间，第三个参数为值节点及其有效时间，第四个参数为set语句的有效时间
                 set_item_variable = self.variables_manager.get_random_variable()
-                set_clause_string = set_clause_string + "\nFOREACH (" + set_item_variable + " IN scypher.getItemToSetInterval("
+                set_clause_string = set_clause_string + "\nFOREACH (" + set_item_variable + " IN scypher.getItemToSetEffectiveTime("
                 object_info = {"objectNode": set_item.object_setting.variable,
                                "effective_time": self.expression_converter.convert_at_t_element(
                                    set_item.object_setting.effective_time)}

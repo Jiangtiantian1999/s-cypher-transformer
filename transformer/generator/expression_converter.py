@@ -127,10 +127,10 @@ class ExpressionConverter:
 
     def get_property_value(self, variable_name: str, property_name: str, time_window: AtTElement = None):
         if time_window:
-            interval_string = self.convert_at_t_element(time_window)
+            time_window_string = self.convert_at_t_element(time_window)
         else:
-            interval_string = "NULL"
-        return "scypher.getPropertyValue(" + variable_name + ", \"" + property_name + "\", " + interval_string + ')'
+            time_window_string = "NULL"
+        return "scypher.getPropertyValue(" + variable_name + ", \"" + property_name + "\", " + time_window_string + ')'
 
     def convert_properties_labels_expression(self, properties_labels_expression: PropertiesLabelsExpression) -> str:
         properties_labels_expression_string = self.convert_atom(properties_labels_expression.atom)
@@ -156,16 +156,16 @@ class ExpressionConverter:
             interval = {"from": element_variable + ".intervalFrom", "to": element_variable + ".intervalTo"}
         elif at_t_expression.time_window is None:
             # 返回属性节点的有效时间
-            # 实际上object_variable.property_name也可能为对象节点，scypher.getPropertyInterval函数内部应该加以区分
-            interval = "scypher.getPropertyInterval(" + element_variable + ", \"" + at_t_expression.property_name + "\")"
+            # 实际上object_variable.property_name也可能为对象节点，scypher.getPropertyEffectiveTime函数内部应该加以区分
+            interval = "scypher.getPropertyEffectiveTime(" + element_variable + ", \"" + at_t_expression.property_name + "\")"
         else:
             # 返回值节点的有效时间
             if at_t_expression.time_window.__class__ == AtTExpression:
                 interval_string = self.convert_at_t_element(at_t_expression.time_window)
             else:
                 interval_string = "NULL"
-            # 实际上object_variable.property_name也可能为对象节点，scypher.getValueInterval函数内部应该加以区分
-            interval = "scypher.getValueInterval(" + element_variable + ", \"" + at_t_expression.property_name + "\", " + interval_string + ')'
+            # 实际上object_variable.property_name也可能为对象节点，scypher.getValueEffectiveTime函数内部应该加以区分
+            interval = "scypher.getValueEffectiveTime(" + element_variable + ", \"" + at_t_expression.property_name + "\", " + interval_string + ')'
 
         for index, time_property in enumerate(at_t_expression.time_property_chains):
             if index == 0 and time_property in ["from", "to"] and interval.__class__ == dict:

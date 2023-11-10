@@ -12,43 +12,43 @@ class GraphConverter:
 
     def match_path(self, path: SPath, time_window: AtTimeClause | BetweenClause = None) -> (str, List[str], List[str]):
         # 路径模式，属性节点和值节点的模式，路径有效时间限制
-        path_pattern, property_patterns, node_interval_info = self.match_object_node(path.nodes[0], time_window)
-        path_interval_info = node_interval_info
+        path_pattern, property_patterns, node_time_window_info = self.match_object_node(path.nodes[0], time_window)
+        path_time_window_info = node_time_window_info
         for index, edge in enumerate(path.edges):
             # 生成边模式
-            edge_pattern, edge_interval_info = self.match_edge(edge, time_window)
+            edge_pattern, edge_time_window_info = self.match_edge(edge, time_window)
             path_pattern = path_pattern + edge_pattern
-            path_interval_info.update(edge_interval_info)
+            path_time_window_info.update(edge_time_window_info)
             # 生成节点模式
-            node_pattern, node_property_patterns, node_interval_info = self.match_object_node(path.nodes[index + 1],
-                                                                                              time_window)
+            node_pattern, node_property_patterns, node_time_window_info = self.match_object_node(path.nodes[index + 1],
+                                                                                                 time_window)
             path_pattern = path_pattern + node_pattern
             property_patterns.extend(node_property_patterns)
-            path_interval_info.update(node_interval_info)
+            path_time_window_info.update(node_time_window_info)
 
         if path.variable:
             path_pattern = path.variable + " = " + path_pattern
-        return path_pattern, property_patterns, path_interval_info
+        return path_pattern, property_patterns, path_time_window_info
 
     def match_object_node(self, object_node: ObjectNode, time_window: AtTimeClause | BetweenClause = None) -> (
             str, List[str], dict[str, str]):
         # 对象节点模式, 对象节点的有效时间限制
-        object_pattern, object_interval_info = self.match_node(object_node, time_window)
-        node_interval_info = object_interval_info
+        object_pattern, object_time_window_info = self.match_node(object_node, time_window)
+        node_time_window_info = object_time_window_info
 
         # 对象节点属性模式
         property_patterns = []
         for property_node, value_node in object_node.properties.items():
-            property_pattern, property_interval_info = self.match_node(property_node, time_window)
-            value_pattern, value_interval_info = self.match_node(value_node, time_window)
+            property_pattern, property_time_window_info = self.match_node(property_node, time_window)
+            value_pattern, value_time_window_info = self.match_node(value_node, time_window)
             property_patterns.append(
                 '(' + object_node.variable + ")-[:OBJECT_PROPERTY]->" + property_pattern + "-[:PROPERTY_VALUE]->" + value_pattern)
             # 属性节点的有效时间限制
-            node_interval_info.update(property_interval_info)
+            node_time_window_info.update(property_time_window_info)
             # 值节点的有效时间限制
-            node_interval_info.update(value_interval_info)
+            node_time_window_info.update(value_time_window_info)
 
-        return object_pattern, property_patterns, node_interval_info
+        return object_pattern, property_patterns, node_time_window_info
 
     def match_node(self, node: SNode, time_window: AtTimeClause | BetweenClause = None) -> (str, dict[str, str]):
         if node.variable is None:
@@ -64,13 +64,13 @@ class GraphConverter:
         node_pattern = '(' + node_pattern + ')'
 
         # 节点的有效时间限制
-        node_interval_info = {}
+        node_time_window_info = {}
         if node.time_window is not None:
-            node_interval_info = {node.variable: self.expression_converter.convert_at_t_element(node.time_window)}
+            node_time_window_info = {node.variable: self.expression_converter.convert_at_t_element(node.time_window)}
         elif time_window is not None:
-            node_interval_info = {node.variable: None}
+            node_time_window_info = {node.variable: None}
 
-        return node_pattern, node_interval_info
+        return node_pattern, node_time_window_info
 
     def match_edge(self, edge: SEdge, time_window: AtTimeClause | BetweenClause = None) -> (str, dict[str, str]):
         if edge.variable is None:
@@ -108,13 +108,13 @@ class GraphConverter:
             edge_pattern = edge_pattern + '>'
 
         # 边的有效时间限制
-        edge_interval_info = {}
+        edge_time_window_info = {}
         if edge.time_window is not None:
-            edge_interval_info = {edge.variable: self.expression_converter.convert_at_t_element(edge.time_window)}
+            edge_time_window_info = {edge.variable: self.expression_converter.convert_at_t_element(edge.time_window)}
         elif time_window is not None:
-            edge_interval_info = {edge.variable: None}
+            edge_time_window_info = {edge.variable: None}
 
-        return edge_pattern, edge_interval_info
+        return edge_pattern, edge_time_window_info
 
     def create_path(self, path: SPath, time_window: AtTimeClause = None) -> (List[str], List[str], List[str], str):
         # 路径模式，属性节点和值节点的模式
