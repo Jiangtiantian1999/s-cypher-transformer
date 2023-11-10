@@ -79,9 +79,9 @@ class IntervalSetting:
 
 
 class SetPropertyExpression:
-    def __init__(self, atom: Atom, property_chains: AtTElement | List[PropertyLookup]):
+    def __init__(self, atom: Atom, property_chains: List[PropertyLookup]):
         self.atom = atom
-        if property_chains.__class__ == list and len(property_chains) == 0:
+        if len(property_chains) == 0:
             raise ValueError("The property chains can't be empty.")
         self.property_chains = property_chains
 

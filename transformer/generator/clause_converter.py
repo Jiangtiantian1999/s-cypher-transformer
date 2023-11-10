@@ -386,26 +386,22 @@ class ClauseConverter:
                 set_clause_string = set_clause_string + "\nFOREACH (" + set_item_variable + " IN scypher.getItemToSetExpression("
                 if set_item.expression_left.__class__ == SetPropertyExpression:
                     object_variable = self.expression_converter.convert_atom(set_item.expression_left.atom)
-                    if set_item.expression_left.property_chains.__class__ == list:
-                        for index, property_lookup in enumerate(set_item.expression_left.property_chains):
-                            if index != len(set_item.expression_left.property_chains) - 1:
-                                object_variable = self.expression_converter.get_property_value(object_variable,
-                                                                                               property_lookup.property_name,
-                                                                                               property_lookup.time_window)
-                        set_clause_string = set_clause_string + object_variable + ", "
-                        if len(set_item.expression_left.property_chains) > 0:
-                            property_lookup = set_item.expression_left.property_chains[-1]
-                            set_clause_string = set_clause_string + property_lookup.property_name + ", "
-                            if property_lookup.time_window:
-                                set_clause_string = set_clause_string + self.expression_converter.convert_at_t_element(
-                                    property_lookup.time_window) + ", "
-                            else:
-                                set_clause_string = set_clause_string + time_point + ", "
+                    for index, property_lookup in enumerate(set_item.expression_left.property_chains):
+                        if index != len(set_item.expression_left.property_chains) - 1:
+                            object_variable = self.expression_converter.get_property_value(object_variable,
+                                                                                           property_lookup.property_name,
+                                                                                           property_lookup.time_window)
+                    set_clause_string = set_clause_string + object_variable + ", "
+                    if len(set_item.expression_left.property_chains) > 0:
+                        property_lookup = set_item.expression_left.property_chains[-1]
+                        set_clause_string = set_clause_string + property_lookup.property_name + ", "
+                        if property_lookup.time_window:
+                            set_clause_string = set_clause_string + self.expression_converter.convert_at_t_element(
+                                property_lookup.time_window) + ", "
                         else:
-                            set_clause_string = set_clause_string + "NULL, " + time_point + ", "
+                            set_clause_string = set_clause_string + time_point + ", "
                     else:
-                        set_clause_string = set_clause_string + object_variable + "NULL, " + self.expression_converter.convert_at_t_element(
-                            set_item.expression_left.property_chains) + ", "
+                        set_clause_string = set_clause_string + "NULL, " + time_point + ", "
                 else:
                     set_clause_string = set_clause_string + set_item.expression_left + ", NULL" + time_point + ", "
                 set_clause_string = set_clause_string + str(

@@ -18,16 +18,20 @@ s_Set : SET SP? oC_SetItem ( SP? ',' SP? oC_SetItem )* ( SP? s_AtTime )? ;
 
 s_Stale : STALE SP? s_StaleItem ( SP? ',' SP? s_StaleItem )* ( SP? s_AtTime )? ;
 
-oC_SetItem : ( s_SetPropertyExpression SP? '=' SP? oC_Expression )
+oC_SetItem : ( oC_PropertyExpression SP? '=' SP? oC_Expression )
            | ( oC_Variable SP? '=' SP? oC_Expression )
            | ( oC_Variable SP? '+=' SP? oC_Expression )
            | ( oC_Variable SP? oC_NodeLabels )
-           | ( oC_Variable SP? AtT SP? '=' SP? oC_Expression )
-           | ( oC_Variable SP? '.' SP? oC_PropertyKeyName SP? AtT SP? '=' SP? oC_Expression )
-           | ( oC_Variable SP? '.' SP? oC_PropertyKeyName SP? ( PoundValue | s_AtTElement ) SP? AtT SP? '=' SP? oC_Expression )
+           | ( oC_Variable SP? s_AtTElement )
+           | ( oC_Variable ( SP? s_AtTElement )? '.' s_SetPropertyItemOne )
+           | ( oC_Variable ( SP? s_AtTElement )? '.' s_SetPropertyItemTwo SP? s_SetValueItem )
            ;
 
-s_SetPropertyExpression : oC_Atom ( (SP? s_AtTElement)? | ( SP? oC_PropertyLookup )+ ) ;
+s_SetPropertyItemOne : oC_PropertyKeyName SP? s_AtTElement ;
+
+s_SetPropertyItemTwo : oC_PropertyKeyName ( SP? s_AtTElement )? ;
+
+s_SetValueItem : PoundValue SP? s_AtTElement ;
 
 s_StaleItem : oC_Expression ( '.' oC_PropertyKeyName SP? PoundValue )? ;
 
