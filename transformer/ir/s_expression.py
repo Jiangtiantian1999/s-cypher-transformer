@@ -90,21 +90,15 @@ class PropertiesLabelsExpression:
         self.labels = labels
 
 
-class PropertyValueAtTElement:
-    def __init__(self, property_name: str, time_window: bool | AtTElement = None):
-        self.property_name = property_name
-        self.time_window = time_window
-
-
 class AtTExpression:
-    def __init__(self, atom: Atom, property_chains: List[PropertyLookup] = None,
-                 property_value_at_t_element: PropertyValueAtTElement = None,
-                 time_property_chains: List[str] = None):
+    def __init__(self, atom: Atom, property_chains: List[PropertyLookup] = None, property_name: str = None,
+                 time_window: bool | AtTElement = None, time_property_chains: List[str] = None):
         self.atom = atom
         if property_chains is None:
             property_chains = []
         self.property_chains = property_chains
-        self.property_value_at_t_element = property_value_at_t_element
+        self.property_name = property_name
+        self.time_window = time_window
         # 获取有效时间的属性
         if time_property_chains is None:
             time_property_chains = []

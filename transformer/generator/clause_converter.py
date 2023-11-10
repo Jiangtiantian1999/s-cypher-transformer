@@ -372,21 +372,30 @@ class ClauseConverter:
             time_point = "NULL"
         for set_item in set_clause.set_items:
             # 为在set时检查约束，调用scypher.getItemToSetX
-            if set_item.__class__ == IntervalSetting:
-                # 设置对象节点/属性节点/值节点/边的有效时间，调用scypher.getItemToSetInterval，第一个参数为对象节点，第二个参数为属性名，第三个参数为值节点有效时间，第四个参数为被设置的有效时间
+            if set_item.__class__ == EffectiveTimeSetting:
+                # 设置对象节点/属性节点/值节点/边的有效时间，调用scypher.getItemToSetInterval，第一个参数为对象节点/边及其有效时间，第二个参数为属性名及其有效时间，第三个参数为值节点及其有效时间，第四个参数为set语句的有效时间
                 set_item_variable = self.variables_manager.get_random_variable()
-                set_clause_string = set_clause_string + "\nFOREACH (" + set_item_variable + " IN scypher.getItemToSetInterval(" + set_item.object_variable + ", "
-                if set_item.property_value_at_t_element:
-                    set_clause_string = set_clause_string + set_item.property_value_at_t_element.property_name + ", "
+                set_clause_string = set_clause_string + "\nFOREACH (" + set_item_variable + " IN scypher.getItemToSetInterval("
+                object_info = {"objectNode": set_item.object_setting.variable,
+                               "effective_time": self.expression_converter.convert_at_t_element(
+                                   set_item.object_setting.effective_time)}
+                set_clause_string = set_clause_string + convert_dict_to_str(object_info) + ", "
+                if set_item.property_setting:
+                    property_info = {"propertyNode": set_item.property_setting.variable,
+                                     "effective_time": self.expression_converter.convert_at_t_element(
+                                         set_item.property_setting.effective_time)}
+                    set_clause_string = set_clause_string + convert_dict_to_str(property_info) + ", "
+                    if set_item.value_setting:
+                        value_info = {"valueNode": set_item.value_setting.variable,
+                                      "effective_time": self.expression_converter.convert_at_t_element(
+                                          set_item.value_setting.effective_time)}
+                        set_clause_string = set_clause_string + convert_dict_to_str(value_info) + ", "
+                    else:
+                        set_clause_string = set_clause_string + "NULL, "
                 else:
-                    set_clause_string = set_clause_string + "NULL, "
-                if set_item.property_value_at_t_element.time_window and set_item.property_value_at_t_element.time_window.__class__ == AtTElement:
-                    set_clause_string = set_clause_string + self.expression_converter.convert_at_t_element(
-                        set_item.property_value_at_t_element.time_window) + ", "
-                else:
-                    set_clause_string = set_clause_string + "NULL, "
-                set_clause_string = set_clause_string + self.expression_converter.convert_expression(
-                    set_item.interval) + ')'
+                    set_clause_string = set_clause_string + "NULL, NULL, "
+                if set_clause.at_time_clause:
+                    set_clause_string = set_clause_string + time_point + ')'
                 set_clause_string = set_clause_string + " | SET " + set_item_variable + ".left = " + set_item_variable + ".right)"
             elif set_item.__class__ == ExpressionSetting:
                 # 修改节点/边的属性，调用scypher.getItemToSetExpression，第一个参数为对象节点，第二个参数为属性名，

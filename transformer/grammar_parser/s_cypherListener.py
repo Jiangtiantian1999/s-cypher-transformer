@@ -413,15 +413,6 @@ class s_cypherListener(ParseTreeListener):
         pass
 
 
-    # Enter a parse tree produced by s_cypherParser#s_PropertyValueAtTElement.
-    def enterS_PropertyValueAtTElement(self, ctx:s_cypherParser.S_PropertyValueAtTElementContext):
-        pass
-
-    # Exit a parse tree produced by s_cypherParser#s_PropertyValueAtTElement.
-    def exitS_PropertyValueAtTElement(self, ctx:s_cypherParser.S_PropertyValueAtTElementContext):
-        pass
-
-
     # Enter a parse tree produced by s_cypherParser#s_PropertyLookupTime.
     def enterS_PropertyLookupTime(self, ctx:s_cypherParser.S_PropertyLookupTimeContext):
         pass

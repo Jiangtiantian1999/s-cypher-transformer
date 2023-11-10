@@ -1,6 +1,6 @@
 from typing import List
 
-from transformer.ir.s_expression import Atom, Expression, PropertyLookup, PropertyValueAtTElement
+from transformer.ir.s_expression import Atom, Expression, PropertyLookup, PropertyValueAtTElement, AtTElement
 from transformer.ir.s_graph import SPath
 
 
@@ -69,13 +69,21 @@ class RemovePropertyExpression:
         self.property_chains = property_chains
 
 
-class IntervalSetting:
+class NodeIntervalSetting:
+    def __init__(self, variable: str, effective_time: AtTElement = None):
+        self.variable = variable
+        self.effective_time = effective_time
 
-    def __init__(self, object_variable: str, interval: Expression,
-                 property_value_at_t_element: PropertyValueAtTElement = None):
-        self.object_variable = object_variable
-        self.interval = interval
-        self.property_value_at_t_element = property_value_at_t_element
+
+class EffectiveTimeSetting:
+
+    def __init__(self, object_setting: NodeIntervalSetting, property_setting: NodeIntervalSetting = None,
+                 value_setting: NodeIntervalSetting = None):
+        if property_setting is None and value_setting is not None:
+            raise ValueError("Can't specify value node before specifying property node")
+        self.object_setting = object_setting
+        self.property_setting = property_setting
+        self.value_setting = value_setting
 
 
 class SetPropertyExpression:
