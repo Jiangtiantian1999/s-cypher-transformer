@@ -316,13 +316,22 @@ class ClauseConverter:
                     delete_item.expression) + ", "
                 delete_list_string = delete_list_string + delete_item.property_value_at_t_element.property_name + ", "
                 if delete_item.property_value_at_t_element.time_window:
+                    # 删除值节点
                     if delete_item.property_value_at_t_element.time_window.__class__ == AtTElement:
                         delete_list_string = delete_list_string + self.expression_converter.convert_at_t_element(
                             delete_item.property_value_at_t_element.time_window) + ')'
+                    elif delete_clause.time_window:
+                        if delete_clause.time_window.__class__ == AtTimeClause:
+                            delete_list_string = delete_list_string + self.expression_converter.convert_expression(
+                                delete_clause.time_window.time_point) + ')'
+                        elif delete_clause.time_window.__class__ == BetweenClause:
+                            delete_list_string = delete_list_string + self.expression_converter.convert_expression(
+                                delete_clause.time_window.interval) + ')'
                     else:
                         delete_list_string = delete_list_string + str(
                             delete_item.property_value_at_t_element.time_window) + ')'
                 else:
+                    # 删除属性节点
                     delete_list_string = delete_list_string + "NULL)"
                 delete_item_variable = self.variables_manager.get_random_variable()
                 delete_clause_string = delete_clause_string + "\nFOREACH (" + delete_item_variable + " IN " + delete_list_string + " | DELETE " + delete_item_variable + ')'

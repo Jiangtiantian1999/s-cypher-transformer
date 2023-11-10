@@ -99,12 +99,14 @@ class CreateClause:
 
 
 class DeleteClause:
-    def __init__(self, delete_items: List[DeleteItem], is_detach=False):
+    def __init__(self, delete_items: List[DeleteItem], is_detach=False,
+                 time_window: AtTimeClause | BetweenClause = None):
         if len(delete_items) == 0:
             raise ValueError("The delete items can't be empty.")
         self.delete_items = delete_items
         # 删除节点时，是否删除相连边
         self.is_detach = is_detach
+        self.time_window = time_window
 
 
 class StaleClause:
@@ -116,7 +118,8 @@ class StaleClause:
 
 
 class SetClause:
-    def __init__(self, set_items: List[IntervalSetting | ExpressionSetting | LabelSetting], at_time_clause: AtTimeClause = None):
+    def __init__(self, set_items: List[IntervalSetting | ExpressionSetting | LabelSetting],
+                 at_time_clause: AtTimeClause = None):
         if len(set_items) == 0:
             raise ValueError("The set items can't be empty.")
         self.set_items = set_items
