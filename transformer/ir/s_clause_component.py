@@ -1,7 +1,7 @@
 from typing import List
 
 from transformer.ir.s_expression import Atom, Expression, PropertyLookup, PropertyValueAtTElement
-from transformer.ir.s_graph import SPath, AtTElement
+from transformer.ir.s_graph import SPath
 
 
 class TemporalPathCall:
