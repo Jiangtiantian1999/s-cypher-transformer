@@ -67,13 +67,13 @@ class GraphConverter:
         node_time_window_info = {}
         if node.time_window is not None:
             node_time_window_info = {node.variable: self.expression_converter.convert_at_t_element(node.time_window)}
-        elif time_window is not None:
+        elif time_window is not None or node.__class__ == ObjectNode:
             node_time_window_info = {node.variable: None}
 
         return node_pattern, node_time_window_info
 
     def match_relationship(self, relationship: SRelationship, time_window: AtTimeClause | BetweenClause = None) -> (
-    str, dict[str, str]):
+            str, dict[str, str]):
         if relationship.variable is None:
             relationship.variable = self.variables_manager.get_random_variable()
         # 关系模式
@@ -111,7 +111,8 @@ class GraphConverter:
         # 关系的有效时间限制
         relationship_time_window_info = {}
         if relationship.time_window is not None:
-            relationship_time_window_info = {relationship.variable: self.expression_converter.convert_at_t_element(relationship.time_window)}
+            relationship_time_window_info = {
+                relationship.variable: self.expression_converter.convert_at_t_element(relationship.time_window)}
         elif time_window is not None:
             relationship_time_window_info = {relationship.variable: None}
 
@@ -141,7 +142,8 @@ class GraphConverter:
             all_object_node_pattern.append(object_node_pattern)
             all_property_node_patterns.extend(property_node_patterns)
             all_value_node_patterns.extend(value_node_patterns)
-            relationship_pattern = self.create_relationship(relationship, path.nodes[index], path.nodes[index + 1], time_window)
+            relationship_pattern = self.create_relationship(relationship, path.nodes[index], path.nodes[index + 1],
+                                                            time_window)
             path_pattern = path_pattern + relationship_pattern + '(' + path.nodes[index + 1].variable + ')'
         if path.variable:
             path_pattern = path.variable + " = " + path_pattern
