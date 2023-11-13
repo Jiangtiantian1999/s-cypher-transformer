@@ -37,7 +37,7 @@ class SCypherErrorStrategy(BailErrorStrategy):
         super().recover(recognizer, e)
 
 
-# 中间变量转换问题
+# 中间实体转换问题
 class TranslateError(Exception):
     def __int__(self, message):
         super().__init__(message)
