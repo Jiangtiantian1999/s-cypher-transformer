@@ -305,7 +305,10 @@ class ClauseConverter:
             # 以列表形式返回所有待物理删除的元素
             delete_list_string = "scypher.getItemsToDelete(" + self.expression_converter.convert_expression(
                 delete_item.expression) + ", "
-            delete_list_string = delete_list_string + delete_item.property_name + ", "
+            if delete_item.property_name:
+                delete_list_string = delete_list_string + delete_item.property_name + ", "
+            else:
+                delete_list_string = delete_list_string + "NULL, "
             if delete_item.time_window:
                 # 删除值节点
                 if delete_item.time_window.__class__ == AtTElement:
