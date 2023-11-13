@@ -63,23 +63,25 @@ class ExpressionConverter:
         return subject_expression_string
 
     def convert_add_subtract_expression(self, add_subtract_expression: AddSubtractExpression) -> str:
-        add_subtract_expression_string = self.convert_multiply_divide_expression(
-            add_subtract_expression.multiply_divide_expressions[0])
+        add_subtract_expression_string = self.convert_multiply_divide_modulo_expression(
+            add_subtract_expression.multiply_divide_modulo_expressions[0])
 
         for index, add_subtract_operation in enumerate(add_subtract_expression.add_subtract_operations):
-            add_subtract_expression_string = add_subtract_expression_string + ' ' + add_subtract_operation + ' ' + self.convert_multiply_divide_expression(
-                add_subtract_expression.multiply_divide_expressions[index + 1])
+            add_subtract_expression_string = add_subtract_expression_string + ' ' + add_subtract_operation + ' ' + self.convert_multiply_divide_modulo_expression(
+                add_subtract_expression.multiply_divide_modulo_expressions[index + 1])
 
         return add_subtract_expression_string
 
-    def convert_multiply_divide_expression(self, multiply_divide_expression: MultiplyDivideExpression) -> str:
-        multiply_divide_expression_string = self.convert_power_expression(
-            multiply_divide_expression.power_expressions[0])
+    def convert_multiply_divide_modulo_expression(self,
+                                                  multiply_divide_modulo_expression: MultiplyDivideModuloExpression) -> str:
+        multiply_divide_modulo_expression_string = self.convert_power_expression(
+            multiply_divide_modulo_expression.power_expressions[0])
 
-        for index, multiply_divide_operation in enumerate(multiply_divide_expression.multiply_divide_operations):
-            multiply_divide_expression_string = multiply_divide_expression_string + ' ' + multiply_divide_operation + ' ' + self.convert_power_expression(
-                multiply_divide_expression.power_expressions[index + 1])
-        return multiply_divide_expression_string
+        for index, multiply_divide_operation in enumerate(
+                multiply_divide_modulo_expression.multiply_divide_modulo_operations):
+            multiply_divide_modulo_expression_string = multiply_divide_modulo_expression_string + ' ' + multiply_divide_operation + ' ' + self.convert_power_expression(
+                multiply_divide_modulo_expression.power_expressions[index + 1])
+        return multiply_divide_modulo_expression_string
 
     def convert_power_expression(self, power_expression: PowerExpression) -> str:
         power_expression_string = ""

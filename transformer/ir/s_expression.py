@@ -147,12 +147,12 @@ class MultiplyDivideModuloExpression:
 
 
 class AddSubtractExpression:
-    def __init__(self, multiply_divide_expressions: List[MultiplyDivideModuloExpression],
+    def __init__(self, multiply_divide_modulo_expressions: List[MultiplyDivideModuloExpression],
                  add_subtract_operations: List[str] = None):
-        self.multiply_divide_expressions = multiply_divide_expressions
+        self.multiply_divide_modulo_expressions = multiply_divide_modulo_expressions
         if add_subtract_operations is None:
             add_subtract_operations = []
-        if len(multiply_divide_expressions) != len(add_subtract_operations) + 1:
+        if len(multiply_divide_modulo_expressions) != len(add_subtract_operations) + 1:
             raise TranslateError(
                 "The numbers of the multiply/divide/modulo expressions and add/subtract operations are not matched.")
         for add_subtract_operation in add_subtract_operations:
