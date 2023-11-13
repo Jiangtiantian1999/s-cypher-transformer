@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from transformer.exceptions.s_exception import ClauseError
+from transformer.exceptions.s_exception import TranslateError
 from transformer.ir.s_clause_component import *
 from transformer.ir.s_expression import Expression
 
@@ -9,11 +9,11 @@ class OrderByClause:
     # dict[排序的元素，排序方式]
     def __init__(self, sort_items: dict[Expression, str]):
         if len(sort_items) == 0:
-            raise ValueError("The sort items can't be empty.")
+            raise TranslateError("The sort items can't be empty.")
         for item in sort_items.values():
             # 若未指定排序方式，将sort_item.value设为None
             if item and item.upper() not in ["ASCENDING", "ASC", "DESCENDING", "DESC"]:
-                raise ValueError("Uncertain sorting method.")
+                raise TranslateError("Uncertain sorting method.")
         self.sort_items = sort_items
 
 
@@ -24,7 +24,7 @@ class ReturnClause:
         if projection_items is None:
             projection_items = []
         if len(projection_items) == 0 and is_all is False:
-            raise ValueError("The return items can't be empty.")
+            raise TranslateError("The return items can't be empty.")
         self.projection_items = projection_items
         # 第一个返回值为*
         self.is_all = is_all
@@ -49,7 +49,7 @@ class MatchClause:
     def __init__(self, patterns: List[Pattern], is_optional: bool = False, where_expression: Expression = None,
                  time_window: AtTimeClause | BetweenClause = None):
         if len(patterns) == 0:
-            raise ValueError("The patterns can't be empty.")
+            raise TranslateError("The patterns can't be empty.")
         self.patterns = patterns
         self.is_optional = is_optional
         self.where_expression = where_expression
@@ -67,7 +67,7 @@ class YieldClause:
         if yield_items is None:
             yield_items = []
         if len(yield_items) == 0 and is_all is False:
-            raise ValueError("The yield items can't be empty.")
+            raise TranslateError("The yield items can't be empty.")
         self.yield_items = yield_items
         # 第一个返回值为*
         self.is_all = is_all
@@ -93,7 +93,7 @@ class ReadingClause:
 class CreateClause:
     def __init__(self, patterns: List[Pattern], at_time_clause: AtTimeClause = None):
         if len(patterns) == 0:
-            raise ValueError("The patterns can't be empty.")
+            raise TranslateError("The patterns can't be empty.")
         self.patterns = patterns
         self.at_time_clause = at_time_clause
 
@@ -102,9 +102,9 @@ class DeleteClause:
     def __init__(self, delete_items: List[DeleteItem], is_detach=False,
                  time_window: AtTimeClause | BetweenClause = None):
         if len(delete_items) == 0:
-            raise ValueError("The delete items can't be empty.")
+            raise TranslateError("The delete items can't be empty.")
         self.delete_items = delete_items
-        # 删除节点时，是否删除相连边
+        # 删除节点时，是否删除相连关系
         self.is_detach = is_detach
         self.time_window = time_window
 
@@ -112,7 +112,7 @@ class DeleteClause:
 class StaleClause:
     def __init__(self, stale_items: List[StaleItem], at_time_clause: AtTimeClause = None):
         if len(stale_items) == 0:
-            raise ValueError("The stale items can't be empty.")
+            raise TranslateError("The stale items can't be empty.")
         self.stale_items = stale_items
         self.at_time_clause = at_time_clause
 
@@ -121,7 +121,7 @@ class SetClause:
     def __init__(self, set_items: List[EffectiveTimeSetting | ExpressionSetting | LabelSetting],
                  at_time_clause: AtTimeClause = None):
         if len(set_items) == 0:
-            raise ValueError("The set items can't be empty.")
+            raise TranslateError("The set items can't be empty.")
         self.set_items = set_items
         self.at_time_clause = at_time_clause
 
@@ -136,7 +136,7 @@ class MergeClause:
             actions = {}
         for action in actions.keys():
             if action not in [MergeClause.ON_MATCH, MergeClause.ON_CREATE]:
-                raise ValueError("Uncertain action.")
+                raise TranslateError("Uncertain action.")
         self.actions = actions
         self.at_time_clause = at_time_clause
 
@@ -144,7 +144,7 @@ class MergeClause:
 class RemoveClause:
     def __init__(self, remove_items: List[LabelSetting | RemovePropertyExpression]):
         if len(remove_items) == 0:
-            raise ValueError("The remove items can't be empty.")
+            raise TranslateError("The remove items can't be empty.")
         self.remove_items = remove_items
 
 
@@ -160,7 +160,7 @@ class SingleQueryClause:
     def __init__(self, reading_clauses: List[ReadingClause] = None, updating_clauses: List[UpdatingClause] = None,
                  return_clause: ReturnClause = None):
         if (updating_clauses is None or len(updating_clauses) == 0) and return_clause is None:
-            raise ClauseError("The updating clauses and the return_clause can't be empty at the same time.")
+            raise TranslateError("The updating clauses and the return_clause can't be empty at the same time.")
         if reading_clauses is None:
             reading_clauses = []
         self.reading_clauses = reading_clauses
@@ -177,7 +177,7 @@ class WithClause:
         if projection_items is None:
             projection_items = []
         if len(projection_items) == 0 and is_all is False:
-            raise ValueError("The with items can't be empty.")
+            raise TranslateError("The with items can't be empty.")
         self.projection_items = projection_items
         # 第一个返回值为*
         self.is_all = is_all
@@ -215,11 +215,11 @@ class MultiQueryClause:
 class UnionQueryClause:
     def __init__(self, multi_query_clauses: List[MultiQueryClause], is_all: List[bool] = None):
         if len(multi_query_clauses) == 0:
-            raise ValueError("The multi-query clauses can't be empty.")
+            raise TranslateError("The multi-query clauses can't be empty.")
         if is_all is None:
             is_all = []
         if len(multi_query_clauses) != len(is_all) + 1:
-            raise ClauseError("The numbers of the clauses and union operations are not matched.")
+            raise TranslateError("The numbers of the clauses and union operations are not matched.")
         self.multi_query_clauses = multi_query_clauses
         # 是否为union all
         self.is_all = is_all

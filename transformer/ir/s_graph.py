@@ -1,6 +1,6 @@
 from typing import List, Tuple
 
-from transformer.exceptions.s_exception import GraphError
+from transformer.exceptions.s_exception import TranslateError
 from transformer.ir.s_expression import Expression, AtTElement
 
 
@@ -40,7 +40,7 @@ class ObjectNode(SNode):
         self.properties = properties
 
 
-class SEdge:
+class SRelationship:
     LEFT = 'LEFT'
     RIGHT = 'RIGHT'
     UNDIRECTED = 'UNDIRECTED'
@@ -48,9 +48,9 @@ class SEdge:
     def __init__(self, direction: str, variable: str = None, labels: List[str] = None, length: Tuple[int, int] = (1, 1),
                  time_window: AtTElement = None, properties: dict[str, Expression] = None):
         if direction.upper() not in [self.LEFT, self.RIGHT, self.UNDIRECTED]:
-            raise ValueError("Direction of edges must be 'LEFT', 'RIGHT' or 'UNDIRECTED'.")
+            raise TranslateError("Direction of relationships must be 'LEFT', 'RIGHT' or 'UNDIRECTED'.")
         if length[0] is not None and length[1] is not None and (length[0] < 0 or length[0] > length[1]):
-            raise ValueError("The length range of edge is incorrect.")
+            raise TranslateError("The length range of relationship is incorrect.")
         self.direction = direction
         self.variable = variable
         if labels is None:
@@ -65,11 +65,11 @@ class SEdge:
 
 
 class SPath:
-    def __init__(self, nodes: List[ObjectNode], edges: List[SEdge] = None, variable: str = None):
-        if edges is None:
-            edges = []
-        if len(nodes) != len(edges) + 1:
-            raise GraphError("The numbers of the nodes and edges are not matched.")
+    def __init__(self, nodes: List[ObjectNode], relationships: List[SRelationship] = None, variable: str = None):
+        if relationships is None:
+            relationships = []
+        if len(nodes) != len(relationships) + 1:
+            raise TranslateError("The numbers of the nodes and relationships are not matched.")
         self.nodes = nodes
-        self.edges = edges
+        self.relationships = relationships
         self.variable = variable

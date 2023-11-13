@@ -103,7 +103,7 @@ class VariablesManager:
                     self.updating_variables.append(object_node.variable)
                 self.user_variables.append(object_node.variable)
 
-        for edge in path.edges:
+        for edge in path.relationships:
             if edge.variable:
                 if is_updating and edge.variable not in self.user_variables:
                     self.updating_variables.append(edge.variable)

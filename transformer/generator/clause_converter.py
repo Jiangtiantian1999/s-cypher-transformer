@@ -161,14 +161,14 @@ class ClauseConverter:
             pattern = pattern.pattern
             if pattern.__class__ == SPath:
                 path_pattern, property_patterns, pattern_time_window_inf = self.graph_converter.match_path(pattern,
-                                                                                                      match_clause.time_window)
+                                                                                                           match_clause.time_window)
                 match_clause_string = match_clause_string + path_pattern + ", "
                 for property_pattern in property_patterns:
                     match_clause_string = match_clause_string + property_pattern + ", "
                 # 添加路径的时态条件限制
                 pattern_time_window_inf.update(pattern_time_window_inf)
             elif pattern.__class__ == TemporalPathCall:
-                if pattern.path.edges[0].direction == SEdge.LEFT:
+                if pattern.path.relationships[0].direction == SRelationship.LEFT:
                     start_node, end_node = pattern.path.nodes[1], pattern.path.nodes[0]
                 else:
                     start_node, end_node = pattern.path.nodes[0], pattern.path.nodes[1]
@@ -187,36 +187,36 @@ class ClauseConverter:
                     where_expression_string = self.convert_where_clause(None, temporal_path_time_window_info,
                                                                         match_clause.time_window)
                     call_string = call_string + '\n' + where_expression_string
-                edge_info = {}
+                relationship_info = {}
                 # 限制路径的标签
-                if len(pattern.path.edges[0].labels) != 0:
-                    edge_info["labels"] = pattern.path.edges[0].labels
+                if len(pattern.path.relationships[0].labels) != 0:
+                    relationship_info["labels"] = pattern.path.relationships[0].labels
                 # 限制路径的长度
-                if pattern.path.edges[0].length[0] is not None:
-                    edge_info["minLength"] = pattern.path.edges[0].length[0]
-                if pattern.path.edges[0].length[1] is not None:
-                    edge_info["maxLength"] = pattern.path.edges[0].length[1]
+                if pattern.path.relationships[0].length[0] is not None:
+                    relationship_info["minLength"] = pattern.path.relationships[0].length[0]
+                if pattern.path.relationships[0].length[1] is not None:
+                    relationship_info["maxLength"] = pattern.path.relationships[0].length[1]
                 # 限制路径的有效时间
-                if pattern.path.edges[0].time_window:
-                    edge_info[
+                if pattern.path.relationships[0].time_window:
+                    relationship_info[
                         "effectiveTime"] = self.expression_converter.convert_at_t_element(
-                        pattern.path.edges[0].time_window)
+                        pattern.path.relationships[0].time_window)
                 elif match_clause.time_window:
                     if match_clause.time_window.__class__ == AtTimeClause:
-                        edge_info["effectiveTime"] = self.expression_converter.convert_expression(
+                        relationship_info["effectiveTime"] = self.expression_converter.convert_expression(
                             match_clause.time_window.time_point)
                     elif match_clause.time_window.__class__ == BetweenClause:
-                        edge_info["effectiveTime"] = self.expression_converter.convert_expression(
+                        relationship_info["effectiveTime"] = self.expression_converter.convert_expression(
                             match_clause.time_window.interval)
                 # 限制路径的属性
-                if len(pattern.path.edges[0].properties) != 0:
-                    edge_info["properties"] = {}
-                    for property_name, property_value in pattern.path.edges[0].properties.items():
-                        edge_info["properties"][property_name] = self.expression_converter.convert_expression(
+                if len(pattern.path.relationships[0].properties) != 0:
+                    relationship_info["properties"] = {}
+                    for property_name, property_value in pattern.path.relationships[0].properties.items():
+                        relationship_info["properties"][property_name] = self.expression_converter.convert_expression(
                             property_value)
 
                 call_string = call_string + "\nCALL scypher." + pattern.function_name + '(' + start_node.variable + ", " + end_node.variable + ", " + convert_dict_to_str(
-                    edge_info) + ")\nYIELD " + pattern.variable
+                    relationship_info) + ")\nYIELD " + pattern.variable
 
         if match_clause_string in ["MATCH ", "OPTIONAL MATCH "]:
             return call_string
@@ -230,15 +230,15 @@ class ClauseConverter:
         return match_clause_string + call_string
 
     def convert_where_clause(self, where_expression: Expression = None,
-                             path_time_window_info: dict[str, str] = None,
+                             pattern_time_window_info: dict[str, str] = None,
                              time_window: AtTimeClause | BetweenClause = None) -> str:
         if where_expression is None and (
-                path_time_window_info is None or len(path_time_window_info) == 0) and time_window is None:
-            raise ValueError("The where expression and the time window conditions can't be None at the same time.")
+                pattern_time_window_info is None or len(pattern_time_window_info) == 0) and time_window is None:
+            raise TranslateError("The where expression and the time window conditions can't be None at the same time.")
         where_clause_string = "WHERE "
         if where_expression:
             where_clause_string = where_clause_string + self.expression_converter.convert_expression(where_expression)
-        if path_time_window_info or time_window:
+        if pattern_time_window_info or time_window:
             if where_clause_string != "WHERE ":
                 where_clause_string = where_clause_string + " and "
             if time_window.__class__ == AtTimeClause:
@@ -248,7 +248,7 @@ class ClauseConverter:
             else:
                 time_window_string = "NULL"
             where_clause_string = where_clause_string + "scypher.limitEffectiveTime(" + convert_dict_to_str(
-                path_time_window_info) + ", " + time_window_string + ')'
+                pattern_time_window_info) + ", " + time_window_string + ')'
 
         return where_clause_string
 
@@ -301,25 +301,25 @@ class ClauseConverter:
         delete_clause_string = ""
 
         for delete_item in delete_clause.delete_items:
-            if delete_item.property_value_at_t_element is None:
-                # 物理删除对象节点/路径/边，调用scypher.getItemToDelete，参数为对象节点/路径/边
-                # 删除对象节点/路径时，返回已删除了属性节点和值节点的对象节点/路径；删除边时，返回边。
+            if delete_item.property_name is None:
+                # 物理删除对象节点/路径/关系，调用scypher.getObjectToDelete，参数为对象节点/路径/关系
+                # 删除对象节点/路径时，返回已删除了属性节点和值节点的对象节点/路径；删除关系时，返回关系。
                 delete_clause_string = delete_clause_string + "\nDELETE "
                 if delete_clause.is_detach:
                     delete_clause_string = delete_clause_string + "\nDETACH DELETE "
                 delete_clause_string = delete_clause_string + "scypher.getObjectToDelete(" + self.expression_converter.convert_expression(
-                    delete_item.expression) + ")"
+                    delete_item.expression) + ')'
             else:
-                # 删除对象节点的属性，第一个参数为对象节点，第二个参数为属性名，第三个参数为删除的值节点的范围
+                # 删除对象节点的属性，调用getItemsToDelete，第一个参数为对象节点，第二个参数为属性名，第三个参数为删除的值节点的范围
                 # 以列表形式返回所有待物理删除的元素
-                delete_list_string = "scypher.getItemToDelete(" + self.expression_converter.convert_expression(
+                delete_list_string = "scypher.getItemsToDelete(" + self.expression_converter.convert_expression(
                     delete_item.expression) + ", "
-                delete_list_string = delete_list_string + delete_item.property_value_at_t_element.property_name + ", "
-                if delete_item.property_value_at_t_element.time_window:
+                delete_list_string = delete_list_string + delete_item.property_name + ", "
+                if delete_item.time_window:
                     # 删除值节点
-                    if delete_item.property_value_at_t_element.time_window.__class__ == AtTElement:
+                    if delete_item.time_window.__class__ == AtTElement:
                         delete_list_string = delete_list_string + self.expression_converter.convert_at_t_element(
-                            delete_item.property_value_at_t_element.time_window) + ')'
+                            delete_item.time_window) + ')'
                     elif delete_clause.time_window:
                         if delete_clause.time_window.__class__ == AtTimeClause:
                             delete_list_string = delete_list_string + self.expression_converter.convert_expression(
@@ -329,7 +329,7 @@ class ClauseConverter:
                                 delete_clause.time_window.interval) + ')'
                     else:
                         delete_list_string = delete_list_string + str(
-                            delete_item.property_value_at_t_element.time_window) + ')'
+                            delete_item.time_window) + ')'
                 else:
                     # 删除属性节点
                     delete_list_string = delete_list_string + "NULL)"
@@ -342,9 +342,9 @@ class ClauseConverter:
         stale_clause_string = "FOREACH "
         stale_list_string = ""
         for stale_item in stale_clause.stale_items:
-            # 逻辑删除对象节点/属性节点/值节点/边，调用scypher.getItemToStale，第一个参数为对象节点，第二个参数为属性名，第三个参数为【是否仅逻辑删除值节点】，第四个参数为逻辑删除时间
+            # 逻辑删除对象节点/属性节点/值节点/关系，调用scypher.getItemsToStale，第一个参数为对象节点，第二个参数为属性名，第三个参数为【是否仅逻辑删除值节点】，第四个参数为逻辑删除时间
             # 以列表形式返回所有待逻辑删除的元素
-            stale_list_string = stale_list_string + "scypher.getItemToStale(" + self.expression_converter.convert_expression(
+            stale_list_string = stale_list_string + "scypher.getItemsToStale(" + self.expression_converter.convert_expression(
                 stale_item.expression)
             if stale_item.property_name:
                 stale_list_string = stale_list_string + ", " + stale_item.property_name
@@ -373,9 +373,9 @@ class ClauseConverter:
         for set_item in set_clause.set_items:
             # 为在set时检查约束，调用scypher.getItemToSetX
             if set_item.__class__ == EffectiveTimeSetting:
-                # 设置对象节点/属性节点/值节点/边的有效时间，调用scypher.getItemToSetEffectiveTime，第一个参数为对象节点/边及其有效时间，第二个参数为属性名及其有效时间，第三个参数为值节点及其有效时间，第四个参数为set语句的有效时间
+                # 设置对象节点/属性节点/值节点/关系的有效时间，调用scypher.getItemsToSetEffectiveTime，第一个参数为对象节点/关系及其有效时间，第二个参数为属性名及其有效时间，第三个参数为值节点及其有效时间，第四个参数为set语句的有效时间
                 set_item_variable = self.variables_manager.get_random_variable()
-                set_clause_string = set_clause_string + "\nFOREACH (" + set_item_variable + " IN scypher.getItemToSetEffectiveTime("
+                set_clause_string = set_clause_string + "\nFOREACH (" + set_item_variable + " IN scypher.getItemsToSetEffectiveTime("
                 object_info = {"objectNode": set_item.object_setting.variable,
                                "effective_time": self.expression_converter.convert_at_t_element(
                                    set_item.object_setting.effective_time)}
@@ -398,10 +398,10 @@ class ClauseConverter:
                     set_clause_string = set_clause_string + time_point + ')'
                 set_clause_string = set_clause_string + " | SET " + set_item_variable + ".left = " + set_item_variable + ".right)"
             elif set_item.__class__ == ExpressionSetting:
-                # 修改节点/边的属性，调用scypher.getItemToSetExpression，第一个参数为对象节点，第二个参数为属性名，
+                # 修改节点/关系的属性，调用scypher.getItemsToSetExpression，第一个参数为对象节点，第二个参数为属性名，
                 # 第三个参数为set的操作时间，第四个参数为【是否为+=】，第五个参数为表达式
                 set_item_variable = self.variables_manager.get_random_variable()
-                set_clause_string = set_clause_string + "\nFOREACH (" + set_item_variable + " IN scypher.getItemToSetExpression("
+                set_clause_string = set_clause_string + "\nFOREACH (" + set_item_variable + " IN scypher.getItemsToSetExpression("
                 if set_item.expression_left.__class__ == SetPropertyExpression:
                     object_variable = self.expression_converter.convert_atom(set_item.expression_left.atom)
                     for index, property_lookup in enumerate(set_item.expression_left.property_chains):
@@ -427,7 +427,7 @@ class ClauseConverter:
                     set_item.expression_right) + ')'
                 set_clause_string = set_clause_string + " | SET " + set_item_variable + ".left = " + set_item_variable + ".right)"
             else:
-                # 设置节点/边的标签
+                # 设置节点/关系的标签
                 set_clause_string = set_clause_string + "\nSET " + set_item.variable
                 for label in set_item.labels:
                     set_clause_string = set_clause_string + ':' + label
@@ -459,7 +459,7 @@ class ClauseConverter:
                 merge_clause_string = merge_clause_string + value_node_pattern + ", "
             merge_clause_string = merge_clause_string.rstrip(", ")
         if len(object_node_patterns) > 1 and path_pattern:
-            # 当路径长度>0时，merge路径（创建对象节点之间的边）
+            # 当路径长度>0时，merge路径（创建对象节点之间的关系）
             merge_clause_string = merge_clause_string + "\nMERGE" + path_pattern
 
         for action, set_clause in merge_clause.actions.items():
@@ -475,13 +475,13 @@ class ClauseConverter:
                 for label in remove_item.labels:
                     remove_clause_string = remove_clause_string + ':' + label
             else:
-                # 移除边的属性
-                edge_variable = self.expression_converter.convert_atom(remove_item.atom)
+                # 移除关系的属性
+                relationship_variable = self.expression_converter.convert_atom(remove_item.atom)
                 for property_lookup in remove_item.property_chains:
-                    edge_variable = self.expression_converter.get_property_value(edge_variable,
-                                                                                 property_lookup.property_name,
-                                                                                 property_lookup.time_window)
-                remove_clause_string = remove_clause_string + edge_variable + '.' + remove_item.property_name
+                    relationship_variable = self.expression_converter.get_property_value(relationship_variable,
+                                                                                         property_lookup.property_name,
+                                                                                         property_lookup.time_window)
+                remove_clause_string = remove_clause_string + relationship_variable + '.' + remove_item.property_name
             remove_clause_string = remove_clause_string + ", "
         return remove_clause_string.rstrip(", ")
 

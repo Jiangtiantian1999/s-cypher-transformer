@@ -37,26 +37,13 @@ class SCypherErrorStrategy(BailErrorStrategy):
         super().recover(recognizer, e)
 
 
-class FormatError(Exception):
+# 中间变量转换问题
+class TranslateError(Exception):
     def __int__(self, message):
         super().__init__(message)
 
 
-class TimeZoneError(Exception):
-    def __int__(self, message):
-        super().__init__(message)
-
-
-class GraphError(Exception):
-    def __int__(self, message):
-        super().__init__(message)
-
-
-class ClauseError(Exception):
-    def __int__(self, message):
-        super().__init__(message)
-
-
+# 用户语法问题
 class SyntaxError(Exception):
     def __int__(self, message):
         super().__init__(message)

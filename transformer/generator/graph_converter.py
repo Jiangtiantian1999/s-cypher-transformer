@@ -14,11 +14,11 @@ class GraphConverter:
         # 路径模式，属性节点和值节点的模式，路径有效时间限制
         path_pattern, property_patterns, node_time_window_info = self.match_object_node(path.nodes[0], time_window)
         path_time_window_info = node_time_window_info
-        for index, edge in enumerate(path.edges):
-            # 生成边模式
-            edge_pattern, edge_time_window_info = self.match_edge(edge, time_window)
-            path_pattern = path_pattern + edge_pattern
-            path_time_window_info.update(edge_time_window_info)
+        for index, relationship in enumerate(path.relationships):
+            # 生成关系模式
+            relationship_pattern, relationship_time_window_info = self.match_relationship(relationship, time_window)
+            path_pattern = path_pattern + relationship_pattern
+            path_time_window_info.update(relationship_time_window_info)
             # 生成节点模式
             node_pattern, node_property_patterns, node_time_window_info = self.match_object_node(path.nodes[index + 1],
                                                                                                  time_window)
@@ -72,49 +72,50 @@ class GraphConverter:
 
         return node_pattern, node_time_window_info
 
-    def match_edge(self, edge: SEdge, time_window: AtTimeClause | BetweenClause = None) -> (str, dict[str, str]):
-        if edge.variable is None:
-            edge.variable = self.variables_manager.get_random_variable()
-        # 边模式
-        edge_pattern = edge.variable
-        for label in edge.labels:
-            edge_pattern = edge_pattern + ':' + label
-        if edge.length[0] != 1 or edge.length[1] != 1:
-            edge_pattern = edge_pattern + '*'
-            if edge.length[0] is not None or edge.length[1] is not None:
-                if edge.length[0] == edge.length[1]:
-                    edge_pattern = edge_pattern + str(edge.length[0])
+    def match_relationship(self, relationship: SRelationship, time_window: AtTimeClause | BetweenClause = None) -> (
+    str, dict[str, str]):
+        if relationship.variable is None:
+            relationship.variable = self.variables_manager.get_random_variable()
+        # 关系模式
+        relationship_pattern = relationship.variable
+        for label in relationship.labels:
+            relationship_pattern = relationship_pattern + ':' + label
+        if relationship.length[0] != 1 or relationship.length[1] != 1:
+            relationship_pattern = relationship_pattern + '*'
+            if relationship.length[0] is not None or relationship.length[1] is not None:
+                if relationship.length[0] == relationship.length[1]:
+                    relationship_pattern = relationship_pattern + str(relationship.length[0])
                 else:
-                    if edge.length[0]:
-                        edge_pattern = edge_pattern + str(edge.length[0])
-                    edge_pattern = edge_pattern + ".."
-                    if edge.length[1]:
-                        edge_pattern = edge_pattern + str(edge.length[1])
-        if len(edge.properties) != 0:
-            edge_pattern = edge_pattern + '{'
-            for index, (property_name, property_value) in enumerate(edge.properties.items()):
+                    if relationship.length[0]:
+                        relationship_pattern = relationship_pattern + str(relationship.length[0])
+                    relationship_pattern = relationship_pattern + ".."
+                    if relationship.length[1]:
+                        relationship_pattern = relationship_pattern + str(relationship.length[1])
+        if len(relationship.properties) != 0:
+            relationship_pattern = relationship_pattern + '{'
+            for index, (property_name, property_value) in enumerate(relationship.properties.items()):
                 if index != 0:
-                    edge_pattern = edge_pattern + ", "
+                    relationship_pattern = relationship_pattern + ", "
                 property_value_string = self.expression_converter.convert_expression(property_value)
-                edge_pattern = edge_pattern + property_name + " : " + property_value_string
-            edge_pattern = edge_pattern + '}'
-        if edge_pattern != "":
-            edge_pattern = "-[" + edge_pattern + "]-"
+                relationship_pattern = relationship_pattern + property_name + " : " + property_value_string
+            relationship_pattern = relationship_pattern + '}'
+        if relationship_pattern != "":
+            relationship_pattern = "-[" + relationship_pattern + "]-"
         else:
-            edge_pattern = '-' + edge_pattern + '-'
-        if edge.direction == edge.LEFT:
-            edge_pattern = '<' + edge_pattern
-        elif edge.direction == edge.RIGHT:
-            edge_pattern = edge_pattern + '>'
+            relationship_pattern = '-' + relationship_pattern + '-'
+        if relationship.direction == SRelationship.LEFT:
+            relationship_pattern = '<' + relationship_pattern
+        elif relationship.direction == SRelationship.RIGHT:
+            relationship_pattern = relationship_pattern + '>'
 
-        # 边的有效时间限制
-        edge_time_window_info = {}
-        if edge.time_window is not None:
-            edge_time_window_info = {edge.variable: self.expression_converter.convert_at_t_element(edge.time_window)}
+        # 关系的有效时间限制
+        relationship_time_window_info = {}
+        if relationship.time_window is not None:
+            relationship_time_window_info = {relationship.variable: self.expression_converter.convert_at_t_element(relationship.time_window)}
         elif time_window is not None:
-            edge_time_window_info = {edge.variable: None}
+            relationship_time_window_info = {relationship.variable: None}
 
-        return edge_pattern, edge_time_window_info
+        return relationship_pattern, relationship_time_window_info
 
     def create_path(self, path: SPath, time_window: AtTimeClause = None) -> (List[str], List[str], List[str], str):
         # 路径模式，属性节点和值节点的模式
@@ -130,18 +131,18 @@ class GraphConverter:
         all_object_node_pattern.append(object_node_pattern)
         all_property_node_patterns.extend(property_node_patterns)
         all_value_node_patterns.extend(value_node_patterns)
-        for index, edge in enumerate(path.edges):
+        for index, relationship in enumerate(path.relationships):
             if path.nodes[index + 1].variable is None:
                 path.nodes[index + 1].variable = self.variables_manager.get_random_variable()
-            if edge.variable is None:
-                edge.variable = self.variables_manager.get_random_variable()
+            if relationship.variable is None:
+                relationship.variable = self.variables_manager.get_random_variable()
             object_node_pattern, property_node_patterns, value_node_patterns = self.create_object_node(
                 path.nodes[index + 1], time_window)
             all_object_node_pattern.append(object_node_pattern)
             all_property_node_patterns.extend(property_node_patterns)
             all_value_node_patterns.extend(value_node_patterns)
-            edge_pattern = self.create_edge(edge, path.nodes[index], path.nodes[index + 1], time_window)
-            path_pattern = path_pattern + edge_pattern + '(' + path.nodes[index + 1].variable + ')'
+            relationship_pattern = self.create_relationship(relationship, path.nodes[index], path.nodes[index + 1], time_window)
+            path_pattern = path_pattern + relationship_pattern + '(' + path.nodes[index + 1].variable + ')'
         if path.variable:
             path_pattern = path.variable + " = " + path_pattern
         return all_object_node_pattern, all_property_node_patterns, all_value_node_patterns, path_pattern
@@ -160,7 +161,7 @@ class GraphConverter:
         else:
             # 该对象节点是在查询语句中定义的，在更新语句中调用时不能设置其标签或属性
             if len(object_node.labels) > 1 or len(object_node.properties) > 0:
-                raise ValueError("Variable `" + object_node.variable + "` already declared.")
+                raise SyntaxError("Variable `" + object_node.variable + "` already declared.")
             object_node_pattern = '(' + object_node.variable + ')'
         return object_node_pattern, property_node_patterns, value_node_patterns
 
@@ -191,51 +192,52 @@ class GraphConverter:
         if node.__class__ == ObjectNode:
             node_pattern = node_pattern + "{intervalFrom: " + interval_from_string + ", intervalTo: " + interval_to_string + "}"
         elif node.__class__ in [PropertyNode, ValueNode]:
-            # 检查属性节点和值节点的有效时间是否满足约束
+            # 调用函数检查属性节点和值节点的有效时间是否满足约束
             node_pattern = node_pattern + "{intervalFrom: scypher.getIntervalFromOfSubordinateNode(" + parent_node.variable + ", " + interval_from_string + "), "
             node_pattern = node_pattern + "intervalTo: scypher.getIntervalToOfSubordinateNode(" + parent_node.variable + ", " + interval_to_string + ")}"
 
         node_pattern = '(' + node_pattern + ')'
         return node_pattern
 
-    def create_edge(self, edge: SEdge, from_node: ObjectNode = None, to_node: ObjectNode = None,
-                    time_window: AtTimeClause = None) -> str:
-        if len(edge.labels) == 0:
+    def create_relationship(self, relationship: SRelationship, from_node: ObjectNode = None, to_node: ObjectNode = None,
+                            time_window: AtTimeClause = None) -> str:
+        if len(relationship.labels) == 0:
             raise SyntaxError(
                 "Exactly one relationship type must be specified for CREATE. Did you forget to prefix your relationship type with a ':'?")
-        if edge.variable:
-            edge_pattern = edge.variable
+        if relationship.variable:
+            relationship_pattern = relationship.variable
         else:
-            edge_pattern = ""
-        # 添加边标签
-        for label in edge.labels:
-            edge_pattern = edge_pattern + ':' + label
-        # 添加边属性
-        edge_pattern = edge_pattern + '{'
-        for key, value in edge.properties.items():
-            edge_pattern = edge_pattern + key + ": " + self.expression_converter.convert_expression(value) + ", "
-        # 需要检查边的有效时间，以及是否有重复边
-        edge_info = {"labels": edge.labels, "properties": list(edge.properties.keys())}
-        if edge.time_window:
+            relationship_pattern = ""
+        # 添加关系的标签
+        for label in relationship.labels:
+            relationship_pattern = relationship_pattern + ':' + label
+        # 添加关系的属性
+        relationship_pattern = relationship_pattern + '{'
+        for property_key, property_value in relationship.properties.items():
+            relationship_pattern = relationship_pattern + property_key + ": " + self.expression_converter.convert_expression(
+                property_value) + ", "
+        # 用于检查关系的有效时间是否符合约束，以及是否有重复关系
+        relationship_info = {"labels": relationship.labels, "properties": list(relationship.properties.keys())}
+        if relationship.time_window:
             interval_from_string = "scypher.timePoint(" + self.expression_converter.convert_time_point_literal(
-                edge.time_window.interval_from) + ')'
+                relationship.time_window.interval_from) + ')'
             interval_to_string = "scypher.timePoint(" + self.expression_converter.convert_time_point_literal(
-                edge.time_window.interval_to) + ')'
+                relationship.time_window.interval_to) + ')'
         elif time_window:
             interval_from_string = self.expression_converter.convert_expression(time_window.time_point)
             interval_to_string = "scypher.timePoint(\"NOW\")"
         else:
             interval_from_string = "scypher.operateTime()"
             interval_to_string = "scypher.timePoint(\"NOW\")"
-        edge_pattern = edge_pattern + "intervalFrom: scypher.getIntervalFromOfEdge(" + from_node.variable + ", " + to_node.variable + ", " + convert_dict_to_str(
-            edge_info) + ", " + interval_from_string + "), "
-        edge_pattern = edge_pattern + "intervalTo: scypher.getIntervalToOfEdge(" + from_node.variable + ", " + to_node.variable + ", " + convert_dict_to_str(
-            edge_info) + ", " + interval_to_string + ")}"
+        relationship_pattern = relationship_pattern + "intervalFrom: scypher.getIntervalFromOfRelationship(" + from_node.variable + ", " + to_node.variable + ", " + convert_dict_to_str(
+            relationship_info) + ", " + interval_from_string + "), "
+        relationship_pattern = relationship_pattern + "intervalTo: scypher.getIntervalToOfRelationship(" + from_node.variable + ", " + to_node.variable + ", " + convert_dict_to_str(
+            relationship_info) + ", " + interval_to_string + ")}"
 
-        edge_pattern = '-[' + edge_pattern + ']-'
-        if edge.direction == edge.LEFT:
-            edge_pattern = '<' + edge_pattern
-        elif edge.direction == edge.RIGHT:
-            edge_pattern = edge_pattern + '>'
+        relationship_pattern = '-[' + relationship_pattern + ']-'
+        if relationship.direction == SRelationship.LEFT:
+            relationship_pattern = '<' + relationship_pattern
+        elif relationship.direction == SRelationship.RIGHT:
+            relationship_pattern = relationship_pattern + '>'
 
-        return edge_pattern
+        return relationship_pattern

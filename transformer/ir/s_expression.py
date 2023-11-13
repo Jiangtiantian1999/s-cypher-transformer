@@ -1,5 +1,7 @@
 from typing import List
 
+from transformer.exceptions.s_exception import TranslateError
+
 
 class ListLiteral:
     # 注意：该处expressions为List[Expression]类型，由于与Expression相互引用，故此处不写明类型。
@@ -130,39 +132,39 @@ class PowerExpression:
         self.list_index_expressions = list_index_expressions
 
 
-class MultiplyDivideExpression:
-    def __init__(self, power_expressions: List[PowerExpression], multiply_divide_operations: List[str] = None):
+class MultiplyDivideModuloExpression:
+    def __init__(self, power_expressions: List[PowerExpression], multiply_divide_modulo_operations: List[str] = None):
         self.power_expressions = power_expressions
-        if multiply_divide_operations is None:
-            multiply_divide_operations = []
-        if len(power_expressions) != len(multiply_divide_operations) + 1:
-            raise ValueError(
-                "The numbers of the power expressions and multiply/divide operations are not matched.")
-        for multiply_divide_operation in multiply_divide_operations:
-            if multiply_divide_operation not in ['*', '/', '%']:
-                raise ValueError("The multiply/divide operation must be '*', '/' or '%' .")
-        self.multiply_divide_operations = multiply_divide_operations
+        if multiply_divide_modulo_operations is None:
+            multiply_divide_modulo_operations = []
+        if len(power_expressions) != len(multiply_divide_modulo_operations) + 1:
+            raise TranslateError(
+                "The numbers of the power expressions and multiply/divide/modulo operations are not matched.")
+        for multiply_divide_modulo_operation in multiply_divide_modulo_operations:
+            if multiply_divide_modulo_operation not in ['*', '/', '%']:
+                raise TranslateError("The multiply/divide/modulo operation must be '*', '/' or '%'.")
+        self.multiply_divide_modulo_operations = multiply_divide_modulo_operations
 
 
 class AddSubtractExpression:
-    def __init__(self, multiply_divide_expressions: List[MultiplyDivideExpression],
+    def __init__(self, multiply_divide_expressions: List[MultiplyDivideModuloExpression],
                  add_subtract_operations: List[str] = None):
         self.multiply_divide_expressions = multiply_divide_expressions
         if add_subtract_operations is None:
             add_subtract_operations = []
         if len(multiply_divide_expressions) != len(add_subtract_operations) + 1:
-            raise ValueError(
-                "The numbers of the multiply/divide expressions and add/subtract operations are not matched.")
+            raise TranslateError(
+                "The numbers of the multiply/divide/modulo expressions and add/subtract operations are not matched.")
         for add_subtract_operation in add_subtract_operations:
             if add_subtract_operation not in ['-', '+']:
-                raise ValueError("The add/subtract operation must be '+' or '-'.")
+                raise TranslateError("The add/subtract operation must be '+' or '-'.")
         self.add_subtract_operations = add_subtract_operations
 
 
 class TimePredicateExpression:
     def __init__(self, time_operation: str, add_subtract_expression: AddSubtractExpression):
         if time_operation.lower() not in ["during", "overlaps"]:
-            raise ValueError("The time operation must be 'during' or 'overlaps'.")
+            raise TranslateError("The time operation must be 'during' or 'overlaps'.")
         self.time_operation = time_operation
         self.add_subtract_expression = add_subtract_expression
 
@@ -170,7 +172,7 @@ class TimePredicateExpression:
 class StringPredicateExpression:
     def __init__(self, string_operation: str, add_subtract_expression: AddSubtractExpression):
         if string_operation.lower() not in ["starts with", "ends with", "contains"]:
-            raise ValueError("The string operation must in 'starts with', 'ends with' and 'contains'.")
+            raise TranslateError("The string operation must in 'starts with', 'ends with' and 'contains'.")
         self.string_operation = string_operation
         self.add_subtract_expression = add_subtract_expression
 
@@ -200,10 +202,10 @@ class ComparisonExpression:
         if comparison_operations is None:
             comparison_operations = []
         if len(subject_expressions) != len(comparison_operations) + 1:
-            raise ValueError("The numbers of the subject expressions and comparison operations are not matched.")
+            raise TranslateError("The numbers of the subject expressions and comparison operations are not matched.")
         for comparison_operation in comparison_operations:
             if comparison_operation not in ['=', "<>", '<', '>', "<=", ">="]:
-                raise ValueError("The comparison operation must be '=', '<>', '<', '>', '<=' or '>='.")
+                raise TranslateError("The comparison operation must be '=', '<>', '<', '>', '<=' or '>='.")
         self.comparison_operations = comparison_operations
 
 
