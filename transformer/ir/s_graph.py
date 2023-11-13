@@ -48,9 +48,9 @@ class SRelationship:
     def __init__(self, direction: str, variable: str = None, labels: List[str] = None, length: Tuple[int, int] = (1, 1),
                  time_window: AtTElement = None, properties: dict[str, Expression] = None):
         if direction.upper() not in [self.LEFT, self.RIGHT, self.UNDIRECTED]:
-            raise TranslateError("Direction of relationships must be 'LEFT', 'RIGHT' or 'UNDIRECTED'.")
+            raise TranslateError("Direction of relationships must be 'LEFT', 'RIGHT' or 'UNDIRECTED'")
         if length[0] is not None and length[1] is not None and (length[0] < 0 or length[0] > length[1]):
-            raise TranslateError("The length range of relationship is incorrect.")
+            raise TranslateError("The length range of relationship is incorrect")
         self.direction = direction
         self.variable = variable
         if labels is None:
@@ -69,7 +69,7 @@ class SPath:
         if relationships is None:
             relationships = []
         if len(nodes) != len(relationships) + 1:
-            raise TranslateError("The numbers of the nodes and relationships are not matched.")
+            raise TranslateError("The numbers of the nodes and relationships are not matched")
         self.nodes = nodes
         self.relationships = relationships
         self.variable = variable

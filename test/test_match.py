@@ -80,7 +80,7 @@ class TestMatch(TestCase):
 
     def test_match_10(self):
         s_cypher = dedent("""
-        MATCH (n:Person) AT_TIME date("1950")
+        MATCH (n:Person) AT TIME date("1950")
         WHERE n.name STARTS WITH "Mary"
         RETURN n.name
         """)
@@ -89,7 +89,7 @@ class TestMatch(TestCase):
 
     def test_match_11(self):
         s_cypher = dedent("""
-        MATCH (n:Person) AT_TIME date("2015202T21+18:00")
+        MATCH (n:Person) AT TIME date("2015202T21+18:00")
         WHERE n.name STARTS WITH "Mary"
         RETURN n.name
         """)

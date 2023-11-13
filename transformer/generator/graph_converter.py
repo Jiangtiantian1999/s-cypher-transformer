@@ -161,7 +161,7 @@ class GraphConverter:
         else:
             # 该对象节点是在查询语句中定义的，在更新语句中调用时不能设置其标签或属性
             if len(object_node.labels) > 1 or len(object_node.properties) > 0:
-                raise SyntaxError("Variable `" + object_node.variable + "` already declared.")
+                raise SyntaxError("Variable `" + object_node.variable + "` already declared")
             object_node_pattern = '(' + object_node.variable + ')'
         return object_node_pattern, property_node_patterns, value_node_patterns
 

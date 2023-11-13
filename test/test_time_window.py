@@ -8,7 +8,7 @@ class TestTimeWindow(TestCase):
     def test_at_time_1(self):
         s_cypher = dedent("""
         MATCH (n:Person)
-        AT_TIME date("1950")
+        AT TIME date("1950")
         WHERE n.name STARTS WITH "Mary"
         RETURN n.name
         """)

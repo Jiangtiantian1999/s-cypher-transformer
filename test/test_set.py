@@ -8,7 +8,7 @@ class TestSet(TestCase):
         s_cypher = dedent("""
         MATCH (n {name: "Pauline Boutler"})
         SET n.gender@T("2000", NOW) = "Male"
-        AT_TIME now()
+        AT TIME now()
         """)
         cypher_query = transform_to_cypher(s_cypher)
         print("test_set_1:", s_cypher, '\n', cypher_query, '\n')
@@ -41,7 +41,7 @@ class TestSet(TestCase):
         s_cypher = dedent("""
         MATCH (:Person {name: "Pauline Boutler"})-[e:LIVE_IN]->(:City {name: "London"})
         SET e.code = "255389"
-        AT_TIME date("2023")
+        AT TIME date("2023")
         """)
         cypher_query = transform_to_cypher(s_cypher)
         print("test_set_5:", s_cypher, '\n', cypher_query, '\n')

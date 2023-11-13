@@ -234,7 +234,7 @@ class ClauseConverter:
                              time_window: AtTimeClause | BetweenClause = None) -> str:
         if where_expression is None and (
                 pattern_time_window_info is None or len(pattern_time_window_info) == 0) and time_window is None:
-            raise TranslateError("The where expression and the time window conditions can't be None at the same time.")
+            raise TranslateError("The where expression and the time window conditions can't be None at the same time")
         where_clause_string = "WHERE "
         if where_expression:
             where_clause_string = where_clause_string + self.expression_converter.convert_expression(where_expression)
