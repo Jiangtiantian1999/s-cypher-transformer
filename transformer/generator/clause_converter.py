@@ -301,40 +301,34 @@ class ClauseConverter:
         delete_clause_string = ""
 
         for delete_item in delete_clause.delete_items:
-            if delete_item.property_name is None:
-                # 物理删除对象节点/路径/关系，调用scypher.getObjectToDelete，参数为对象节点/路径/关系
-                # 删除对象节点/路径时，返回已删除了属性节点和值节点的对象节点/路径；删除关系时，返回关系。
-                delete_clause_string = delete_clause_string + "\nDELETE "
-                if delete_clause.is_detach:
-                    delete_clause_string = delete_clause_string + "\nDETACH DELETE "
-                delete_clause_string = delete_clause_string + "scypher.getObjectToDelete(" + self.expression_converter.convert_expression(
-                    delete_item.expression) + ')'
-            else:
-                # 删除对象节点的属性，调用getItemsToDelete，第一个参数为对象节点，第二个参数为属性名，第三个参数为删除的值节点的范围
-                # 以列表形式返回所有待物理删除的元素
-                delete_list_string = "scypher.getItemsToDelete(" + self.expression_converter.convert_expression(
-                    delete_item.expression) + ", "
-                delete_list_string = delete_list_string + delete_item.property_name + ", "
-                if delete_item.time_window:
-                    # 删除值节点
-                    if delete_item.time_window.__class__ == AtTElement:
-                        delete_list_string = delete_list_string + self.expression_converter.convert_at_t_element(
-                            delete_item.time_window) + ')'
-                    elif delete_clause.time_window:
-                        if delete_clause.time_window.__class__ == AtTimeClause:
-                            delete_list_string = delete_list_string + self.expression_converter.convert_expression(
-                                delete_clause.time_window.time_point) + ')'
-                        elif delete_clause.time_window.__class__ == BetweenClause:
-                            delete_list_string = delete_list_string + self.expression_converter.convert_expression(
-                                delete_clause.time_window.interval) + ')'
-                    else:
-                        delete_list_string = delete_list_string + str(
-                            delete_item.time_window) + ')'
+            # 物理删除对象节点/路径/关系/对象节点的属性，调用getItemsToDelete，第一个参数为对象节点/路径/关系，第二个参数为属性名，第三个参数为删除的值节点的范围
+            # 以列表形式返回所有待物理删除的元素
+            delete_list_string = "scypher.getItemsToDelete(" + self.expression_converter.convert_expression(
+                delete_item.expression) + ", "
+            delete_list_string = delete_list_string + delete_item.property_name + ", "
+            if delete_item.time_window:
+                # 删除值节点
+                if delete_item.time_window.__class__ == AtTElement:
+                    delete_list_string = delete_list_string + self.expression_converter.convert_at_t_element(
+                        delete_item.time_window) + ')'
+                elif delete_clause.time_window:
+                    if delete_clause.time_window.__class__ == AtTimeClause:
+                        delete_list_string = delete_list_string + self.expression_converter.convert_expression(
+                            delete_clause.time_window.time_point) + ')'
+                    elif delete_clause.time_window.__class__ == BetweenClause:
+                        delete_list_string = delete_list_string + self.expression_converter.convert_expression(
+                            delete_clause.time_window.interval) + ')'
                 else:
-                    # 删除属性节点
-                    delete_list_string = delete_list_string + "NULL)"
-                delete_item_variable = self.variables_manager.get_random_variable()
-                delete_clause_string = delete_clause_string + "\nFOREACH (" + delete_item_variable + " IN " + delete_list_string + " | DELETE " + delete_item_variable + ')'
+                    delete_list_string = delete_list_string + str(
+                        delete_item.time_window) + ')'
+            else:
+                # 删除属性节点
+                delete_list_string = delete_list_string + "NULL)"
+            delete_item_variable = self.variables_manager.get_random_variable()
+            delete_operation = "DELETE"
+            if delete_clause.is_detach:
+                delete_operation = "DETACH DELETE"
+            delete_clause_string = delete_clause_string + "\nFOREACH (" + delete_item_variable + " IN " + delete_list_string + " | " + delete_operation + " " + delete_item_variable + ')'
 
         return delete_clause_string.lstrip()
 
