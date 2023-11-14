@@ -216,7 +216,7 @@ class ClauseConverter:
                             property_value)
 
                 call_string = call_string + "\nCALL scypher." + pattern.function_name + '(' + start_node.variable + ", " + end_node.variable + ", " + convert_dict_to_str(
-                    relationship_info) + ")\nYIELD " + pattern.variable
+                    relationship_info) + ")\nYIELD path as " + pattern.variable
 
         if match_clause_string in ["MATCH ", "OPTIONAL MATCH "]:
             return call_string
