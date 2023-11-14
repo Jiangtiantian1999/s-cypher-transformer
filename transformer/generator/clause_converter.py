@@ -247,6 +247,8 @@ class ClauseConverter:
                 time_window_string = self.expression_converter.convert_expression(time_window.interval)
             else:
                 time_window_string = "NULL"
+            if pattern_time_window_info[0].__class__ != list:
+                pattern_time_window_info = [pattern_time_window_info]
             where_clause_string = where_clause_string + "scypher.limitEffectiveTime(" + convert_list_to_str(
                 pattern_time_window_info) + ", " + time_window_string + ')'
 
