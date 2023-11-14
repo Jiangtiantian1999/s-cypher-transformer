@@ -132,6 +132,7 @@ class ExpressionConverter:
             time_window_string = self.convert_at_t_element(time_window)
         else:
             time_window_string = "NULL"
+        # 实际上variable_name可能为对象节点/边/Map，scypher.variable_name函数内部应该加以区分
         return "scypher.getPropertyValue(" + variable_name + ", \"" + property_name + "\", " + time_window_string + ')'
 
     def convert_properties_labels_expression(self, properties_labels_expression: PropertiesLabelsExpression) -> str:
@@ -166,7 +167,7 @@ class ExpressionConverter:
                 interval_string = self.convert_at_t_element(at_t_expression.time_window)
             else:
                 interval_string = "NULL"
-            # 实际上object_variable.property_name也可能为对象节点，scypher.getValueEffectiveTime函数内部应该加以区分
+            # 一定是返回值节点的有效时间，否则报错
             interval = "scypher.getValueEffectiveTime(" + element_variable + ", \"" + at_t_expression.property_name + "\", " + interval_string + ')'
 
         for index, time_property in enumerate(at_t_expression.time_property_chains):

@@ -341,7 +341,7 @@ class ClauseConverter:
         stale_clause_string = "FOREACH "
         stale_list_string = ""
         for stale_item in stale_clause.stale_items:
-            # 逻辑删除对象节点/属性节点/值节点/关系，调用scypher.getItemsToStale，第一个参数为对象节点，第二个参数为属性名，第三个参数为【是否仅逻辑删除值节点】，第四个参数为逻辑删除时间
+            # 逻辑删除对象节点/属性节点/值节点/关系，调用scypher.getItemsToStale，第一个参数为对象节点/关系，第二个参数为属性名，第三个参数为【是否仅逻辑删除值节点】，第四个参数为逻辑删除时间
             # 以列表形式返回所有待逻辑删除的元素
             stale_list_string = stale_list_string + "scypher.getItemsToStale(" + self.expression_converter.convert_expression(
                 stale_item.expression)
@@ -372,32 +372,29 @@ class ClauseConverter:
         for set_item in set_clause.set_items:
             # 为在set时检查约束，调用scypher.getItemToSetX
             if set_item.__class__ == EffectiveTimeSetting:
-                # 设置对象节点/属性节点/值节点/关系的有效时间，调用scypher.getItemsToSetEffectiveTime，第一个参数为对象节点/关系及其有效时间，第二个参数为属性名及其有效时间，第三个参数为值节点及其有效时间，第四个参数为set语句的有效时间
+                # 设置对象节点/属性节点/值节点/关系的有效时间，调用scypher.getItemsToSetEffectiveTime，第一个参数为对象节点/关系及其有效时间，第二个参数为属性名及属性节点的有效时间，第三个参数为值节点的有效时间，第四个参数为set语句的操作时间
                 set_item_variable = self.variables_manager.get_random_variable()
                 set_clause_string = set_clause_string + "\nFOREACH (" + set_item_variable + " IN scypher.getItemsToSetEffectiveTime("
                 object_info = {"objectNode": set_item.object_setting.variable,
-                               "effective_time": self.expression_converter.convert_at_t_element(
+                               "effectiveTime": self.expression_converter.convert_at_t_element(
                                    set_item.object_setting.effective_time)}
                 set_clause_string = set_clause_string + convert_dict_to_str(object_info) + ", "
                 if set_item.property_setting:
-                    property_info = {"propertyNode": set_item.property_setting.variable,
-                                     "effective_time": self.expression_converter.convert_at_t_element(
+                    property_info = {"propertyName": set_item.property_setting.variable,
+                                     "effectiveTime": self.expression_converter.convert_at_t_element(
                                          set_item.property_setting.effective_time)}
                     set_clause_string = set_clause_string + convert_dict_to_str(property_info) + ", "
                     if set_item.value_setting:
-                        value_info = {"valueNode": set_item.value_setting.variable,
-                                      "effective_time": self.expression_converter.convert_at_t_element(
-                                          set_item.value_setting.effective_time)}
-                        set_clause_string = set_clause_string + convert_dict_to_str(value_info) + ", "
+                        set_clause_string = set_clause_string + self.expression_converter.convert_at_t_element(
+                            set_item.value_setting) + ", "
                     else:
                         set_clause_string = set_clause_string + "NULL, "
                 else:
                     set_clause_string = set_clause_string + "NULL, NULL, "
-                if set_clause.at_time_clause:
-                    set_clause_string = set_clause_string + time_point + ')'
+                set_clause_string = set_clause_string + time_point + ')'
                 set_clause_string = set_clause_string + " | SET " + set_item_variable + ".left = " + set_item_variable + ".right)"
             elif set_item.__class__ == ExpressionSetting:
-                # 修改节点/关系的属性，调用scypher.getItemsToSetExpression，第一个参数为对象节点，第二个参数为属性名，
+                # 修改节点/关系的属性，调用scypher.getItemsToSetExpression，第一个参数为对象节点/关系，第二个参数为属性名，
                 # 第三个参数为set的操作时间，第四个参数为【是否为+=】，第五个参数为表达式
                 set_item_variable = self.variables_manager.get_random_variable()
                 set_clause_string = set_clause_string + "\nFOREACH (" + set_item_variable + " IN scypher.getItemsToSetExpression("

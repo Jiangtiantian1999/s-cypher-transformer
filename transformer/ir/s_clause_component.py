@@ -80,7 +80,7 @@ class NodeIntervalSetting:
 class EffectiveTimeSetting:
 
     def __init__(self, object_setting: NodeIntervalSetting, property_setting: NodeIntervalSetting = None,
-                 value_setting: NodeIntervalSetting = None):
+                 value_setting: AtTElement = None):
         if property_setting is None and value_setting is not None:
             raise TranslateError("Can't specify value node before specifying property node")
         self.object_setting = object_setting
