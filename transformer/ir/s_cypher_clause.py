@@ -160,7 +160,7 @@ class SingleQueryClause:
     def __init__(self, reading_clauses: List[ReadingClause] = None, updating_clauses: List[UpdatingClause] = None,
                  return_clause: ReturnClause = None):
         if (updating_clauses is None or len(updating_clauses) == 0) and return_clause is None:
-            raise TranslateError("The updating clauses and the return_clause can't be empty at the same time")
+            raise TranslateError("The updating clauses and the return clause can't be empty at the same time")
         if reading_clauses is None:
             reading_clauses = []
         self.reading_clauses = reading_clauses

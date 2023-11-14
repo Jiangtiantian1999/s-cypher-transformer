@@ -1,7 +1,7 @@
 from transformer.conf.config_reader import ConfigReader
 from transformer.generator.expression_converter import ExpressionConverter
 from transformer.generator.graph_converter import GraphConverter
-from transformer.generator.utils import convert_dict_to_str
+from transformer.generator.utils import convert_dict_to_str, convert_list_to_str
 from transformer.generator.variables_manager import VariablesManager
 from transformer.ir.s_cypher_clause import *
 from transformer.ir.s_graph import *
@@ -155,18 +155,18 @@ class ClauseConverter:
         match_clause_string = "MATCH "
         if match_clause.is_optional:
             match_clause_string = "OPTIONAL MATCH "
-        pattern_time_window_info = {}
+        pattern_time_window_info = []
         call_string = ""
         for pattern in match_clause.patterns:
             pattern = pattern.pattern
             if pattern.__class__ == SPath:
-                path_pattern, property_patterns, pattern_time_window_inf = self.graph_converter.match_path(pattern,
-                                                                                                           match_clause.time_window)
+                path_pattern, property_patterns, pattern_time_window_info = self.graph_converter.match_path(pattern,
+                                                                                                            match_clause.time_window)
                 match_clause_string = match_clause_string + path_pattern + ", "
                 for property_pattern in property_patterns:
                     match_clause_string = match_clause_string + property_pattern + ", "
                 # 添加路径的时态条件限制
-                pattern_time_window_inf.update(pattern_time_window_inf)
+                pattern_time_window_info.extend(pattern_time_window_info)
             elif pattern.__class__ == TemporalPathCall:
                 if pattern.path.relationships[0].direction == SRelationship.LEFT:
                     start_node, end_node = pattern.path.nodes[1], pattern.path.nodes[0]
@@ -182,7 +182,7 @@ class ClauseConverter:
                     call_string = call_string + ", " + property_pattern
                 # 限制节点的有效时间
                 temporal_path_time_window_info = start_node_time_window_info
-                temporal_path_time_window_info.update(end_node_time_window_info)
+                temporal_path_time_window_info.extend(end_node_time_window_info)
                 if len(temporal_path_time_window_info) > 0 or match_clause.time_window:
                     where_expression_string = self.convert_where_clause(None, temporal_path_time_window_info,
                                                                         match_clause.time_window)
@@ -230,7 +230,7 @@ class ClauseConverter:
         return match_clause_string + call_string
 
     def convert_where_clause(self, where_expression: Expression = None,
-                             pattern_time_window_info: dict[str, str] = None,
+                             pattern_time_window_info: list = None,
                              time_window: AtTimeClause | BetweenClause = None) -> str:
         if where_expression is None and (
                 pattern_time_window_info is None or len(pattern_time_window_info) == 0) and time_window is None:
@@ -247,7 +247,7 @@ class ClauseConverter:
                 time_window_string = self.expression_converter.convert_expression(time_window.interval)
             else:
                 time_window_string = "NULL"
-            where_clause_string = where_clause_string + "scypher.limitEffectiveTime(" + convert_dict_to_str(
+            where_clause_string = where_clause_string + "scypher.limitEffectiveTime(" + convert_list_to_str(
                 pattern_time_window_info) + ", " + time_window_string + ')'
 
         return where_clause_string
