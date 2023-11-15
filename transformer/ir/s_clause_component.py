@@ -71,7 +71,7 @@ class RemovePropertyExpression:
         self.property_chains = property_chains
 
 
-class NodeIntervalSetting:
+class NodeEffectiveTimeSetting:
     def __init__(self, variable: str, effective_time: AtTElement = None):
         self.variable = variable
         self.effective_time = effective_time
@@ -79,7 +79,7 @@ class NodeIntervalSetting:
 
 class EffectiveTimeSetting:
 
-    def __init__(self, object_setting: NodeIntervalSetting, property_setting: NodeIntervalSetting = None,
+    def __init__(self, object_setting: NodeEffectiveTimeSetting, property_setting: NodeEffectiveTimeSetting = None,
                  value_setting: AtTElement = None):
         if property_setting is None and value_setting is not None:
             raise TranslateError("Can't specify value node before specifying property node")
