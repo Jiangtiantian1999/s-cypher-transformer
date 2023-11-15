@@ -190,7 +190,7 @@ s_PropertyOrLabelsWhereExpression
                           :  oC_Atom ( SP? oC_PropertyLookup )* ( SP? oC_NodeLabels )? ;
 
 
-s_AtTWhereExpression : oC_Atom ( ( SP? oC_PropertyLookup )+ ( SP? PoundValue )? )? SP? s_PropertyLookupTime ;
+s_AtTWhereExpression : oC_Atom ( ( SP? oC_PropertyLookup )* SP? '.' SP? oC_PropertyKeyName ( SP? PoundValue | s_AtTElement)? )? SP? s_PropertyLookupTime ;
 
 s_SingleIndexWhereExpression : SP? '[' s_LeftWhereExpression ']' ;
 

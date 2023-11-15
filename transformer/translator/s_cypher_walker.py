@@ -86,7 +86,7 @@ class SCypherWalker(s_cypherListener):
         self.string_predicate_expression = None
         self.time_predicate_expression = None
         self.add_subtract_expressions = []  # 第一个是oC_StringListNullPredicateExpression里的，第二个是PredicateExpression里的
-        self.multiply_divide_expressions = []
+        self.multiply_divide_modulo_expressions = []
         self.power_expressions = []
         self.list_index_expressions = []
         self.index_expressions = []
@@ -111,7 +111,7 @@ class SCypherWalker(s_cypherListener):
         self.where_string_predicate_expression = None
         self.where_time_predicate_expression = None
         self.where_add_subtract_expressions = []
-        self.where_multiply_divide_expressions = []
+        self.where_multiply_divide_modulo_expressions = []
         self.where_power_expressions = []
         self.where_list_index_expressions = []
         self.where_index_expressions = []
@@ -164,6 +164,7 @@ class SCypherWalker(s_cypherListener):
         self.list_literal_expressions = []
         self.is_explicit = False
         self.projection_item_is_all = False
+        self.is_property_look_up_time = False
 
     def exitOC_Query(self, ctx: s_cypherParser.OC_QueryContext):
         if ctx.oC_RegularQuery():
@@ -524,7 +525,7 @@ class SCypherWalker(s_cypherListener):
         self.rel_type_names = []  # 退出清空
         properties = self.properties
         self.properties = None  # 退出清空
-        self.relationship_pattern = SEdge('UNDIRECTED', variable, labels, length_tuple, interval, properties)
+        self.relationship_pattern = SRelationship('UNDIRECTED', variable, labels, length_tuple, interval, properties)
 
     def exitOC_RangeLiteral(self, ctx: s_cypherParser.OC_RangeLiteralContext):
         lengths = self.integer_literals
@@ -564,7 +565,7 @@ class SCypherWalker(s_cypherListener):
             self.relationship_pattern.direction = direction
             self.edge_list.append(self.relationship_pattern)
         else:
-            self.edge_list.append(SEdge(direction))
+            self.edge_list.append(SRelationship(direction))
 
     def exitS_PathFunctionPattern(self, ctx: s_cypherParser.S_PathFunctionPatternContext):
         # variable: str,
@@ -774,7 +775,7 @@ class SCypherWalker(s_cypherListener):
             raise TranslateError("The number of AddOrSubtractExpression is wrong.")
 
     def exitOC_AddOrSubtractExpression(self, ctx: s_cypherParser.OC_AddOrSubtractExpressionContext):
-        # multiply_divide_expressions: List[MultiplyDivideExpression],
+        # multiply_divide_modulo_expressions: List[MultiplyDivideExpression],
         # add_subtract_operations: List[str] = None
         # 获取加减运算符
         new_operations_list = self.add_subtract_operations
@@ -782,10 +783,10 @@ class SCypherWalker(s_cypherListener):
         add_subtract_operations = None
         if len(new_operations_list) > 0:
             add_subtract_operations = new_operations_list
-        multiply_divide_expressions = self.multiply_divide_expressions
-        self.multiply_divide_expressions = []  # 退出时清空，避免重复记录
+        multiply_divide_modulo_expressions = self.multiply_divide_modulo_expressions
+        self.multiply_divide_modulo_expressions = []  # 退出时清空，避免重复记录
         self.add_subtract_expressions.append(
-            AddSubtractExpression(multiply_divide_expressions, add_subtract_operations))
+            AddSubtractExpression(multiply_divide_modulo_expressions, add_subtract_operations))
 
     def exitS_AddOrSubtractOperator(self, ctx: s_cypherParser.S_AddOrSubtractOperatorContext):
         self.add_subtract_operations.append(ctx.getText())
@@ -801,7 +802,7 @@ class SCypherWalker(s_cypherListener):
             multiply_divide_operations = new_operations_list
         power_expressions = self.power_expressions
         self.power_expressions = []  # 退出时清空，避免重复记录
-        self.multiply_divide_expressions.append(MultiplyDivideExpression(power_expressions, multiply_divide_operations))
+        self.multiply_divide_modulo_expressions.append(MultiplyDivideModuloExpression(power_expressions, multiply_divide_operations))
 
     def exitS_MultiplyDivideModuloOperator(self, ctx: s_cypherParser.S_MultiplyDivideModuloOperatorContext):
         self.multiply_divide_module_operations.append(ctx.getText())
@@ -861,7 +862,7 @@ class SCypherWalker(s_cypherListener):
 
     def exitOC_PropertyOrLabelsExpression(self, ctx: s_cypherParser.OC_PropertyOrLabelsExpressionContext):
         # atom: Atom,
-        # property_chains: List[str] = None,
+        # property_chains: List[PropertyLookup] = None,
         # labels: List[str] = None
         atom = self.atom
         self.atom = None
@@ -879,43 +880,58 @@ class SCypherWalker(s_cypherListener):
 
     def exitS_AtTExpression(self, ctx: s_cypherParser.S_AtTExpressionContext):
         # atom: Atom,
-        # property_chains: List[str] = None,
-        # is_value: bool = False,
+        # property_chains: List[PropertyLookup] = None,
+        # property_name: str = None,
+        # time_window: bool | AtTElement = None,
         # time_property_chains: List[str] = None
         atom = self.atom
         self.atom = None
-        is_value = False
-        # 待确认
-        if ctx.PoundValue() is not None:
-            is_value = True
         # 获取属性
         if ctx.oC_PropertyLookup() is not None:
             property_chains = self.property_look_up_list
             self.property_look_up_list = []  # 退出清空
         else:
             property_chains = None
+        # 获取属性名
+        if ctx.oC_PropertyKeyName() is not None:
+            property_name = ctx.oC_PropertyKeyName().getText()
+        else:
+            property_name = None
+        # 获取时间窗口
+        if ctx.s_AtTElement() is not None:
+            time_window = self.at_t_element
+            self.at_t_element = None
+        elif ctx.PoundValue() is not None:
+            time_window = True
+        else:
+            time_window = None
         # 获取时间属性
         if ctx.s_PropertyLookupTime() is not None:
             time_property_chains = self.property_look_up_time_list
             self.property_look_up_time_list = []  # 退出清空
         else:
             time_property_chains = None
-        self.AtT_expression = AtTExpression(atom, property_chains, is_value, time_property_chains)
+        self.AtT_expression = AtTExpression(atom, property_chains, property_name, time_window, time_property_chains)
 
     def exitOC_PropertyLookup(self, ctx: s_cypherParser.OC_PropertyLookupContext):
         # property_name: str,
         # time_window: AtTElement = None
-        property_name = ctx.oC_PropertyKeyName()
+        property_name = ctx.oC_PropertyKeyName().getText()
         time_window = None
         if ctx.s_AtTElement() is not None:
             time_window = self.at_t_element
             self.at_t_element = None
         self.property_look_up_list.append(PropertyLookup(property_name, time_window))
 
+    def enterS_PropertyLookupTime(self, ctx:s_cypherParser.S_PropertyLookupTimeContext):
+        self.is_property_look_up_time = True
+
     def exitS_PropertyLookupTime(self, ctx: s_cypherParser.S_PropertyLookupTimeContext):
-        # TODO
-        self.property_look_up_time_list = self.property_look_up_list
-        self.property_look_up_list = []  # 退出清空
+        self.is_property_look_up_time = False
+
+    def exitOC_PropertyKeyName(self, ctx:s_cypherParser.OC_PropertyKeyNameContext):
+        if self.is_property_look_up_time:
+            self.property_look_up_time_list.append(ctx.getText())
 
     # =============处理WhereExpression===============
     def exitS_WhereExpression(self, ctx: s_cypherParser.S_WhereExpressionContext):
@@ -1026,9 +1042,9 @@ class SCypherWalker(s_cypherListener):
         where_add_subtract_operations = None
         if len(where_new_operations_list) > 0:
             where_add_subtract_operations = where_new_operations_list
-        where_multiply_divide_expressions = self.where_multiply_divide_expressions
-        self.where_multiply_divide_expressions = []  # 退出时清空，避免重复记录
-        self.where_add_subtract_expressions.append(AddSubtractExpression(where_multiply_divide_expressions,
+        where_multiply_divide_modulo_expressions = self.where_multiply_divide_modulo_expressions
+        self.where_multiply_divide_modulo_expressions = []  # 退出时清空，避免重复记录
+        self.where_add_subtract_expressions.append(AddSubtractExpression(where_multiply_divide_modulo_expressions,
                                                                          where_add_subtract_operations))
 
     def exitS_AddOrSubtractWhereOperator(self, ctx: s_cypherParser.S_AddOrSubtractWhereOperatorContext):
@@ -1042,8 +1058,8 @@ class SCypherWalker(s_cypherListener):
         where_multiply_divide_operations = where_new_operations_list
         where_power_expressions = self.where_power_expressions
         self.where_power_expressions = []  # 退出时清空，避免重复记录
-        self.where_multiply_divide_expressions.append(
-            MultiplyDivideExpression(where_power_expressions, where_multiply_divide_operations))
+        self.where_multiply_divide_modulo_expressions.append(
+            MultiplyDivideModuloExpression(where_power_expressions, where_multiply_divide_operations))
 
     def exitS_MultiplyDivideModuloWhereOperator(self, ctx: s_cypherParser.S_MultiplyDivideModuloWhereOperatorContext):
         self.where_multiply_divide_module_operations.append(ctx.getText())
@@ -1113,16 +1129,32 @@ class SCypherWalker(s_cypherListener):
     def exitS_AtTWhereExpression(self, ctx: s_cypherParser.S_AtTWhereExpressionContext):
         atom = self.atom
         self.atom = None
-        is_value = False
-        if ctx.PoundValue() is not None:
-            is_value = True
         # 获取属性
-        property_chains = self.property_look_up_list
-        self.property_look_up_list = []  # 退出清空
+        if ctx.oC_PropertyLookup() is not None:
+            property_chains = self.property_look_up_list
+            self.property_look_up_list = []  # 退出清空
+        else:
+            property_chains = None
+        # 获取属性名
+        if ctx.oC_PropertyKeyName() is not None:
+            property_name = ctx.oC_PropertyKeyName().getText()
+        else:
+            property_name = None
+        # 获取时间窗口
+        if ctx.s_AtTElement() is not None:
+            time_window = self.at_t_element
+            self.at_t_element = None
+        elif ctx.PoundValue() is not None:
+            time_window = True
+        else:
+            time_window = None
         # 获取时间属性
-        time_property_chains = self.property_look_up_time_list
-        self.property_look_up_time_list = []  # 退出清空
-        self.where_AtT_expression = AtTExpression(atom, property_chains, is_value, time_property_chains)
+        if ctx.s_PropertyLookupTime() is not None:
+            time_property_chains = self.property_look_up_time_list
+            self.property_look_up_time_list = []  # 退出清空
+        else:
+            time_property_chains = None
+        self.where_AtT_expression = AtTExpression(atom, property_chains, property_name, time_window, time_property_chains)
 
     # 更新语句
     def exitS_Create(self, ctx: s_cypherParser.S_CreateContext):
@@ -1189,7 +1221,6 @@ class SCypherWalker(s_cypherListener):
             time_window = self.at_t_element
             self.at_t_element = None  # 退出时清空
         elif ctx.PoundValue() is not None:
-            # TODO:bool的True和False怎么确定
             time_window = True
         self.delete_items.append(DeleteItem(expression, property_name, time_window))
 
@@ -1206,64 +1237,67 @@ class SCypherWalker(s_cypherListener):
         # ===NodeIntervalSetting
         # variable: str,
         # effective_time: AtTElement = None
+
         # ===item: EffectiveTimeSetting
-        if ctx.s_AtTElement() is not None:
-            # object_setting: NodeIntervalSetting,
-            # 对象节点变量名
-            object_variable = ctx.oC_Variable().getText()
-            # 对象节点的有效时间
-            object_interval = None
-            if ctx.s_AtTElement() is not None:
-                object_interval = self.getAtTElement(ctx.s_AtTElement().getText())
-            object_setting = NodeIntervalSetting(object_variable, object_interval)
-
-            # ===property_setting: NodeIntervalSetting = None,
-            # 属性节点的有效时间
-            property_interval = None
-            if ctx.s_SetPropertyItemOne() is not None:
-                if ctx.s_SetPropertyItemOne().s_AtTElement() is not None:
-                    property_interval = self.getAtTElement(ctx.s_SetPropertyItemOne().s_AtTElement().getText())
-            elif ctx.s_SetPropertyItemTwo() is not None:
-                if ctx.s_SetPropertyItemTwo().s_AtTElement() is not None:
-                    property_interval = self.getAtTElement(ctx.s_SetPropertyItemTwo().s_AtTElement().getText())
-            # 为属性节点名称，或者( SP? oC_PropertyLookup )+的字符串表示
-            property_variable = None
-            if ctx.s_SetPropertyItemTwo() is not None:
-                if ctx.s_SetPropertyItemTwo().oC_PropertyKeyName() is not None:
-                    property_variable = ctx.s_SetPropertyItemTwo().oC_PropertyKeyName().getText()
-            elif ctx.oC_PropertyExpression() is not None:
-                if ctx.oC_PropertyExpression().oC_PropertyLookup() is not None:
-                    property_variable = ' '.join(self.property_look_up_list)
-                    self.property_look_up_list = []  # 退出清空
-            property_setting = NodeIntervalSetting(property_variable, property_variable)
-
-            # ===value_setting: NodeIntervalSetting = None
-            # 设置值节点的值，或者表达式赋值
-            value_expression = None
-            if ctx.oC_Expression() is not None:
-                value_expression = self.expression
-                self.expression = None
-            # 设置值节点的有效时间
-            value_interval = None
-            if ctx.s_SetValueItem() is not None:
-                if ctx.s_SetValueItem().s_AtTElement() is not None:
-                    value_interval = self.getAtTElement(ctx.s_SetValueItem().s_AtTElement().getText())
-            elif ctx.s_SetValueItem() is not None:
-                if ctx.s_SetValueItem().s_AtTElement() is not None:
-                    value_interval = self.getAtTElement(ctx.s_SetValueItem().s_AtTElement().getText())
-            value_setting = NodeIntervalSetting(value_expression, value_interval)
-            # TODO:value_expression还是value_variable
+        # 只有对象节点
+        if ctx.s_AtTElement() is None and all(item is None for item in [ctx.s_SetPropertyItemOne(), ctx.s_SetPropertyItemTwo()]):
+            variable = ctx.oC_Variable().getText()
+            effective_time = self.at_t_element
+            self.at_t_element = None
+            object_setting = NodeEffectiveTimeSetting(variable, effective_time)
             # 整合SetItem
-            item = EffectiveTimeSetting(object_setting, property_setting, value_setting)
-            self.set_items.append(item)
-
+            self.set_items.append(EffectiveTimeSetting(object_setting, None, None))
+        # 对象节点+属性节点
+        elif all(item is not None for item in [ctx.oC_Variable(), ctx.s_SetPropertyItemOne()]):
+            # 对象节点
+            object_variable = ctx.oC_Variable().getText()
+            object_effective_time = None
+            if ctx.s_AtTElement() is not None:
+                object_effective_time = self.at_t_element
+                self.at_t_element = None
+            object_setting = NodeEffectiveTimeSetting(object_variable, object_effective_time)
+            # 属性节点
+            property_variable = ctx.s_SetPropertyItemOne().oC_PropertyKeyName.getText()
+            property_effective_time = self.getAtTElement(ctx.s_SetPropertyItemOne().s_AtTElement().getText())
+            property_setting = NodeEffectiveTimeSetting(property_variable, property_effective_time)
+            # 整合SetItem
+            self.set_items.append(EffectiveTimeSetting(object_setting, property_setting, None))
+        # 对象节点+属性节点+值节点
+        elif all(item is not None for item in [ctx.oC_Variable(), ctx.s_SetPropertyItemTwo()]):
+            # 对象节点
+            object_variable = ctx.oC_Variable().getText()
+            object_effective_time = None
+            if ctx.s_AtTElement() is not None:
+                object_effective_time = self.at_t_element
+                self.at_t_element = None
+            object_setting = NodeEffectiveTimeSetting(object_variable, object_effective_time)
+            # 属性节点
+            property_variable = ctx.s_SetPropertyItemOne().oC_PropertyKeyName.getText()
+            property_effective_time = None
+            if ctx.s_SetPropertyItemTwo().s_AtTElement() is not None:
+                property_effective_time = self.getAtTElement(ctx.s_SetPropertyItemTwo().s_AtTElement().getText())
+            property_setting = NodeEffectiveTimeSetting(property_variable, property_effective_time)
+            # 值节点
+            value_effective_time = None
+            if ctx.s_SetPropertyItemTwo().s_AtTElement() is not None:
+                value_effective_time = self.getAtTElement(ctx.s_SetValueItem().s_AtTElement().getText())
+            value_setting = value_effective_time
+            # 整合SetItem
+            self.set_items.append(EffectiveTimeSetting(object_setting, property_setting, value_setting))
+        # ===item: LabelSetting
+        elif all(item is not None for item in [ctx.oC_Variable(), ctx.oC_NodeLabels()]):
+            # variable: str,
+            # labels: List[str]
+            variable = ctx.oC_Variable().getText()
+            labels = self.node_labels
+            self.node_labels = []  # 退出清空
+            self.set_items.append(LabelSetting(variable, labels))
         # ===item: ExpressionSetting
         elif ctx.oC_Expression() is not None:
-            #   expression_left: PropertyExpression | str,
-            #   expression_right: Expression,
-            #   is_added: False
+            # expression_left: SetPropertyExpression | str,
+            # expression_right: Expression,
+            # is_added: False
             if ctx.oC_PropertyExpression() is not None:
-                # TODO
                 expression_left = self.property_expression
                 self.property_expression = None  # 退出清空
             else:
@@ -1271,31 +1305,21 @@ class SCypherWalker(s_cypherListener):
             expression_right = self.expression
             self.expression = None  # 退出清空
             is_added = False
-            if '=' in ctx.getText():
+            if '+=' in ctx.getText():
                 is_added = True
-            item = ExpressionSetting(expression_left, expression_right, is_added)
-            self.set_items.append(item)
-        elif ctx.oC_NodeLabels() is not None:
-            # LabelSetting
-            #   variable: str,
-            #   labels: List[str]
-            # 设置对象节点的label
-            labels = self.node_labels
-            self.node_labels = []  # 退出清空
-            variable = ctx.oC_Variable().getText()
-            item = LabelSetting(variable, labels)
-            self.set_items.append(item)
+            self.set_items.append(ExpressionSetting(expression_left, expression_right, is_added))
         else:
             raise TranslateError("Error SetItem format.")
 
-    # def exitOC_PropertyExpression(self, ctx: s_cypherParser.OC_PropertyExpressionContext):
-    #     # atom: Atom,
-    #     # property_chains: List[str]
-    #     atom = self.atom
-    #     self.atom = None  # 退出清空
-    #     property_chains = self.property_look_up_list
-    #     self.property_look_up_list = []  # 退出清空
-    #     self.property_expression = PropertyExpression(atom, property_chains)
+    def exitOC_PropertyExpression(self, ctx: s_cypherParser.OC_PropertyExpressionContext):
+        # ===SetPropertyExpression
+        # atom: Atom,
+        # property_chains: List[PropertyLookup]
+        atom = self.atom
+        self.atom = None  # 退出清空
+        property_chains = self.property_look_up_list
+        self.property_look_up_list = []  # 退出清空
+        self.property_expression = SetPropertyExpression(atom, property_chains)
 
     def exitOC_Remove(self, ctx: s_cypherParser.OC_RemoveContext):
         # remove_items: List[LabelSetting | RemovePropertyExpression]
@@ -1326,8 +1350,11 @@ class SCypherWalker(s_cypherListener):
         atom = self.atom
         self.atom = None
         property_name = ctx.oC_PropertyKeyName().getText()
-        property_chains = self.property_look_up_list
-        self.property_look_up_list = []  # 退出清空
+        if ctx.oC_PropertyLookup() is not None:
+            property_chains = self.property_look_up_list
+            self.property_look_up_list = []  # 退出清空
+        else:
+            property_chains = None
         self.remove_property_expression = RemovePropertyExpression(atom, property_name, property_chains)
 
     def exitS_Stale(self, ctx: s_cypherParser.S_StaleContext):
