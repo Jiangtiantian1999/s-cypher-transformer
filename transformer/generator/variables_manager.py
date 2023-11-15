@@ -3,12 +3,13 @@ from transformer.ir.s_graph import *
 
 
 class VariablesManager:
-    def __init__(self, s_cypher_clause: SCypherClause):
+    def __init__(self):
         self.count_num = 99
         # 当前有效的用户定义的变量名
         self.user_variables = []
         self.updating_variables = []
-        self.update_s_cypher_clause_variables(s_cypher_clause)
+        # union连接的各个语句的返回变量
+        self.union_variables = []
 
     # 获取新的变量名
     def get_random_variable(self) -> str:
@@ -23,13 +24,9 @@ class VariablesManager:
         self.user_variables = []
         self.updating_variables = []
 
-    def update_s_cypher_clause_variables(self, s_cypher_clause: SCypherClause):
-        query_clause = s_cypher_clause.query_clause
-        if query_clause.__class__ == UnionQueryClause:
-            for multi_query_clause in query_clause.multi_query_clauses:
-                self.update_multi_query_clause_variables(multi_query_clause)
-        elif query_clause.__class__ == CallClause and query_clause.yield_clause:
-            self.update_yield_clause_variables(query_clause.yield_clause)
+    def update_multi_query_clause_variables(self):
+        self.union_variables.append(self.user_variables)
+        self.clear()
 
     def update_yield_clause_variables(self, yield_clause: YieldClause):
         for yield_item in yield_clause.yield_items:
@@ -37,19 +34,6 @@ class VariablesManager:
                 self.user_variables.append(yield_item.variable)
             else:
                 self.user_variables.append(yield_item.procedure_result)
-
-    def update_multi_query_clause_variables(self, multi_query_clause: MultiQueryClause):
-        for with_query_clause in multi_query_clause.with_query_clauses:
-            self.update_with_query_clause_variables(with_query_clause)
-        self.update_single_query_clause_variables(multi_query_clause.single_query_clause)
-
-    def update_single_query_clause_variables(self, single_query_clause: SingleQueryClause):
-        for reading_clause in single_query_clause.reading_clauses:
-            self.update_reading_clause_variables(reading_clause)
-        for updating_clause in single_query_clause.updating_clauses:
-            self.update_updating_clause_variables(updating_clause)
-        if single_query_clause.return_clause:
-            self.update_return_clause_variables(single_query_clause.return_clause)
 
     def update_reading_clause_variables(self, reading_clause: ReadingClause):
         if reading_clause.reading_clause.__class__ == MatchClause:
@@ -66,13 +50,6 @@ class VariablesManager:
                 self.update_pattern_variables(pattern, True)
         elif updating_clause.updating_clause.__class__ == MergeClause:
             self.update_pattern_variables(updating_clause.updating_clause.pattern, True)
-
-    def update_with_query_clause_variables(self, with_query_clause: WithQueryClause):
-        for reading_clause in with_query_clause.reading_clauses:
-            self.update_reading_clause_variables(reading_clause)
-        for updating_clause in with_query_clause.updating_clauses:
-            self.update_updating_clause_variables(updating_clause)
-        self.update_with_clause_variables(with_query_clause.with_clause)
 
     def update_with_clause_variables(self, with_clause: WithClause):
         if with_clause.is_all is None:

@@ -25,7 +25,6 @@ class ClauseConverter:
 
     def convert_union_query_clause(self, union_query_clause: UnionQueryClause) -> str:
         union_query_clause_string = self.convert_multi_query_clause(union_query_clause.multi_query_clauses[0])
-
         for index, is_all in enumerate(union_query_clause.is_all):
             if is_all:
                 operator = " UNION ALL "
@@ -46,6 +45,7 @@ class ClauseConverter:
         call_clause_string = call_clause_string + '(' + input_string.rstrip(", ") + ')'
 
         if call_clause.yield_clause:
+            self.variables_manager.update_yield_clause_variables(call_clause.yield_clause)
             call_clause_string = call_clause_string + '\n' + self.convert_yield_clause(call_clause.yield_clause)
 
         return call_clause_string
@@ -77,6 +77,7 @@ class ClauseConverter:
             return "CALL scypher.scope(" + interval_expression_string + ')'
 
     def convert_multi_query_clause(self, multi_query_clause: MultiQueryClause) -> str:
+        self.variables_manager.update_multi_query_clause_variables()
         multi_query_clause_string = ""
         # with连接的查询部分
         for with_query_clause in multi_query_clause.with_query_clauses:
@@ -124,6 +125,7 @@ class ClauseConverter:
             limit_expression_string = self.expression_converter.convert_expression(with_clause.limit_expression)
             with_clause_string = with_clause_string + "\nLIMIT " + limit_expression_string
 
+        self.variables_manager.update_with_clause_variables(with_clause)
         return with_clause_string
 
     def convert_single_query_clause(self, single_query_clause: SingleQueryClause) -> str:
@@ -142,6 +144,7 @@ class ClauseConverter:
         return (reading_clause_string + updating_clause_string + return_clause_string).rstrip()
 
     def convert_reading_clause(self, reading_clause: ReadingClause) -> str:
+        self.variables_manager.update_reading_clause_variables(reading_clause)
         if reading_clause.reading_clause.__class__ == MatchClause:
             return self.convert_match_clause(reading_clause.reading_clause)
         elif reading_clause.reading_clause.__class__ == UnwindClause:
@@ -160,13 +163,14 @@ class ClauseConverter:
         for pattern in match_clause.patterns:
             pattern = pattern.pattern
             if pattern.__class__ == SPath:
-                path_pattern, property_patterns, pattern_time_window_info = self.graph_converter.match_path(pattern,
-                                                                                                            match_clause.time_window)
+                path_pattern, property_patterns, path_time_window_info = self.graph_converter.match_path(pattern,
+                                                                                                         match_clause.time_window)
                 match_clause_string = match_clause_string + path_pattern + ", "
                 for property_pattern in property_patterns:
                     match_clause_string = match_clause_string + property_pattern + ", "
                 # 添加路径的时态条件限制
-                pattern_time_window_info.extend(pattern_time_window_info)
+                if path_time_window_info:
+                    pattern_time_window_info.extend(path_time_window_info)
             elif pattern.__class__ == TemporalPathCall:
                 if pattern.path.relationships[0].direction == SRelationship.LEFT:
                     start_node, end_node = pattern.path.nodes[1], pattern.path.nodes[0]
@@ -181,8 +185,11 @@ class ClauseConverter:
                 for property_pattern in start_node_property_patterns + end_node_property_patterns:
                     call_string = call_string + ", " + property_pattern
                 # 限制节点的有效时间
-                temporal_path_time_window_info = start_node_time_window_info
-                temporal_path_time_window_info.extend(end_node_time_window_info)
+                temporal_path_time_window_info = []
+                if start_node_time_window_info:
+                    temporal_path_time_window_info.extend(start_node_time_window_info)
+                if end_node_time_window_info:
+                    temporal_path_time_window_info.extend(end_node_time_window_info)
                 if len(temporal_path_time_window_info) > 0 or match_clause.time_window:
                     where_expression_string = self.convert_where_clause(None, temporal_path_time_window_info,
                                                                         match_clause.time_window)
@@ -190,7 +197,10 @@ class ClauseConverter:
                 relationship_info = {}
                 # 限制路径的标签
                 if len(pattern.path.relationships[0].labels) != 0:
-                    relationship_info["labels"] = pattern.path.relationships[0].labels
+                    relationship_info["labels"] = ""
+                    for label in pattern.path.relationships[0].labels:
+                        relationship_info["labels"] = relationship_info["labels"] + '\"' + label + "\", "
+                    relationship_info["labels"] = '[' + relationship_info["labels"].rstrip(", ") + ']'
                 # 限制路径的长度
                 if pattern.path.relationships[0].length[0] is not None:
                     relationship_info["minLength"] = pattern.path.relationships[0].length[0]
@@ -222,7 +232,7 @@ class ClauseConverter:
             return call_string
         match_clause_string.rstrip(", ")
 
-        if match_clause.where_expression or len(pattern_time_window_info) != 0 or match_clause.time_window:
+        if match_clause.where_expression or len(pattern_time_window_info) > 0 or match_clause.time_window:
             where_expression_string = self.convert_where_clause(match_clause.where_expression, pattern_time_window_info,
                                                                 match_clause.time_window)
             match_clause_string = match_clause_string + '\n' + where_expression_string
@@ -232,13 +242,14 @@ class ClauseConverter:
     def convert_where_clause(self, where_expression: Expression = None,
                              pattern_time_window_info: list = None,
                              time_window: AtTimeClause | BetweenClause = None) -> str:
-        if where_expression is None and (
-                pattern_time_window_info is None or len(pattern_time_window_info) == 0) and time_window is None:
+        if pattern_time_window_info is None:
+            pattern_time_window_info = []
+        if where_expression is None and len(pattern_time_window_info) == 0 and time_window is None:
             raise TranslateError("The where expression and the time window conditions can't be None at the same time")
         where_clause_string = "WHERE "
         if where_expression:
             where_clause_string = where_clause_string + self.expression_converter.convert_expression(where_expression)
-        if pattern_time_window_info or time_window:
+        if len(pattern_time_window_info) > 0 or time_window:
             if where_clause_string != "WHERE ":
                 where_clause_string = where_clause_string + " and "
             if time_window.__class__ == AtTimeClause:
@@ -247,14 +258,13 @@ class ClauseConverter:
                 time_window_string = self.expression_converter.convert_expression(time_window.interval)
             else:
                 time_window_string = "NULL"
-            if pattern_time_window_info[0].__class__ != list:
-                pattern_time_window_info = [pattern_time_window_info]
             where_clause_string = where_clause_string + "scypher.limitEffectiveTime(" + convert_list_to_str(
                 pattern_time_window_info) + ", " + time_window_string + ')'
 
         return where_clause_string
 
     def convert_updating_clause(self, updating_clause: UpdatingClause) -> str:
+        self.variables_manager.update_updating_clause_variables(updating_clause)
         if updating_clause.updating_clause.__class__ == CreateClause:
             return self.convert_create_clause(updating_clause.updating_clause)
         elif updating_clause.updating_clause.__class__ == DeleteClause:
@@ -324,8 +334,7 @@ class ClauseConverter:
                         delete_list_string = delete_list_string + self.expression_converter.convert_expression(
                             delete_clause.time_window.interval) + ')'
                 else:
-                    delete_list_string = delete_list_string + str(
-                        delete_item.time_window) + ')'
+                    delete_list_string = delete_list_string + str(delete_item.time_window) + ')'
             else:
                 # 删除属性节点
                 delete_list_string = delete_list_string + "NULL)"
@@ -513,6 +522,7 @@ class ClauseConverter:
             limit_expression_string = self.expression_converter.convert_expression(return_clause.limit_expression)
             return_clause_string = return_clause_string + "\nLIMIT " + limit_expression_string
 
+        self.variables_manager.update_return_clause_variables(return_clause)
         return return_clause_string
 
     def convert_order_by_clause(self, order_by_clause: OrderByClause) -> str:

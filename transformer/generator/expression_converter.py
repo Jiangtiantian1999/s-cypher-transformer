@@ -1,9 +1,13 @@
 from transformer.conf.config_reader import ConfigReader
+from transformer.generator.variables_manager import VariablesManager
 from transformer.ir.s_expression import *
 from transformer.ir.s_graph import *
 
 
 class ExpressionConverter:
+
+    def __init__(self, variables_manager: VariablesManager):
+        self.variables_manager = variables_manager
 
     def convert_expression(self, expression: Expression) -> str:
         return self.convert_or_expression(expression.or_expression)
@@ -111,13 +115,13 @@ class ExpressionConverter:
 
         return list_index_expression_string
 
-    def convert_time_point_literal(self, time_point_literal: TimePointLiteral):
+    def convert_time_point_literal(self, time_point_literal: TimePointLiteral) -> str:
         if time_point_literal.time_point.__class__ == str:
-            return time_point_literal
+            return time_point_literal.time_point
         else:
             return self.convert_map_literal(time_point_literal.time_point)
 
-    def convert_at_t_element(self, at_t_element: AtTElement = None):
+    def convert_at_t_element(self, at_t_element: AtTElement = None) -> str:
         if at_t_element is None:
             return None
         interval_from_string = self.convert_time_point_literal(at_t_element.interval_from)
@@ -127,7 +131,7 @@ class ExpressionConverter:
         else:
             return "scypher.timePoint(" + interval_from_string + ')'
 
-    def get_property_value(self, variable_name: str, property_name: str, time_window: AtTElement = None):
+    def get_property_value(self, variable_name: str, property_name: str, time_window: AtTElement = None) -> str:
         if time_window:
             time_window_string = self.convert_at_t_element(time_window)
         else:
@@ -171,16 +175,23 @@ class ExpressionConverter:
             interval = "scypher.getValueEffectiveTime(" + element_variable + ", \"" + at_t_expression.property_name + "\", " + interval_string + ')'
 
         for index, time_property in enumerate(at_t_expression.time_property_chains):
-            if index == 0 and time_property in ["from", "to"] and interval.__class__ == dict:
-                interval = interval[time_property]
-            else:
-                interval = interval + '.' + time_property
-
+            if index == 0:
+                if interval.__class__ == dict:
+                    if time_property in ["from", "to"]:
+                        interval = interval[time_property]
+                    else:
+                        interval = "NULL"
+                else:
+                    interval = interval + '.' + time_property
+        if interval.__class__ == dict:
+            return "{\"from\":" + interval["from"] + ", \"to\":" + interval["to"] + '}'
         return interval
 
     def convert_atom(self, atom: Atom) -> str:
         particle = atom.particle
         if particle.__class__ == str:
+            if particle.upper() == "NOW" and particle not in self.variables_manager.user_variables:
+                particle = "\"NOW\""
             return particle
         elif particle.__class__ == ListLiteral:
             return self.convert_list_literal(particle)

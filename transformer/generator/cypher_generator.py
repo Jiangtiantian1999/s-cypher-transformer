@@ -9,8 +9,8 @@ class CypherGenerator:
 
     @staticmethod
     def generate_cypher_query(s_cypher_clause: SCypherClause) -> str:
-        variables_manager = VariablesManager(s_cypher_clause)
-        expression_converter = ExpressionConverter()
+        variables_manager = VariablesManager()
+        expression_converter = ExpressionConverter(variables_manager)
         graph_converter = GraphConverter(variables_manager, expression_converter)
         clause_converter = ClauseConverter(variables_manager, expression_converter, graph_converter)
 
