@@ -43,6 +43,7 @@ class DeleteItem:
     def __init__(self, expression: Expression, property_name: str = None, time_window: bool | AtTElement = None):
         self.expression = expression
         self.property_name = property_name
+        # #Value表示删除所有值节点（时间窗口不作限制），传入True；@T表示删除该时间窗口下的值节点，传入时间区间/时间点
         self.time_window = time_window
 
 

@@ -118,7 +118,7 @@ s_RightExpression : oC_Expression ;
 
 s_AtTExpression : oC_Atom ( ( SP? oC_PropertyLookup )* SP? '.' SP? oC_PropertyKeyName ( SP? PoundValue | s_AtTElement)? )? SP? s_PropertyLookupTime ;
 
-s_PropertyLookupTime: AtT ( SP? oC_PropertyLookup )* ;
+s_PropertyLookupTime: AtT ( SP? '.' SP? oC_PropertyKeyName )* ;
 
 oC_PropertyLookup : '.' SP? oC_PropertyKeyName ( SP? s_AtTElement )? ;
 
