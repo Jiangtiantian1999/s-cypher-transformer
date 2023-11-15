@@ -100,7 +100,7 @@ class AtTExpression:
             property_chains = []
         self.property_chains = property_chains
         self.property_name = property_name
-        # #Value表示获取所有值节点（时间窗口不作限制），传入True；@T表示获取该时间窗口下的值节点，传入时间区间/时间点
+        # #Value表示获取所有值节点的有效时间，传入True；@T表示获取该时间窗口下的值节点的有效时间，传入时间区间/时间点
         self.time_window = time_window
         # 获取有效时间的属性
         if time_property_chains is None:

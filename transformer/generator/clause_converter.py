@@ -311,9 +311,15 @@ class ClauseConverter:
 
     def convert_delete_clause(self, delete_clause: DeleteClause) -> str:
         delete_clause_string = ""
-
+        if delete_clause.time_window:
+            if delete_clause.time_window.__class__ == AtTimeClause:
+                delete_time_window = self.expression_converter.convert_expression(delete_clause.time_window.time_point)
+            else:
+                delete_time_window = self.expression_converter.convert_expression(delete_clause.time_window.interval)
+        else:
+            delete_time_window = "NULL"
         for delete_item in delete_clause.delete_items:
-            # 物理删除对象节点/路径/关系/对象节点的属性，调用getItemsToDelete，第一个参数为对象节点/路径/关系，第二个参数为属性名，第三个参数为删除的值节点的范围
+            # 物理删除对象节点/路径/关系/对象节点的属性，调用getItemsToDelete，第一个参数为对象节点/路径/关系，第二个参数为属性名，第三个参数为删除的值节点的范围/[是否仅删除值节点]
             # 以列表形式返回所有待物理删除的元素
             delete_list_string = "scypher.getItemsToDelete(" + self.expression_converter.convert_expression(
                 delete_item.expression) + ", "
@@ -322,21 +328,16 @@ class ClauseConverter:
             else:
                 delete_list_string = delete_list_string + "NULL, "
             if delete_item.time_window:
-                # 删除值节点
+                # 仅物理删除值节点
                 if delete_item.time_window.__class__ == AtTElement:
                     delete_list_string = delete_list_string + self.expression_converter.convert_at_t_element(
                         delete_item.time_window) + ')'
                 elif delete_clause.time_window:
-                    if delete_clause.time_window.__class__ == AtTimeClause:
-                        delete_list_string = delete_list_string + self.expression_converter.convert_expression(
-                            delete_clause.time_window.time_point) + ')'
-                    elif delete_clause.time_window.__class__ == BetweenClause:
-                        delete_list_string = delete_list_string + self.expression_converter.convert_expression(
-                            delete_clause.time_window.interval) + ')'
+                    delete_list_string = delete_list_string + delete_time_window + ')'
                 else:
                     delete_list_string = delete_list_string + str(delete_item.time_window) + ')'
             else:
-                # 删除属性节点
+                # 物理删除属性节点和值节点
                 delete_list_string = delete_list_string + "NULL)"
             delete_item_variable = self.variables_manager.get_random_variable()
             delete_operation = "DELETE"
@@ -348,6 +349,10 @@ class ClauseConverter:
 
     def convert_stale_clause(self, stale_clause: StaleClause) -> str:
         stale_clause_string = "FOREACH "
+        if stale_clause.at_time_clause:
+            stale_operate_time = self.expression_converter.convert_expression(stale_clause.at_time_clause.time_point)
+        else:
+            stale_operate_time = "scypher.operateTime()"
         stale_list_string = ""
         for stale_item in stale_clause.stale_items:
             # 逻辑删除对象节点/属性节点/值节点/关系，调用scypher.getItemsToStale，第一个参数为对象节点/关系，第二个参数为属性名，第三个参数为【是否仅逻辑删除值节点】，第四个参数为逻辑删除时间
@@ -358,17 +363,11 @@ class ClauseConverter:
                 stale_list_string = stale_list_string + ", " + stale_item.property_name
             else:
                 stale_list_string = stale_list_string + ", NULL"
-            stale_list_string = stale_list_string + ", " + str(stale_item.is_value) + ") + "
+            stale_list_string = stale_list_string + ", " + str(stale_item.is_value) + ", " + stale_operate_time + ") + "
 
         stale_list_string = stale_list_string.rstrip(" + ")
         stale_item_variable = self.variables_manager.get_random_variable()
-        stale_clause_string = stale_clause_string + " (" + stale_item_variable + " IN " + stale_list_string + " | SET " + stale_item_variable + ".intervalTo = "
-
-        if stale_clause.at_time_clause:
-            stale_clause_string = stale_clause_string + self.expression_converter.convert_expression(
-                stale_clause.at_time_clause.time_point) + ')'
-        else:
-            stale_clause_string = stale_clause_string + "scypher.operateTime())"
+        stale_clause_string = stale_clause_string + " (" + stale_item_variable + " IN " + stale_list_string + " | SET " + stale_item_variable + ".intervalTo = " + stale_operate_time
 
         return stale_clause_string.rstrip(", ")
 

@@ -43,7 +43,7 @@ class DeleteItem:
     def __init__(self, expression: Expression, property_name: str = None, time_window: bool | AtTElement = None):
         self.expression = expression
         self.property_name = property_name
-        # #Value表示删除所有值节点（时间窗口不作限制），传入True；@T表示删除该时间窗口下的值节点，传入时间区间/时间点
+        # #Value表示仅物理删除值节点，传入True；@T表示仅物理删除该时间窗口下的值节点，传入时间区间/时间点
         self.time_window = time_window
 
 
@@ -53,7 +53,7 @@ class StaleItem:
         if property_name is None and is_value is True:
             raise TranslateError("Can't delete the value node without property name")
         self.property_name = property_name
-        # 删除的是否为值节点
+        # 是否仅逻辑删除值节点
         self.is_value = is_value
 
 
