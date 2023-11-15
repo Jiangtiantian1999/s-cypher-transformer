@@ -14,21 +14,27 @@ class ExpressionConverter:
 
     def convert_or_expression(self, or_expression: OrExpression) -> str:
         or_expression_string = ""
-        for xor_expression in or_expression.xor_expressions:
-            or_expression_string = or_expression_string + self.convert_xor_expression(xor_expression) + " or "
-        return or_expression_string.rstrip(" or ")
+        for index, xor_expression in enumerate(or_expression.xor_expressions):
+            if index != 0:
+                or_expression_string = or_expression_string + " or "
+            or_expression_string = or_expression_string + self.convert_xor_expression(xor_expression)
+        return or_expression_string
 
     def convert_xor_expression(self, xor_expression: XorExpression) -> str:
         xor_expression_string = ""
-        for and_expression in xor_expression.and_expressions:
-            xor_expression_string = xor_expression_string + self.convert_and_expression(and_expression) + " xor "
-        return xor_expression_string.rstrip(" xor ")
+        for index, and_expression in enumerate(xor_expression.and_expressions):
+            if index != 0:
+                xor_expression_string = xor_expression_string + " xor "
+            xor_expression_string = xor_expression_string + self.convert_and_expression(and_expression)
+        return xor_expression_string
 
     def convert_and_expression(self, and_expression: AndExpression) -> str:
         and_expression_string = ""
-        for not_expression in and_expression.not_expressions:
-            and_expression_string = and_expression_string + self.convert_not_expression(not_expression) + " and "
-        return and_expression_string.rstrip(" and ")
+        for index, not_expression in enumerate(and_expression.not_expressions):
+            if index != 0:
+                and_expression_string = and_expression_string + " and "
+            and_expression_string = and_expression_string + self.convert_not_expression(not_expression)
+        return and_expression_string
 
     def convert_not_expression(self, not_expression: NotExpression) -> str:
         comparison_expression_string = self.convert_comparison_expression(not_expression.comparison_expression)
