@@ -374,16 +374,16 @@ class ClauseConverter:
     def convert_set_clause(self, set_clause: SetClause) -> str:
         set_clause_string = ""
         if set_clause.at_time_clause:
-            time_point = self.expression_converter.convert_expression(set_clause.at_time_clause.time_point)
+            set_time_point = self.expression_converter.convert_expression(set_clause.at_time_clause.time_point)
         else:
-            time_point = "NULL"
+            set_time_point = "scypher.operateTime()"
         for set_item in set_clause.set_items:
             # 为在set时检查约束，调用scypher.getItemToSetX
             if set_item.__class__ == EffectiveTimeSetting:
                 # 设置对象节点/属性节点/值节点/关系的有效时间，调用scypher.getItemsToSetEffectiveTime，第一个参数为对象节点/关系及其有效时间，第二个参数为属性名及属性节点的有效时间，第三个参数为值节点的有效时间，第四个参数为set语句的操作时间
                 set_item_variable = self.variables_manager.get_random_variable()
                 set_clause_string = set_clause_string + "\nFOREACH (" + set_item_variable + " IN scypher.getItemsToSetEffectiveTime("
-                object_info = {"objectNode": set_item.object_setting.variable,
+                object_info = {"object": set_item.object_setting.variable,
                                "effectiveTime": self.expression_converter.convert_at_t_element(
                                    set_item.object_setting.effective_time)}
                 set_clause_string = set_clause_string + convert_dict_to_str(object_info) + ", "
@@ -399,8 +399,9 @@ class ClauseConverter:
                         set_clause_string = set_clause_string + "NULL, "
                 else:
                     set_clause_string = set_clause_string + "NULL, NULL, "
-                set_clause_string = set_clause_string + time_point + ')'
-                set_clause_string = set_clause_string + " | SET " + set_item_variable + ".left = " + set_item_variable + ".right)"
+                set_clause_string = set_clause_string + set_time_point + ')'
+                set_clause_string = set_clause_string + " | SET " + set_item_variable + ".item.intervalFrom = " + set_item_variable + ".intervalFrom, " + \
+                                    set_item_variable + ".item.intervalTo = " + set_item_variable + ".intervalTo)"
             elif set_item.__class__ == ExpressionSetting:
                 # 修改节点/关系的属性，调用scypher.getItemsToSetExpression，第一个参数为对象节点/关系，第二个参数为属性名，
                 # 第三个参数为set的操作时间，第四个参数为【是否为+=】，第五个参数为表达式
@@ -421,11 +422,11 @@ class ClauseConverter:
                             set_clause_string = set_clause_string + self.expression_converter.convert_at_t_element(
                                 property_lookup.time_window) + ", "
                         else:
-                            set_clause_string = set_clause_string + time_point + ", "
+                            set_clause_string = set_clause_string + set_time_point + ", "
                     else:
-                        set_clause_string = set_clause_string + "NULL, " + time_point + ", "
+                        set_clause_string = set_clause_string + "NULL, " + set_time_point + ", "
                 else:
-                    set_clause_string = set_clause_string + set_item.expression_left + ", NULL" + time_point + ", "
+                    set_clause_string = set_clause_string + set_item.expression_left + ", NULL" + set_time_point + ", "
                 set_clause_string = set_clause_string + str(
                     set_item.is_added) + ", " + self.expression_converter.convert_expression(
                     set_item.expression_right) + ')'
