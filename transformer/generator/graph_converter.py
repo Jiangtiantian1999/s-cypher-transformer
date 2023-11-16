@@ -273,15 +273,29 @@ class GraphConverter:
                 "from": self.expression_converter.convert_time_point_literal(start_node.time_window.interval_from),
                 "to": self.expression_converter.convert_time_point_literal(start_node.time_window.interval_to)}
         else:
-            start_node_effective_time = {"from": start_node.variable + ".intervalFrom",
-                                         "to": start_node.variable + ".intervalTo"}
+            if start_node.__class__ == ObjectNode and start_node.variable in self.variables_manager.updating_variables:
+                start_node_effective_time = {"from": start_node.variable + ".intervalFrom",
+                                             "to": start_node.variable + ".intervalTo"}
+            elif time_window:
+                start_node_effective_time = {
+                    "from": self.expression_converter.convert_expression(time_window.time_point),
+                    "to": "scypher.timePoint(\"NOW\")"}
+            else:
+                start_node_effective_time = {"from": "scypher.operateTime()", "to": "scypher.timePoint(\"NOW\")"}
         if end_node.time_window:
             end_node_effective_time = {
                 "from": self.expression_converter.convert_time_point_literal(end_node.time_window.interval_from),
                 "to": self.expression_converter.convert_time_point_literal(end_node.time_window.interval_to)}
         else:
-            end_node_effective_time = {"from": end_node.variable + ".intervalFrom",
-                                       "to": end_node.variable + ".intervalTo"}
+            if end_node.__class__ == ObjectNode and end_node.variable in self.variables_manager.updating_variables:
+                end_node_effective_time = {"from": end_node.variable + ".intervalFrom",
+                                           "to": end_node.variable + ".intervalTo"}
+            elif time_window:
+                end_node_effective_time = {
+                    "from": self.expression_converter.convert_expression(time_window.time_point),
+                    "to": "scypher.timePoint(\"NOW\")"}
+            else:
+                end_node_effective_time = {"from": "scypher.operateTime()", "to": "scypher.timePoint(\"NOW\")"}
         relationship_pattern = relationship_pattern + "intervalFrom: scypher.getIntervalFromOfRelationship(" + \
                                start_node_effective_time["from"] + ", " + end_node_effective_time[
                                    "from"] + ", " + convert_dict_to_str(
