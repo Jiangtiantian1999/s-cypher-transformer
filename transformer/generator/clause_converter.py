@@ -318,6 +318,7 @@ class ClauseConverter:
                 delete_time_window = self.expression_converter.convert_expression(delete_clause.time_window.interval)
         else:
             delete_time_window = "NULL"
+        delete_item_variable = self.variables_manager.get_random_variable()
         for delete_item in delete_clause.delete_items:
             # 物理删除对象节点/路径/关系/对象节点的属性，调用getItemsToDelete，第一个参数为对象节点/路径/关系，第二个参数为属性名，第三个参数为删除的值节点的范围/[是否仅删除值节点]
             # 以列表形式返回所有待物理删除的元素
@@ -339,7 +340,6 @@ class ClauseConverter:
             else:
                 # 物理删除属性节点和值节点
                 delete_list_string = delete_list_string + "NULL)"
-            delete_item_variable = self.variables_manager.get_random_variable()
             delete_operation = "DELETE"
             if delete_clause.is_detach:
                 delete_operation = "DETACH DELETE"
@@ -377,11 +377,13 @@ class ClauseConverter:
             set_time_point = self.expression_converter.convert_expression(set_clause.at_time_clause.time_point)
         else:
             set_time_point = "scypher.operateTime()"
+        set_item_variable = self.variables_manager.get_random_variable()
+        set_sub_item_variable = self.variables_manager.get_random_variable()
         for set_item in set_clause.set_items:
             # 为在set时检查约束，调用scypher.getItemToSetX
             if set_item.__class__ == EffectiveTimeSetting:
                 # 设置对象节点/属性节点/值节点/关系的有效时间，调用scypher.getItemsToSetEffectiveTime，第一个参数为对象节点/关系及其有效时间，第二个参数为属性名及属性节点的有效时间，第三个参数为值节点的有效时间，第四个参数为set语句的操作时间
-                set_item_variable = self.variables_manager.get_random_variable()
+
                 set_clause_string = set_clause_string + "\nFOREACH (" + set_item_variable + " IN scypher.getItemsToSetEffectiveTime("
                 object_info = {"object": set_item.object_setting.variable,
                                "effectiveTime": self.expression_converter.convert_at_t_element(
@@ -404,8 +406,8 @@ class ClauseConverter:
                                     set_item_variable + ".item.intervalTo = " + set_item_variable + ".intervalTo)"
             elif set_item.__class__ == ExpressionSetting:
                 # 修改节点/关系的属性，调用scypher.getItemsToSetExpression，第一个参数为对象节点/关系，第二个参数为属性名，
-                # 第三个参数为set的操作时间，第四个参数为【是否为+=】，第五个参数为表达式
-                set_item_variable = self.variables_manager.get_random_variable()
+                # 第三个参数为值节点的有效时间，第四个参数为【是否为+=】，第五个参数为表达式
+                set_interval = {"from": set_time_point, "to": "scypher.timePoint(\"NOW\")"}
                 set_clause_string = set_clause_string + "\nFOREACH (" + set_item_variable + " IN scypher.getItemsToSetExpression("
                 if set_item.expression_left.__class__ == SetPropertyExpression:
                     object_variable = self.expression_converter.convert_atom(set_item.expression_left.atom)
@@ -415,22 +417,65 @@ class ClauseConverter:
                                                                                            property_lookup.property_name,
                                                                                            property_lookup.time_window)
                     set_clause_string = set_clause_string + object_variable + ", "
-                    if len(set_item.expression_left.property_chains) > 0:
-                        property_lookup = set_item.expression_left.property_chains[-1]
-                        set_clause_string = set_clause_string + property_lookup.property_name + ", "
-                        if property_lookup.time_window:
-                            set_clause_string = set_clause_string + self.expression_converter.convert_at_t_element(
-                                property_lookup.time_window) + ", "
-                        else:
-                            set_clause_string = set_clause_string + set_time_point + ", "
+                    property_lookup = set_item.expression_left.property_chains[-1]
+                    set_clause_string = set_clause_string + property_lookup.property_name + ", "
+                    if property_lookup.time_window:
+                        set_clause_string = set_clause_string + self.expression_converter.convert_at_t_element(
+                            property_lookup.time_window) + ", "
+                        set_interval["from"] = self.expression_converter.convert_time_point_literal(
+                            property_lookup.time_window.interval_from)
+                        if property_lookup.time_window.interval_to:
+                            set_interval["to"] = self.expression_converter.convert_time_point_literal(
+                                property_lookup.time_window.interval_to)
                     else:
-                        set_clause_string = set_clause_string + "NULL, " + set_time_point + ", "
+                        set_clause_string = set_clause_string + set_time_point + ", "
                 else:
                     set_clause_string = set_clause_string + set_item.expression_left + ", NULL" + set_time_point + ", "
+                set_expression_right_string = self.expression_converter.convert_expression(set_item.expression_right)
                 set_clause_string = set_clause_string + str(
-                    set_item.is_added) + ", " + self.expression_converter.convert_expression(
-                    set_item.expression_right) + ')'
-                set_clause_string = set_clause_string + " | SET " + set_item_variable + ".left = " + set_item_variable + ".right)"
+                    set_item.is_added) + ", " + set_expression_right_string + ') | '
+                # 删除属性节点/值节点/属性节点和值节点的相连边
+                set_clause_string = set_clause_string + "FOREACH( " + set_sub_item_variable + " IN " + set_item_variable + ".deleteItems | "
+                set_clause_string = set_clause_string + "DELETE " + set_sub_item_variable + ')'
+                # 创建属性节点和值节点
+                if set_item.expression_left.__class__ == SetPropertyExpression:
+                    set_clause_string = set_clause_string + "FOREACH( " + set_sub_item_variable + " IN " + set_item_variable + ".createPropertyNode | "
+                    # 此时，createPropertyNode返回属性节点所连接的对象节点
+                    set_clause_string = set_clause_string + "CREATE (" + set_sub_item_variable + ")-[:OBJECT_PROPERTY]->(:Property{content:" + property_lookup.property_name + ",intervalFrom:" + \
+                                        set_interval["from"] + ",intervalTo:" + set_interval[
+                                            "to"] + "})-[:PROPERTY_VALUE]->(:Value{content:" + set_expression_right_string + ",intervalFrom:" + \
+                                        set_interval["from"] + ",intervalTo:" + set_interval["to"] + "}))"
+                else:
+                    set_clause_string = set_clause_string + "FOREACH( " + set_sub_item_variable + " IN " + set_item_variable + ".createPropertyNodes | "
+                    # 此时，createPropertyNodes返回属性节点的属性名和值节点的值
+                    set_clause_string = set_clause_string + "CREATE (" + set_item.expression_left + ")-[:OBJECT_PROPERTY]->(:Property{content:" + set_sub_item_variable + ".propertyName,intervalFrom:" + \
+                                        set_interval["from"] + ",intervalTo:" + set_interval[
+                                            "to"] + "})-[:PROPERTY_VALUE]->(:Value{content:" + set_sub_item_variable + ".propertyValue,intervalFrom:" + \
+                                        set_interval["from"] + ",intervalTo:" + set_interval["to"] + "}))"
+                # 仅创建值节点
+                if set_item.expression_left.__class__ == SetPropertyExpression:
+                    set_clause_string = set_clause_string + "FOREACH( " + set_sub_item_variable + " IN " + set_item_variable + ".createValueNode | "
+                    # 此时，createValueNode返回值节点所连接的属性节点
+                    set_clause_string = set_clause_string + "CREATE (" + set_sub_item_variable + ")-[:PROPERTY_VALUE]->(:Value{content:" + set_expression_right_string + ",intervalFrom:" + \
+                                        set_interval["from"] + ",intervalTo:" + set_interval["to"] + "}))"
+                else:
+                    set_clause_string = set_clause_string + "FOREACH( " + set_sub_item_variable + " IN " + set_item_variable + ".createValueNodes | "
+                    # 此时，createValueNodes返回属性节点的属性名和值节点的值
+                    set_clause_string = set_clause_string + "MERGE (" + set_item.expression_left + ")-[:OBJECT_PROPERTY]->(" + self.variables_manager.get_random_variable() + ":Property{content:" + set_sub_item_variable + ".propertyName})-[:PROPERTY_VALUE]->(:Value{content:" + set_sub_item_variable + ".propertyValue,intervalFrom:" + \
+                                        set_interval["from"] + ",intervalTo:" + set_interval["to"] + "}))"
+                # 修改值节点的值
+                set_clause_string = set_clause_string + "FOREACH( " + set_sub_item_variable + " IN " + set_item_variable + ".setValueNodes | "
+                set_clause_string = set_clause_string + "SET " + set_sub_item_variable + ".item.content = " + set_sub_item_variable + ".content)"
+                # 修改关系属性
+                if set_item.expression_left.__class__ == SetPropertyExpression:
+                    set_clause_string = set_clause_string + "FOREACH( " + set_sub_item_variable + " IN " + set_item_variable + ".setRelationshipProperty | "
+                    set_clause_string = set_clause_string + "SET " + set_sub_item_variable + "." + property_lookup.property_name + " = " + set_expression_right_string + ')'
+                else:
+                    set_clause_string = set_clause_string + "FOREACH( " + set_sub_item_variable + " IN " + set_item_variable + ".setRelationshipProperties | "
+                    if set_item.is_added:
+                        set_clause_string = set_clause_string + "SET " + set_item.expression_left + " += " + set_sub_item_variable + ')'
+                    else:
+                        set_clause_string = set_clause_string + "SET " + set_item.expression_left + " = " + set_sub_item_variable + ')'
             else:
                 # 设置节点/关系的标签
                 set_clause_string = set_clause_string + "\nSET " + set_item.variable
