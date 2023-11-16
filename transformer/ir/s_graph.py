@@ -18,23 +18,23 @@ class SNode:
 
 
 class PropertyNode(SNode):
-    def __init__(self, content: str, variable: str = None, interval: AtTElement = None):
-        super().__init__(['Property'], content, variable, interval)
+    def __init__(self, content: str, variable: str = None, time_window: AtTElement = None):
+        super().__init__(['Property'], content, variable, time_window)
 
 
 class ValueNode(SNode):
-    def __init__(self, content: Expression, variable: str = None, interval: AtTElement = None):
-        super().__init__(['Value'], content, variable, interval)
+    def __init__(self, content: Expression, variable: str = None, time_window: AtTElement = None):
+        super().__init__(['Value'], content, variable, time_window)
 
 
 class ObjectNode(SNode):
 
-    def __init__(self, labels: List[str] = None, variable: str = None, interval: AtTElement = None,
+    def __init__(self, labels: List[str] = None, variable: str = None, time_window: AtTElement = None,
                  properties: dict[PropertyNode, ValueNode] = None):
         if labels is None:
             labels = []
         labels.append('Object')
-        super().__init__(labels, None, variable, interval)
+        super().__init__(labels, None, variable, time_window)
         if properties is None:
             properties = {}
         self.properties = properties

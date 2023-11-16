@@ -180,7 +180,7 @@ class GraphConverter:
             object_node_pattern = '(' + object_node.variable + ')'
         return object_node_pattern, property_node_patterns, value_node_patterns
 
-    def create_node(self, node: SNode, time_window: AtTimeClause = None, parent_node: SNode = None) -> str:
+    def create_node(self, node: SNode, time_window: AtTimeClause = None, parent_node: None = None) -> str:
         if node.variable is None:
             node.variable = self.variables_manager.get_random_variable()
         node_pattern = node.variable
@@ -194,10 +194,13 @@ class GraphConverter:
             node_pattern = node_pattern + "{content: " + self.expression_converter.convert_expression(node.content)
         # 添加节点有效时间
         if node.time_window:
-            interval_from_string = "scypher.timePoint(" + self.expression_converter.convert_time_point_literal(
-                node.time_window.interval_from) + ')'
-            interval_to_string = "scypher.timePoint(" + self.expression_converter.convert_time_point_literal(
-                node.time_window.interval_to) + ')'
+            if node.time_window.interval_to:
+                interval_from_string = "scypher.timePoint(" + self.expression_converter.convert_time_point_literal(
+                    node.time_window.interval_from) + ')'
+                interval_to_string = "scypher.timePoint(" + self.expression_converter.convert_time_point_literal(
+                    node.time_window.interval_to) + ')'
+            else:
+                raise SyntaxError("Must appoint a interval when set the effective time of the node")
         elif time_window:
             interval_from_string = self.expression_converter.convert_expression(time_window.time_point)
             interval_to_string = "scypher.timePoint(\"NOW\")"
@@ -207,14 +210,32 @@ class GraphConverter:
         if node.__class__ == ObjectNode:
             node_pattern = node_pattern + "{intervalFrom: " + interval_from_string + ", intervalTo: " + interval_to_string + "}"
         elif node.__class__ in [PropertyNode, ValueNode]:
+            parent_node_effective_time = {}
             # 调用函数检查属性节点和值节点的有效时间是否满足约束
-            node_pattern = node_pattern + "{intervalFrom: scypher.getIntervalFromOfSubordinateNode(" + parent_node.variable + ", " + interval_from_string + "), "
-            node_pattern = node_pattern + "intervalTo: scypher.getIntervalToOfSubordinateNode(" + parent_node.variable + ", " + interval_to_string + ")}"
+            if parent_node.time_window:
+                parent_node_effective_time = {
+                    "from": self.expression_converter.convert_time_point_literal(parent_node.time_window.interval_from),
+                    "to": self.expression_converter.convert_time_point_literal(parent_node.time_window.interval_to)}
+            else:
+                if parent_node.__class__ == ObjectNode and parent_node.variable in self.variables_manager.updating_variables:
+                    parent_node_effective_time = {"from": parent_node.variable + ".intervalFrom",
+                                                  "to": parent_node.variable + ".intervalTo"}
+                elif time_window:
+                    parent_node_effective_time = {
+                        "from": self.expression_converter.convert_expression(time_window.time_point),
+                        "to": "scypher.timePoint(\"NOW\")"}
+                else:
+                    parent_node_effective_time = {"from": "scypher.operateTime()", "to": "scypher.timePoint(\"NOW\")"}
+            node_pattern = node_pattern + "{intervalFrom: scypher.getIntervalFromOfSubordinateNode(" + \
+                           parent_node_effective_time["from"] + ", " + interval_from_string + "), "
+            node_pattern = node_pattern + "intervalTo: scypher.getIntervalToOfSubordinateNode(" + \
+                           parent_node_effective_time["to"] + ", " + interval_to_string + ")}"
 
         node_pattern = '(' + node_pattern + ')'
         return node_pattern
 
-    def create_relationship(self, relationship: SRelationship, from_node: ObjectNode = None, to_node: ObjectNode = None,
+    def create_relationship(self, relationship: SRelationship, start_node: ObjectNode = None,
+                            end_node: ObjectNode = None,
                             time_window: AtTimeClause = None) -> str:
         if len(relationship.labels) == 0:
             raise SyntaxError(
@@ -234,19 +255,40 @@ class GraphConverter:
         # 用于检查关系的有效时间是否符合约束，以及是否有重复关系
         relationship_info = {"labels": relationship.labels, "properties": list(relationship.properties.keys())}
         if relationship.time_window:
-            interval_from_string = "scypher.timePoint(" + self.expression_converter.convert_time_point_literal(
-                relationship.time_window.interval_from) + ')'
-            interval_to_string = "scypher.timePoint(" + self.expression_converter.convert_time_point_literal(
-                relationship.time_window.interval_to) + ')'
+            if relationship.time_window.interval_to:
+                interval_from_string = "scypher.timePoint(" + self.expression_converter.convert_time_point_literal(
+                    relationship.time_window.interval_from) + ')'
+                interval_to_string = "scypher.timePoint(" + self.expression_converter.convert_time_point_literal(
+                    relationship.time_window.interval_to) + ')'
+            else:
+                raise SyntaxError("Must appoint a interval when set the effective time of the relationship")
         elif time_window:
             interval_from_string = self.expression_converter.convert_expression(time_window.time_point)
             interval_to_string = "scypher.timePoint(\"NOW\")"
         else:
             interval_from_string = "scypher.operateTime()"
             interval_to_string = "scypher.timePoint(\"NOW\")"
-        relationship_pattern = relationship_pattern + "intervalFrom: scypher.getIntervalFromOfRelationship(" + from_node.variable + ", " + to_node.variable + ", " + convert_dict_to_str(
+        if start_node.time_window:
+            start_node_effective_time = {
+                "from": self.expression_converter.convert_time_point_literal(start_node.time_window.interval_from),
+                "to": self.expression_converter.convert_time_point_literal(start_node.time_window.interval_to)}
+        else:
+            start_node_effective_time = {"from": start_node.variable + ".intervalFrom",
+                                         "to": start_node.variable + ".intervalTo"}
+        if end_node.time_window:
+            end_node_effective_time = {
+                "from": self.expression_converter.convert_time_point_literal(end_node.time_window.interval_from),
+                "to": self.expression_converter.convert_time_point_literal(end_node.time_window.interval_to)}
+        else:
+            end_node_effective_time = {"from": end_node.variable + ".intervalFrom",
+                                       "to": end_node.variable + ".intervalTo"}
+        relationship_pattern = relationship_pattern + "intervalFrom: scypher.getIntervalFromOfRelationship(" + \
+                               start_node_effective_time["from"] + ", " + end_node_effective_time[
+                                   "from"] + ", " + convert_dict_to_str(
             relationship_info) + ", " + interval_from_string + "), "
-        relationship_pattern = relationship_pattern + "intervalTo: scypher.getIntervalToOfRelationship(" + from_node.variable + ", " + to_node.variable + ", " + convert_dict_to_str(
+        relationship_pattern = relationship_pattern + "intervalTo: scypher.getIntervalToOfRelationship(" + \
+                               start_node_effective_time["to"] + ", " + end_node_effective_time[
+                                   "to"] + ", " + convert_dict_to_str(
             relationship_info) + ", " + interval_to_string + ")}"
 
         relationship_pattern = '-[' + relationship_pattern + ']-'
