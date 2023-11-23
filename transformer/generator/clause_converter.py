@@ -230,7 +230,7 @@ class ClauseConverter:
 
         if match_clause_string in ["MATCH ", "OPTIONAL MATCH "]:
             return call_string
-        match_clause_string.rstrip(", ")
+        match_clause_string = match_clause_string.rstrip(", ")
 
         if match_clause.where_expression or len(pattern_time_window_info) > 0 or match_clause.time_window:
             where_expression_string = self.convert_where_clause(match_clause.where_expression, pattern_time_window_info,
