@@ -1,16 +1,35 @@
 from textwrap import dedent
 from unittest import TestCase
 
-from transformer.main import transform_to_cypher
+from neo4j import GraphDatabase
+
+from transformer.s_transformer import STransformer
 
 
 class TestMatch(TestCase):
+    driver = None
+    session = None
+    tx = None
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        super().setUpClass()
+        TestMatch.driver = GraphDatabase.driver("bolt://118.25.15.14:7687", auth=("neo4j", "s-cypher"))
+        TestMatch.session = TestMatch.driver.session()
+        TestMatch.tx = TestMatch.session.begin_transaction()
+
+    @classmethod
+    def tearDownClass(cls) -> None:
+        super().tearDownClass()
+        TestMatch.tx.closed()
+        TestMatch.driver.close()
+
     def test_match_1(self):
         s_cypher = dedent("""
         MATCH (n:City@T("1690", NOW) {name@T("1900", NOW): "London"@T("2000", NOW)})
         RETURN n
         """)
-        cypher_query = transform_to_cypher(s_cypher)
+        cypher_query = STransformer.transform(s_cypher)
         print("test_match_1:", s_cypher, '\n', cypher_query, '\n')
 
     def test_match_2(self):
@@ -18,7 +37,7 @@ class TestMatch(TestCase):
         MATCH (n1:Person)-[:LIVED@T("2000","2005")]->(n2:City {name: "Brussels"})
         RETURN n1
         """)
-        cypher_query = transform_to_cypher(s_cypher)
+        cypher_query = STransformer.transform(s_cypher)
         print("test_match_2:", s_cypher, '\n', cypher_query, '\n')
 
     def test_match_3(self):
@@ -26,7 +45,7 @@ class TestMatch(TestCase):
         MATCH path = cPath((n1:Person)-[:FRIEND*2]->(n2:Person))
         RETURN path
         """)
-        cypher_query = transform_to_cypher(s_cypher)
+        cypher_query = STransformer.transform(s_cypher)
         print("test_match_3:", s_cypher, '\n', cypher_query, '\n')
 
     def test_match_4(self):
@@ -34,7 +53,7 @@ class TestMatch(TestCase):
         MATCH path = pairCPath((n1:Person)-[:FRIEND*2..3]->(n2:Person))
         RETURN path
         """)
-        cypher_query = transform_to_cypher(s_cypher)
+        cypher_query = STransformer.transform(s_cypher)
         print("test_match_4:", s_cypher, '\n', cypher_query, '\n')
 
     def test_match_5(self):
@@ -42,7 +61,7 @@ class TestMatch(TestCase):
         MATCH path = earliestPath((n1:Station {name: "HangZhou East"})-[:route*]->(n2:Station {name: "XvZhou North"}))
         RETURN path
         """)
-        cypher_query = transform_to_cypher(s_cypher)
+        cypher_query = STransformer.transform(s_cypher)
         print("test_match_5:", s_cypher, '\n', cypher_query, '\n')
 
     def test_match_6(self):
@@ -50,7 +69,7 @@ class TestMatch(TestCase):
         MATCH path = latestPath((n1:Station {name: "HangZhou East"})-[:route*]->(n2:Station {name: "XvZhou North"}))
         RETURN path
         """)
-        cypher_query = transform_to_cypher(s_cypher)
+        cypher_query = STransformer.transform(s_cypher)
         print("test_match_6:", s_cypher, '\n', cypher_query, '\n')
 
     def test_match_7(self):
@@ -58,7 +77,7 @@ class TestMatch(TestCase):
         MATCH path = fastestPath((n1:Station {name: "HangZhou East"})-[:route*]->(n2:Station {name: "XiAn North"}))
         RETURN path
         """)
-        cypher_query = transform_to_cypher(s_cypher)
+        cypher_query = STransformer.transform(s_cypher)
         print("test_match_7:", s_cypher, '\n', cypher_query, '\n')
 
     def test_match_8(self):
@@ -66,7 +85,7 @@ class TestMatch(TestCase):
         MATCH path = shortestSPath((n1:Station {name: "HangZhou East"})-[:route*]->(n2:Station {name: "XiAn North"}))
         RETURN path
         """)
-        cypher_query = transform_to_cypher(s_cypher)
+        cypher_query = STransformer.transform(s_cypher)
         print("test_match_8:", s_cypher, '\n', cypher_query, '\n')
 
     def test_match_9(self):
@@ -75,7 +94,7 @@ class TestMatch(TestCase):
         WHERE n.name STARTS WITH "Mary"
         RETURN n.name
         """)
-        cypher_query = transform_to_cypher(s_cypher)
+        cypher_query = STransformer.transform(s_cypher)
         print("test_match_9:", s_cypher, '\n', cypher_query, '\n')
 
     def test_match_10(self):
@@ -84,7 +103,7 @@ class TestMatch(TestCase):
         WHERE n.name STARTS WITH "Mary"
         RETURN n.name
         """)
-        cypher_query = transform_to_cypher(s_cypher)
+        cypher_query = STransformer.transform(s_cypher)
         print("test_match_10:", s_cypher, '\n', cypher_query, '\n')
 
     def test_match_11(self):
@@ -93,7 +112,7 @@ class TestMatch(TestCase):
         WHERE n.name STARTS WITH "Mary"
         RETURN n.name
         """)
-        cypher_query = transform_to_cypher(s_cypher)
+        cypher_query = STransformer.transform(s_cypher)
         print("test_match_11:", s_cypher, '\n', cypher_query, '\n')
 
     def test_match_12(self):
@@ -102,7 +121,7 @@ class TestMatch(TestCase):
         BETWEEN interval("1940", NOW) 
         RETURN n.name limit 10
         """)
-        cypher_query = transform_to_cypher(s_cypher)
+        cypher_query = STransformer.transform(s_cypher)
         print("test_match_12:", s_cypher, '\n', cypher_query, '\n')
 
     def test_match_13(self):
@@ -111,7 +130,7 @@ class TestMatch(TestCase):
         BETWEEN interval("1940", NOW) 
         RETURN n.name
         """)
-        cypher_query = transform_to_cypher(s_cypher)
+        cypher_query = STransformer.transform(s_cypher)
         print("test_match_13:", s_cypher, '\n', cypher_query, '\n')
 
     def test_match_14(self):
@@ -120,7 +139,7 @@ class TestMatch(TestCase):
         BETWEEN interval("1940", NOW)
         RETURN n.name
         """)
-        cypher_query = transform_to_cypher(s_cypher)
+        cypher_query = STransformer.transform(s_cypher)
         print("test_match_14:", s_cypher, '\n', cypher_query, '\n')
 
     def test_match_15(self):
@@ -129,7 +148,7 @@ class TestMatch(TestCase):
         WITH n AS person
         RETURN person.name@T;
         """)
-        cypher_query = transform_to_cypher(s_cypher)
+        cypher_query = STransformer.transform(s_cypher)
         print("test_match_15:", s_cypher, '\n', cypher_query, '\n')
 
     def test_match_16(self):
@@ -138,7 +157,7 @@ class TestMatch(TestCase):
         WITH n.name + '000' as name
         RETURN name;
         """)
-        cypher_query = transform_to_cypher(s_cypher)
+        cypher_query = STransformer.transform(s_cypher)
         print("test_match_16:", s_cypher, '\n', cypher_query, '\n')
 
     def test_match_17(self):
@@ -147,7 +166,7 @@ class TestMatch(TestCase):
         WITH n.name AS name
         RETURN name@T;
         """)
-        cypher_query = transform_to_cypher(s_cypher)
+        cypher_query = STransformer.transform(s_cypher)
         print("test_match_17:", s_cypher, '\n', cypher_query, '\n')
 
     def test_match_18(self):
@@ -156,7 +175,7 @@ class TestMatch(TestCase):
         MATCH path = (a:Person)-[*1..5]->(b:Person)
         RETURN path;
         """)
-        cypher_query = transform_to_cypher(s_cypher)
+        cypher_query = STransformer.transform(s_cypher)
         print("test_match_18:", s_cypher, '\n', cypher_query, '\n')
 
     def test_match_19(self):
@@ -165,7 +184,7 @@ class TestMatch(TestCase):
         WHERE r@T.from < '2022-01-01'
         RETURN a, b;
         """)
-        cypher_query = transform_to_cypher(s_cypher)
+        cypher_query = STransformer.transform(s_cypher)
         print("test_match_19:", s_cypher, '\n', cypher_query, '\n')
 
     def test_match_20(self):
@@ -174,7 +193,7 @@ class TestMatch(TestCase):
         WHERE r@T.from < '2022-01-01'
         RETURN n;
         """)
-        cypher_query = transform_to_cypher(s_cypher)
+        cypher_query = STransformer.transform(s_cypher)
         print("test_match_20:", s_cypher, '\n', cypher_query, '\n')
 
     def test_match_21(self):
@@ -183,5 +202,5 @@ class TestMatch(TestCase):
         WHERE r@T.from < '2022-01-01'
         RETURN n;
         """)
-        cypher_query = transform_to_cypher(s_cypher)
+        cypher_query = STransformer.transform(s_cypher)
         print("test_match_21:", s_cypher, '\n', cypher_query, '\n')

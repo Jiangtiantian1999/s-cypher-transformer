@@ -1,7 +1,7 @@
 from textwrap import dedent
 from unittest import TestCase
 
-from transformer.main import transform_to_cypher
+from transformer.s_transformer import STransformer
 
 
 class TestUnwind(TestCase):
@@ -10,7 +10,7 @@ class TestUnwind(TestCase):
         UNWIND [1, 2, 3] AS x
         RETURN x
         """)
-        cypher_query = transform_to_cypher(s_cypher)
+        cypher_query = STransformer.transform(s_cypher)
         print("test_unwind_1:", s_cypher, '\n', cypher_query, '\n')
 
     def test_unwind_2(self):
@@ -20,9 +20,8 @@ class TestUnwind(TestCase):
         WITH DISTINCT x
         RETURN collect(x) AS SET
         """)
-        cypher_query = transform_to_cypher(s_cypher)
+        cypher_query = STransformer.transform(s_cypher)
         print("test_unwind_2:", s_cypher, '\n', cypher_query, '\n')
-
 
     def test_unwind_3(self):
         s_cypher = dedent("""

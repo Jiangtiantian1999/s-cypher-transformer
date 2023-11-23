@@ -1,7 +1,7 @@
 from textwrap import dedent
 from unittest import TestCase
 
-from transformer.main import transform_to_cypher
+from transformer.s_transformer import STransformer
 
 
 class TestWith(TestCase):
@@ -11,7 +11,7 @@ class TestWith(TestCase):
         WITH n AS person
         RETURN person.name@T
         """)
-        cypher_query = transform_to_cypher(s_cypher)
+        cypher_query = STransformer.transform(s_cypher)
         print("test_with_1:", s_cypher, '\n', cypher_query, '\n')
 
     def test_with_2(self):
@@ -20,7 +20,7 @@ class TestWith(TestCase):
         WITH n.name + "000" as name
         RETURN name
         """)
-        cypher_query = transform_to_cypher(s_cypher)
+        cypher_query = STransformer.transform(s_cypher)
         print("test_with_2:", s_cypher, '\n', cypher_query, '\n')
 
 ## WITH date({year: 1984, month: 10, day: 11}) AS dd

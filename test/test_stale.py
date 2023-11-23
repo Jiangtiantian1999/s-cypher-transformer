@@ -1,7 +1,7 @@
 from textwrap import dedent
 from unittest import TestCase
 
-from transformer.main import transform_to_cypher
+from transformer.s_transformer import STransformer
 
 
 class TestStale(TestCase):
@@ -11,7 +11,7 @@ class TestStale(TestCase):
         STALE n
         AT TIME date("2023")
         """)
-        cypher_query = transform_to_cypher(s_cypher)
+        cypher_query = STransformer.transform(s_cypher)
         print("test_stale_1:", s_cypher, '\n', cypher_query, '\n')
 
     def test_stale_2(self):
@@ -19,7 +19,7 @@ class TestStale(TestCase):
         MATCH (:Person {name: "Pauline Boutler"})-[e:LIVE_IN]->(:City {name: "London"})
         STALE e
         """)
-        cypher_query = transform_to_cypher(s_cypher)
+        cypher_query = STransformer.transform(s_cypher)
         print("test_stale_2:", s_cypher, '\n', cypher_query, '\n')
 
     def test_stale_3(self):
@@ -28,7 +28,7 @@ class TestStale(TestCase):
         STALE n.name
         AT TIME date("2023")
         """)
-        cypher_query = transform_to_cypher(s_cypher)
+        cypher_query = STransformer.transform(s_cypher)
         print("test_stale_3:", s_cypher, '\n', cypher_query, '\n')
 
     def test_stale_4(self):
@@ -37,7 +37,7 @@ class TestStale(TestCase):
         STALE n.name#Value
         AT TIME date("2023")
         """)
-        cypher_query = transform_to_cypher(s_cypher)
+        cypher_query = STransformer.transform(s_cypher)
         print("test_stale_4:", s_cypher, '\n', cypher_query, '\n')
 
     def test_stale_5(self):
@@ -46,6 +46,5 @@ class TestStale(TestCase):
         MATCH (n:City@T("1690", "1999") {name@T("1900", "1999"): "London"@T("1900", "1999")})
         STALE n
         """)
-        cypher_query = transform_to_cypher(s_cypher)
+        cypher_query = STransformer.transform(s_cypher)
         print("test_stale_5:", s_cypher, '\n', cypher_query, '\n')
-    

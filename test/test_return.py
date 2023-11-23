@@ -1,7 +1,7 @@
 from textwrap import dedent
 from unittest import TestCase
 
-from transformer.main import transform_to_cypher
+from transformer.s_transformer import STransformer
 
 
 class TestReturn(TestCase):
@@ -10,14 +10,14 @@ class TestReturn(TestCase):
         MATCH (n1:Person)-[e:FRIEND]->(n2:Person)
         RETURN n1.name, e.name
         """)
-        cypher_query = transform_to_cypher(s_cypher)
+        cypher_query = STransformer.transform(s_cypher)
         print("test_return_1:", s_cypher, '\n', cypher_query, '\n')
 
     def test_return_2(self):
         s_cypher = dedent("""
         RETURN datetime({epochSeconds: timestamp() / 1000, nanosecond: 23}) AS theDate;
         """)
-        cypher_query = transform_to_cypher(s_cypher)
+        cypher_query = STransformer.transform(s_cypher)
         print("test_return_2:", s_cypher, '\n', cypher_query, '\n')
 
     def test_return_3(self):
@@ -26,7 +26,7 @@ class TestReturn(TestCase):
         MATCH (a:Person)
         RETURN DISTINCT a.country;
         """)
-        cypher_query = transform_to_cypher(s_cypher)
+        cypher_query = STransformer.transform(s_cypher)
         print("test_return_3:", s_cypher, '\n', cypher_query, '\n')
 
     def test_return_4(self):
@@ -36,7 +36,7 @@ class TestReturn(TestCase):
         RETURN p@T as n
         ORDER BY n DESC
         """)
-        cypher_query = transform_to_cypher(s_cypher)
+        cypher_query = STransformer.transform(s_cypher)
         print("test_return_4:", s_cypher, '\n', cypher_query, '\n')
 
     def test_return_5(self):
@@ -45,7 +45,7 @@ class TestReturn(TestCase):
         MATCH (a:Person)-[:FRIENDS_WITH]->(b)
         RETURN a.name, collect(b.name) AS Friends;
         """)
-        cypher_query = transform_to_cypher(s_cypher)
+        cypher_query = STransformer.transform(s_cypher)
         print("test_return_5:", s_cypher, '\n', cypher_query, '\n')
 
     def test_return_6(self):
@@ -54,7 +54,7 @@ class TestReturn(TestCase):
         MATCH (p:Person)
         RETURN avg(p.age) AS AverageAge, max(p.age) AS Oldest, min(p.age) AS Youngest;
         """)
-        cypher_query = transform_to_cypher(s_cypher)
+        cypher_query = STransformer.transform(s_cypher)
         print("test_return_6:", s_cypher, '\n', cypher_query, '\n')
 
     def test_return_7(self):
@@ -63,7 +63,7 @@ class TestReturn(TestCase):
         MATCH (p:Person)
         RETURN avg(p@T.from) AS AverageBirth, min(p@T.from) AS Oldest;
         """)
-        cypher_query = transform_to_cypher(s_cypher)
+        cypher_query = STransformer.transform(s_cypher)
         print("test_return_7:", s_cypher, '\n', cypher_query, '\n')
 
     def test_return_8(self):
@@ -72,7 +72,7 @@ class TestReturn(TestCase):
         MATCH (p:Person)
         RETURN max(p@T.to) AS Oldest;
         """)
-        cypher_query = transform_to_cypher(s_cypher)
+        cypher_query = STransformer.transform(s_cypher)
         print("test_return_8:", s_cypher, '\n', cypher_query, '\n')
 
     def test_return_9(self):
@@ -82,5 +82,5 @@ class TestReturn(TestCase):
         WHERE p.name STARTS WITH "Mary"
         RETURN p,b, p@T.from-b@T.from AS AgeDiff;
         """)
-        cypher_query = transform_to_cypher(s_cypher)
+        cypher_query = STransformer.transform(s_cypher)
         print("test_return_9:", s_cypher, '\n', cypher_query, '\n')

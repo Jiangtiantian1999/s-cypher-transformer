@@ -1,7 +1,7 @@
 from textwrap import dedent
 from unittest import TestCase
 
-from transformer.main import transform_to_cypher
+from transformer.s_transformer import STransformer
 
 
 class TestDelete(TestCase):
@@ -10,7 +10,7 @@ class TestDelete(TestCase):
         MATCH (n {name: "Pauline Boutler"})
         DELETE n
         """)
-        cypher_query = transform_to_cypher(s_cypher)
+        cypher_query = STransformer.transform(s_cypher)
         print("test_delete_1:", s_cypher, '\n', cypher_query, '\n')
 
     def test_delete_2(self):
@@ -18,7 +18,7 @@ class TestDelete(TestCase):
         MATCH (n {name: "Pauline Boutler"})
         DELETE n.name
         """)
-        cypher_query = transform_to_cypher(s_cypher)
+        cypher_query = STransformer.transform(s_cypher)
         print("test_delete_2:", s_cypher, '\n', cypher_query, '\n')
 
     def test_delete_3(self):
@@ -26,7 +26,7 @@ class TestDelete(TestCase):
         MATCH (n {name: "Pauline Boutler"})
         DELETE n.name#Value
         """)
-        cypher_query = transform_to_cypher(s_cypher)
+        cypher_query = STransformer.transform(s_cypher)
         print("test_delete_3:", s_cypher, '\n', cypher_query, '\n')
 
     def test_delete_4(self):
@@ -34,5 +34,5 @@ class TestDelete(TestCase):
         MATCH (a:Person {name: "Pauline Boutler"})-[e:LIVE_IN]->(b:City {name: "London"})
         DELETE e
         """)
-        cypher_query = transform_to_cypher(s_cypher)
+        cypher_query = STransformer.transform(s_cypher)
         print("test_delete_4:", s_cypher, '\n', cypher_query, '\n')

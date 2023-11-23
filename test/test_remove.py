@@ -1,7 +1,7 @@
 from textwrap import dedent
 from unittest import TestCase
 
-from transformer.main import transform_to_cypher
+from transformer.s_transformer import STransformer
 
 
 class TestRemove(TestCase):
@@ -10,7 +10,7 @@ class TestRemove(TestCase):
         MATCH (:Person {name: "Pauline Boutler"})-[e:LIVE_IN]->(:City {name: "London"})
         REMOVE e.code
         """)
-        cypher_query = transform_to_cypher(s_cypher)
+        cypher_query = STransformer.transform(s_cypher)
         print("test_remove_1:", s_cypher, '\n', cypher_query, '\n')
 
     def test_remove_2(self):
