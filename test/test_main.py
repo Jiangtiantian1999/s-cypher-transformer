@@ -1,4 +1,7 @@
 import os
+import sys
+root_path = os.path.dirname(os.path.dirname(__file__))
+sys.path.append(root_path)
 from unittest import TextTestRunner, defaultTestLoader, TestSuite
 
 if __name__ == '__main__':

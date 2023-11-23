@@ -39,7 +39,7 @@ if __name__ == '__main__':
     print(cypher_query)
 
     # test connect
-    driver = GraphDatabase.driver("bolt://localhost:7687", auth=("neo4j", "s-cypher"))
+    driver = GraphDatabase.driver("bolt://10.66.10.172:7687", auth=("neo4j", "s-cypher"))
     session = driver.session()
     tx = session.begin_transaction()
     result = tx.run(cypher_query)
