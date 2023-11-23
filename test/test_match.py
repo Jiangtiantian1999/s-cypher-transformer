@@ -14,7 +14,7 @@ class TestMatch(TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         super().setUpClass()
-        TestMatch.driver = GraphDatabase.driver("bolt://118.25.15.14:7687", auth=("neo4j", "s-cypher"))
+        TestMatch.driver = GraphDatabase.driver("bolt://10.66.10.172:7687", auth=("neo4j", "s-cypher"))
         TestMatch.session = TestMatch.driver.session()
         TestMatch.tx = TestMatch.session.begin_transaction()
 

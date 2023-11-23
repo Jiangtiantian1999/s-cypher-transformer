@@ -37,7 +37,7 @@ class TestUnwind(TestCase):
         ] AS theDate
         RETURN theDate;
         """)
-        cypher_query = transform_to_cypher(s_cypher)
+        cypher_query = STransformer.transform(s_cypher)
         print("tset_unwind_3:", s_cypher, '\n', cypher_query, '\n')
 
     def test_unwind_4(self):
@@ -51,7 +51,7 @@ class TestUnwind(TestCase):
         ] AS aDuration
         RETURN aDuration;
         """)
-        cypher_query = transform_to_cypher(s_cypher)
+        cypher_query = STransformer.transform(s_cypher)
         print("test_unwind_4:", s_cypher, '\n', cypher_query, '\n')
 
     def test_unwind_5(self):
@@ -66,7 +66,7 @@ class TestUnwind(TestCase):
         ] AS aDuration
         RETURN aDuration;
         """)
-        cypher_query = transform_to_cypher(s_cypher)
+        cypher_query = STransformer.transform(s_cypher)
         print("test_unwind_5:", s_cypher, '\n', cypher_query, '\n')
 
     def test_unwind_6(self):
@@ -83,7 +83,7 @@ class TestUnwind(TestCase):
         ] AS theDate
         RETURN theDate;
         """)
-        cypher_query = transform_to_cypher(s_cypher)
+        cypher_query = STransformer.transform(s_cypher)
         print("test_unwind_6:", s_cypher, '\n', cypher_query, '\n')
 
     def test_unwind_7(self):
@@ -99,7 +99,7 @@ class TestUnwind(TestCase):
         ] AS theDate
         RETURN theDate;
         """)
-        cypher_query = transform_to_cypher(s_cypher)
+        cypher_query = STransformer.transform(s_cypher)
         print("test_unwind_7:", s_cypher, '\n', cypher_query, '\n')
 
     def test_unwind_8(self):
@@ -112,7 +112,7 @@ class TestUnwind(TestCase):
         ] AS theDate
         RETURN theDate;
         """)
-        cypher_query = transform_to_cypher(s_cypher)
+        cypher_query = STransformer.transform(s_cypher)
         print("test_unwind_8:", s_cypher, '\n', cypher_query, '\n')
 
     def test_unwind_9(self):
@@ -125,5 +125,5 @@ class TestUnwind(TestCase):
         ] AS theDate
         RETURN theDate
         """)
-        cypher_query = transform_to_cypher(s_cypher)
+        cypher_query = STransformer.transform(s_cypher)
         print("test_unwind_9:", s_cypher, '\n', cypher_query, '\n')
