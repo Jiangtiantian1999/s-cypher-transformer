@@ -210,7 +210,6 @@ class GraphConverter:
         if node.__class__ == ObjectNode:
             node_pattern = node_pattern + "{intervalFrom: " + interval_from_string + ", intervalTo: " + interval_to_string + "}"
         elif node.__class__ in [PropertyNode, ValueNode]:
-            parent_node_effective_time = {}
             # 调用函数检查属性节点和值节点的有效时间是否满足约束
             if parent_node.time_window:
                 parent_node_effective_time = {
@@ -226,7 +225,7 @@ class GraphConverter:
                         "to": "scypher.timePoint(\"NOW\")"}
                 else:
                     parent_node_effective_time = {"from": "scypher.operateTime()", "to": "scypher.timePoint(\"NOW\")"}
-            node_pattern = node_pattern + "{intervalFrom: scypher.getIntervalFromOfSubordinateNode(" + \
+            node_pattern = node_pattern + ", intervalFrom: scypher.getIntervalFromOfSubordinateNode(" + \
                            parent_node_effective_time["from"] + ", " + interval_from_string + "), "
             node_pattern = node_pattern + "intervalTo: scypher.getIntervalToOfSubordinateNode(" + \
                            parent_node_effective_time["to"] + ", " + interval_to_string + ")}"
