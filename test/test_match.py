@@ -2,11 +2,13 @@ from textwrap import dedent
 from unittest import TestCase
 
 from neo4j import GraphDatabase
+from sshtunnel import SSHTunnelForwarder
 
 from transformer.s_transformer import STransformer
 
 
 class TestMatch(TestCase):
+    server = None
     driver = None
     session = None
     tx = None
@@ -14,7 +16,11 @@ class TestMatch(TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         super().setUpClass()
-        TestMatch.driver = GraphDatabase.driver("bolt://10.66.10.172:7687", auth=("neo4j", "s-cypher"))
+        TestMatch.server = SSHTunnelForwarder(("118.25.15.14", 1111), ssh_password="123456", ssh_username="jtt",
+                                              remote_bind_address=("0.0.0.0", 7687))
+        TestMatch.server.start()
+        TestMatch.driver = GraphDatabase.driver("bolt://127.0.0.1:" + str(TestMatch.server.local_bind_port),
+                                                auth=("neo4j", "s-cypher"))
         TestMatch.session = TestMatch.driver.session()
         TestMatch.tx = TestMatch.session.begin_transaction()
 
@@ -23,6 +29,7 @@ class TestMatch(TestCase):
         super().tearDownClass()
         TestMatch.tx.closed()
         TestMatch.driver.close()
+        TestMatch.server.close()
 
     def test_match_1(self):
         s_cypher = dedent("""
@@ -31,6 +38,9 @@ class TestMatch(TestCase):
         """)
         cypher_query = STransformer.transform(s_cypher)
         print("test_match_1:", s_cypher, '\n', cypher_query, '\n')
+        results = TestMatch.tx.run(cypher_query)
+        for result in results:
+            print(result)
 
     def test_match_2(self):
         s_cypher = dedent("""
