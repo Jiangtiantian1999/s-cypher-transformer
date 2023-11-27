@@ -182,6 +182,8 @@ class ExpressionConverter:
 
         for index, time_property in enumerate(at_t_expression.time_property_chains):
             if index == 0:
+                if time_property.lower() in ["from", "to"]:
+                    time_property = time_property.lower()
                 if interval.__class__ == dict:
                     if time_property in ["from", "to"]:
                         interval = interval[time_property]

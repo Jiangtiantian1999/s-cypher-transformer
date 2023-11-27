@@ -309,10 +309,12 @@ class GraphConverter:
         # getIntervalFromOfRelationship和getIntervalToOfRelationship用于检查关系的有效时间是否符合约束，以及是否有重复关系
         relationship_pattern = relationship_pattern + "intervalFrom: scypher.getIntervalFromOfRelationship(" + \
                                start_node_effective_time["from"] + ", " + end_node_effective_time["from"] + ", " + \
-                               relationship.labels[0] + ", " + relationship_effective_time["from"] + "), "
+                               start_node.variable + ", " + end_node.variable + ", " + relationship.labels[0] + ", " + \
+                               relationship_effective_time["from"] + "), "
         relationship_pattern = relationship_pattern + "intervalTo: scypher.getIntervalToOfRelationship(" + \
                                start_node_effective_time["to"] + ", " + end_node_effective_time["to"] + ", " + \
-                               relationship.labels[0] + ", " + relationship_effective_time["to"] + ")}"
+                               start_node.variable + ", " + end_node.variable + ", " + relationship.labels[0] + ", " + \
+                               relationship_effective_time["to"] + ")}"
         relationship_pattern = '-[' + relationship_pattern + ']-'
         if relationship.direction == SRelationship.LEFT:
             relationship_pattern = '<' + relationship_pattern
