@@ -282,32 +282,30 @@ class ClauseConverter:
         create_clause_string = ""
         for pattern in create_clause.patterns:
             # create clause的pattern均为SPath类型
-            pattern = pattern.pattern
-            if create_clause_string == "":
-                create_clause_string = "CREATE "
-            else:
-                create_clause_string = create_clause_string + "\nCREATE "
             object_node_patterns, property_node_patterns, value_node_patterns, path_pattern = self.graph_converter.create_path(
-                pattern, create_clause.at_time_clause)
-            if len(object_node_patterns) == 1 and path_pattern:
-                create_clause_string = create_clause_string + path_pattern
-            else:
+                pattern.pattern, create_clause.at_time_clause)
+            if len(object_node_patterns) > 0:
+                # 创建对象节点
+                create_clause_string = create_clause_string + "\nCREATE "
                 for object_node_pattern in object_node_patterns:
                     create_clause_string = create_clause_string + object_node_pattern + ", "
                 create_clause_string = create_clause_string.rstrip(", ")
             if len(property_node_patterns) > 0:
-                create_clause_string = create_clause_string + "\nCREATE"
+                # 创建属性节点和对象节点到属性节点的边
+                create_clause_string = create_clause_string + "\nCREATE "
                 for property_node_pattern in property_node_patterns:
                     create_clause_string = create_clause_string + property_node_pattern + ", "
                 create_clause_string = create_clause_string.rstrip(", ")
             if len(value_node_patterns) > 0:
-                create_clause_string = create_clause_string + "\nCREATE"
+                # 创建值节点和属性节点到值节点的边
+                create_clause_string = create_clause_string + "\nCREATE "
                 for value_node_pattern in value_node_patterns:
                     create_clause_string = create_clause_string + value_node_pattern + ", "
                 create_clause_string = create_clause_string.rstrip(", ")
-            if len(object_node_patterns) > 1 and path_pattern:
+            if path_pattern:
+                # 创建对象节点之间的边
                 create_clause_string = create_clause_string + "\nCREATE " + path_pattern
-        return create_clause_string
+        return create_clause_string.lstrip()
 
     def convert_delete_clause(self, delete_clause: DeleteClause) -> str:
         delete_clause_string = ""
@@ -477,7 +475,7 @@ class ClauseConverter:
                     else:
                         set_clause_string = set_clause_string + "SET " + set_item.expression_left + " = " + set_sub_item_variable + ')'
             else:
-                # 设置节点/关系的标签
+                # 设置节点的标签
                 set_clause_string = set_clause_string + "\nSET " + set_item.variable
                 for label in set_item.labels:
                     set_clause_string = set_clause_string + ':' + label
@@ -521,6 +519,7 @@ class ClauseConverter:
         remove_clause_string = "REMOVE "
         for remove_item in remove_clause.remove_items:
             if remove_item.__class__ == LabelSetting:
+                # 移除节点/关系的标签
                 remove_clause_string = remove_clause_string + remove_item.variable
                 for label in remove_item.labels:
                     remove_clause_string = remove_clause_string + ':' + label
