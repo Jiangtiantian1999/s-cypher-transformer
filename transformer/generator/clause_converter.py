@@ -407,7 +407,9 @@ class ClauseConverter:
                 # 第三个参数为值节点的有效时间，第四个参数为【是否为+=】，第五个参数为表达式
                 set_interval = {"from": set_time_point, "to": "scypher.timePoint(\"NOW\")"}
                 set_clause_string = set_clause_string + "\nFOREACH (" + set_item_variable + " IN scypher.getItemsToSetExpression("
+                # 设置第1~3个参数
                 if set_item.expression_left.__class__ == SetPropertyExpression:
+                    # set n.property[@T(...)] =  expression
                     object_variable = self.expression_converter.convert_atom(set_item.expression_left.atom)
                     for index, property_lookup in enumerate(set_item.expression_left.property_chains):
                         if index != len(set_item.expression_left.property_chains) - 1:
@@ -428,19 +430,23 @@ class ClauseConverter:
                     else:
                         set_clause_string = set_clause_string + set_time_point + ", "
                 else:
+                    # set n = {...}或set n += {...}
                     set_clause_string = set_clause_string + set_item.expression_left + ", NULL" + set_time_point + ", "
+                # 设置第四个参数
+                set_clause_string = set_clause_string + str(set_item.is_added) + ", "
+                # 设置第五个参数
                 set_expression_right_string = self.expression_converter.convert_expression(set_item.expression_right)
-                set_clause_string = set_clause_string + str(
-                    set_item.is_added) + ", " + set_expression_right_string + ') | '
-                # 删除属性节点/值节点/属性节点和值节点的相连边
+                set_clause_string = set_clause_string + set_expression_right_string + ') | '
+
+                # 删除属性节点/值节点/属性节点和值节点的相连边（值为null时即删除属性）
                 set_clause_string = set_clause_string + "FOREACH( " + set_sub_item_variable + " IN " + set_item_variable + ".deleteItems | "
                 set_clause_string = set_clause_string + "DELETE " + set_sub_item_variable + ')'
-                # 创建属性节点和值节点
+                # 创建属性节点和值节点（没有属性节点时）
                 if set_item.expression_left.__class__ == SetPropertyExpression:
                     set_clause_string = set_clause_string + "FOREACH( " + set_sub_item_variable + " IN " + set_item_variable + ".createPropertyNode | "
                     # 此时，createPropertyNode返回属性节点所连接的对象节点
-                    set_clause_string = set_clause_string + "CREATE (" + set_sub_item_variable + ")-[:OBJECT_PROPERTY]->(:Property{content:" + property_lookup.property_name + ",intervalFrom:" + \
-                                        set_interval["from"] + ",intervalTo:" + set_interval[
+                    set_clause_string = set_clause_string + "CREATE (" + set_sub_item_variable + ")-[:OBJECT_PROPERTY]->(:Property{content:" + property_lookup.property_name + ", intervalFrom:" + \
+                                        set_interval["from"] + ", intervalTo:" + set_interval[
                                             "to"] + "})-[:PROPERTY_VALUE]->(:Value{content:" + set_expression_right_string + ",intervalFrom:" + \
                                         set_interval["from"] + ",intervalTo:" + set_interval["to"] + "}))"
                 else:
@@ -450,25 +456,29 @@ class ClauseConverter:
                                         set_interval["from"] + ",intervalTo:" + set_interval[
                                             "to"] + "})-[:PROPERTY_VALUE]->(:Value{content:" + set_sub_item_variable + ".propertyValue,intervalFrom:" + \
                                         set_interval["from"] + ",intervalTo:" + set_interval["to"] + "}))"
-                # 仅创建值节点
+                # 仅创建值节点，可能要修改已有值节点的结束时间
                 if set_item.expression_left.__class__ == SetPropertyExpression:
                     set_clause_string = set_clause_string + "FOREACH( " + set_sub_item_variable + " IN " + set_item_variable + ".createValueNode | "
-                    # 此时，createValueNode返回值节点所连接的属性节点
+                    # 此时，createValueNode返回待创建的值节点所连接的属性节点
                     set_clause_string = set_clause_string + "CREATE (" + set_sub_item_variable + ")-[:PROPERTY_VALUE]->(:Value{content:" + set_expression_right_string + ",intervalFrom:" + \
                                         set_interval["from"] + ",intervalTo:" + set_interval["to"] + "}))"
                 else:
                     set_clause_string = set_clause_string + "FOREACH( " + set_sub_item_variable + " IN " + set_item_variable + ".createValueNodes | "
-                    # 此时，createValueNodes返回属性节点的属性名和值节点的值
+                    # 此时，createValueNodes返回属性节点的属性名和待创建的值节点的值
                     set_clause_string = set_clause_string + "MERGE (" + set_item.expression_left + ")-[:OBJECT_PROPERTY]->(" + self.variables_manager.get_random_variable() + ":Property{content:" + set_sub_item_variable + ".propertyName})-[:PROPERTY_VALUE]->(:Value{content:" + set_sub_item_variable + ".propertyValue,intervalFrom:" + \
                                         set_interval["from"] + ",intervalTo:" + set_interval["to"] + "}))"
-                # 修改值节点的值
-                set_clause_string = set_clause_string + "FOREACH( " + set_sub_item_variable + " IN " + set_item_variable + ".setValueNodes | "
-                set_clause_string = set_clause_string + "SET " + set_sub_item_variable + ".item.content = " + set_sub_item_variable + ".content)"
+
+                # 修改已有值节点的结束时间
+                set_clause_string = set_clause_string + "FOREACH( " + set_sub_item_variable + " IN " + set_item_variable + ".staleValueNodes | "
+                set_clause_string = set_clause_string + "SET " + set_sub_item_variable + ".intervalTo = " + \
+                                    set_interval["to"] + ')'
                 # 修改关系属性
                 if set_item.expression_left.__class__ == SetPropertyExpression:
+                    # 此时，setRelationshipProperty返回待修改的关系
                     set_clause_string = set_clause_string + "FOREACH( " + set_sub_item_variable + " IN " + set_item_variable + ".setRelationshipProperty | "
                     set_clause_string = set_clause_string + "SET " + set_sub_item_variable + "." + property_lookup.property_name + " = " + set_expression_right_string + ')'
                 else:
+                    # 此时，setRelationshipProperties返回待修改的属性键值对
                     set_clause_string = set_clause_string + "FOREACH( " + set_sub_item_variable + " IN " + set_item_variable + ".setRelationshipProperties | "
                     if set_item.is_added:
                         set_clause_string = set_clause_string + "SET " + set_item.expression_left + " += " + set_sub_item_variable + ')'
