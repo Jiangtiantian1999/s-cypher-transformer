@@ -18,7 +18,6 @@ class DataSet1:
         DETACH DELETE p,c,b
         """
         cypher_query = STransformer.transform(s_cypher_query)
-        print(cypher_query)
         self.tx.run(cypher_query)
         self.tx.commit()
 
