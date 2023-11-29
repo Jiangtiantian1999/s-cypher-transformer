@@ -64,11 +64,10 @@ class LabelSetting:
 
 
 class RemovePropertyExpression:
-    def __init__(self, atom: Atom, property_name: str, property_chains: List[str] = None):
+    def __init__(self, atom: Atom, property_chains: List[str]):
         self.atom = atom
-        self.property_name = property_name
         if property_chains is None:
-            property_chains = []
+            raise TranslateError("Property chains can't be empty")
         self.property_chains = property_chains
 
 

@@ -531,7 +531,6 @@ class ClauseConverter:
                 relationship_variable = self.expression_converter.convert_atom(remove_item.atom)
                 for property_name in remove_item.property_chains:
                     relationship_variable = relationship_variable + '.' + property_name
-                remove_clause_string = remove_clause_string + relationship_variable + '.' + remove_item.property_name
             remove_clause_string = remove_clause_string + ", "
         return remove_clause_string.rstrip(", ")
 
