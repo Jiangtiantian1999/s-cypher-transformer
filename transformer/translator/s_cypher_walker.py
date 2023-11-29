@@ -92,8 +92,8 @@ class SCypherWalker(s_cypherListener):
         self.index_expressions = []
         self.AtT_expression = None
         self.properties_labels_expression = None
-        self.property_expression = None
         self.remove_property_expression = None
+        self.set_property_expression = None
 
         # where expression
         self.where_skip_expression = None  # Expression类型
@@ -162,9 +162,13 @@ class SCypherWalker(s_cypherListener):
         self.map_key_values = dict()
         self.integer_literals = []
         self.list_literal_expressions = []
+
+        # bool
         self.is_explicit = False
         self.projection_item_is_all = False
         self.is_property_look_up_time = False
+        self.is_set = False
+        self.is_remove = False
 
     def exitOC_Query(self, ctx: s_cypherParser.OC_QueryContext):
         if ctx.oC_RegularQuery():
@@ -915,21 +919,16 @@ class SCypherWalker(s_cypherListener):
 
     def exitOC_PropertyLookup(self, ctx: s_cypherParser.OC_PropertyLookupContext):
         # property_name: str,
-        # time_window: AtTElement = None
         property_name = ctx.oC_PropertyKeyName().getText()
-        time_window = None
-        if ctx.s_AtTElement() is not None:
-            time_window = self.at_t_element
-            self.at_t_element = None
-        self.property_look_up_list.append(PropertyLookup(property_name, time_window))
+        self.property_look_up_list.append(property_name)
 
-    def enterS_PropertyLookupTime(self, ctx:s_cypherParser.S_PropertyLookupTimeContext):
+    def enterS_PropertyLookupTime(self, ctx: s_cypherParser.S_PropertyLookupTimeContext):
         self.is_property_look_up_time = True
 
     def exitS_PropertyLookupTime(self, ctx: s_cypherParser.S_PropertyLookupTimeContext):
         self.is_property_look_up_time = False
 
-    def exitOC_PropertyKeyName(self, ctx:s_cypherParser.OC_PropertyKeyNameContext):
+    def exitOC_PropertyKeyName(self, ctx: s_cypherParser.OC_PropertyKeyNameContext):
         if self.is_property_look_up_time:
             self.property_look_up_time_list.append(ctx.getText())
 
@@ -1224,6 +1223,9 @@ class SCypherWalker(s_cypherListener):
             time_window = True
         self.delete_items.append(DeleteItem(expression, property_name, time_window))
 
+    def enterS_Set(self, ctx:s_cypherParser.S_SetContext):
+        self.is_set = True
+
     def exitS_Set(self, ctx: s_cypherParser.S_SetContext):
         # set_items: List[EffectiveTimeSetting | ExpressionSetting | LabelSetting],
         # at_time_clause: AtTimeClause = None
@@ -1231,6 +1233,7 @@ class SCypherWalker(s_cypherListener):
         self.at_time_clause = None  # 退出清空
         self.set_clause = SetClause(self.set_items, at_time_clause)
         self.set_items = []  # 退出清空
+        self.is_set = False
 
     def exitOC_SetItem(self, ctx: s_cypherParser.OC_SetItemContext):
         # item: EffectiveTimeSetting | ExpressionSetting | LabelSetting
@@ -1298,8 +1301,10 @@ class SCypherWalker(s_cypherListener):
             # expression_right: Expression,
             # is_added: False
             if ctx.oC_PropertyExpression() is not None:
-                expression_left = self.property_expression
-                self.property_expression = None  # 退出清空
+                expression_left = self.set_property_expression
+                if ctx.s_TimePointLiteral() is not None:
+                    self.set_property_expression.operate_time = TimePointLiteral(ctx.s_TimePointLiteral().getText())
+                self.set_property_expression = None  # 退出清空
             else:
                 expression_left = ctx.oC_Variable().getText()
             expression_right = self.expression
@@ -1312,14 +1317,26 @@ class SCypherWalker(s_cypherListener):
             raise TranslateError("Error SetItem format.")
 
     def exitOC_PropertyExpression(self, ctx: s_cypherParser.OC_PropertyExpressionContext):
-        # ===SetPropertyExpression
-        # atom: Atom,
-        # property_chains: List[PropertyLookup]
-        atom = self.atom
-        self.atom = None  # 退出清空
-        property_chains = self.property_look_up_list
-        self.property_look_up_list = []  # 退出清空
-        self.property_expression = SetPropertyExpression(atom, property_chains)
+        if self.is_set:
+            # ===SetPropertyExpression
+            # atom: Atom,
+            # property_chains: List[str],
+            # operate_time: TimePointLiteral = None
+            atom = self.atom
+            self.atom = None  # 退出清空
+            property_chains = self.property_look_up_list
+            self.property_look_up_list = []  # 退出清空
+            self.set_property_expression = SetPropertyExpression(atom, property_chains)
+        elif self.is_remove:
+            # atom: Atom,
+            # property_name: str,
+            # property_chains: List[str] = None
+            atom = self.atom
+            self.atom = None  # 退出清空
+            property_chains = self.property_look_up_list
+            self.property_look_up_list = []  # 退出清空
+            # TODO: property_name的对应
+            self.set_property_expression = RemovePropertyExpression(atom, None, property_chains)
 
     def exitOC_Remove(self, ctx: s_cypherParser.OC_RemoveContext):
         # remove_items: List[LabelSetting | RemovePropertyExpression]
@@ -1337,25 +1354,25 @@ class SCypherWalker(s_cypherListener):
             labels = self.node_labels
             self.node_labels = []  # 退出清空
             self.remove_items.append(LabelSetting(variable, labels))
-        elif ctx.s_RemovePropertyExpression() is not None:
+        elif ctx.oC_PropertyExpression() is not None:
             self.remove_items.append(self.remove_property_expression)
             self.remove_property_expression = None
         else:
             raise TranslateError("RemoveItem format error.")
 
-    def exitS_RemovePropertyExpression(self, ctx: s_cypherParser.S_RemovePropertyExpressionContext):
-        # atom: Atom,
-        # property_name: str,
-        # property_chains: List[PropertyLookup] = None
-        atom = self.atom
-        self.atom = None
-        property_name = ctx.oC_PropertyKeyName().getText()
-        if ctx.oC_PropertyLookup() is not None:
-            property_chains = self.property_look_up_list
-            self.property_look_up_list = []  # 退出清空
-        else:
-            property_chains = None
-        self.remove_property_expression = RemovePropertyExpression(atom, property_name, property_chains)
+    # def exitS_RemovePropertyExpression(self, ctx: s_cypherParser.S_RemovePropertyExpressionContext):
+    #     # atom: Atom,
+    #     # property_name: str,
+    #     # property_chains: List[PropertyLookup] = None
+    #     atom = self.atom
+    #     self.atom = None
+    #     property_name = ctx.oC_PropertyKeyName().getText()
+    #     if ctx.oC_PropertyLookup() is not None:
+    #         property_chains = self.property_look_up_list
+    #         self.property_look_up_list = []  # 退出清空
+    #     else:
+    #         property_chains = None
+    #     self.remove_property_expression = RemovePropertyExpression(atom, property_name, property_chains)
 
     def exitS_Stale(self, ctx: s_cypherParser.S_StaleContext):
         # stale_items: List[StaleItem]
