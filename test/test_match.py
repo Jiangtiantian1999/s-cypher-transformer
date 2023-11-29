@@ -214,3 +214,103 @@ class TestMatch(TestCase):
         """)
         cypher_query = STransformer.transform(s_cypher)
         print("test_match_21:", s_cypher, '\n', cypher_query, '\n')
+
+    def test_match_22(self):
+        s_cypher = dedent("""
+        MATCH (n:Person@T("1937", NOW) {name@T("1937", NOW): "Mary Smith"@T("1937", "1959")}) -[r:LIVE_IN]->(m:City@T("1581", NOW) {name@T("1581", NOW): "Antwerp"@T("1581", NOW)})
+        WHERE r@T.from > '1989-08-09'
+        RETURN n;
+        """)
+
+    def test_match_23(self):
+        s_cypher = dedent("""
+        MATCH (n:Person{name@T("1937", NOW): "Mary Smith"@T("1937", "1959")}) -[r:LIVE_IN]->(m:City@T("1581", NOW) {name@T("1581", NOW): "Antwerp"@T("1581", NOW)})
+        WHERE r@T.from > '1989-08-09'
+        RETURN n;
+        """)
+
+    def test_match_24(self):
+        s_cypher = dedent("""
+        MATCH (n:Person{name@T("1937", NOW): "Mary Smith"@T("1937", "1959")}) -[r:LIKE]->(m:Brand@T("1938", NOW) {name@T("1938", NOW): "Samsung"@T("1938", NOW)})
+        WHERE r@T.from > '1890-08-09'
+        RETURN m;
+        """)
+
+    def test_match_25(self):
+        s_cypher = dedent("""
+        MATCH (n1:Person {name: 'Pauline Boutler'})-[e:FRIEND]->(n2:Person)
+        WHERE e@T.to >= date ('2000')
+        RETURN n2;
+        """)
+
+    def test_match_26(self):
+        s_cypher = dedent("""
+        MATCH (n1:Person)-[e:FRIEND]->(n2:Person {name: 'Cathy Van'})
+        WHERE e@T.from >= date ('1990')
+        RETURN n1;
+        """)
+
+    def test_match_27(self):
+        s_cypher = dedent("""
+        MATCH (n1:Person)-[e:FRIEND]->(n2:Person {name: 'Cathy Van'})
+        WHERE n1.name ENDS WITH 'Burton'
+        RETURN n1;
+        """)
+
+    def test_match_28(self):
+        s_cypher = dedent("""
+        MATCH (n1:Person)
+        WHERE n1.name CONTAINS 'Mary Smith'
+        RETURN n1;
+        """)
+
+    def test_match_29(self):
+        s_cypher = dedent("""
+        MATCH (n1:Person)-[:LIVED@T("2000","2002")]->(n2:City {name: "Brussels"})
+        RETURN n1;
+        """)
+
+    def test_match_29(self):
+        s_cypher = dedent("""
+        MATCH (n1:Person)-[:LIVED@T("2001","2022")]->(n2:City)
+        WHERE n2.name CONTAINS 'Paris' AND n1@T.from <= date('1960')
+        RETURN n1;
+        """)
+
+    def test_match_30(self):
+        s_cypher = dedent("""
+        MATCH (n1:Person)-[e:FRIEND]->(n2:Person)
+        WHERE n1.name STARTS WITH "Mary" AND (e@T.to - e@T.from) >= duration({years: 20})
+        RETURN e;
+        """)
+
+    def test_match_31(self):
+        s_cypher = dedent("""
+        MATCH (n:Brand)
+        WHERE n.name CONTAINS 'Samsung'
+        WITH n AS brand
+        RETURN brand.name@T;
+        """)
+
+    def test_match_32(self):
+        s_cypher = dedent("""
+        MATCH (n:Person{name: 'Daniel Yang'})
+        WITH n.name + 'Justin' as name
+        RETURN name;
+        """)
+
+    def test_match_33(self):
+        s_cypher = dedent("""
+        MATCH path = cPath((n1:Person)-[:LIVE_IN*2]->(n2:City))
+        RETURN path;
+        """)
+
+    def test_match_34(self):
+        s_cypher = dedent("""
+        MATCH path = cPath((n1:Person)-[:LIKE*2]->(n2:Brand))
+        RETURN path;
+        """)
+
+
+
+
