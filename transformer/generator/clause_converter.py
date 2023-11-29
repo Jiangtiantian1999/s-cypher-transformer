@@ -316,16 +316,19 @@ class ClauseConverter:
                 delete_time_window = self.expression_converter.convert_expression(delete_clause.time_window.interval)
         else:
             delete_time_window = "NULL"
+
+        delete_object_string = ""
         delete_item_variable = self.variables_manager.get_random_variable()
         for delete_item in delete_clause.delete_items:
             # 物理删除对象节点/路径/关系/对象节点的属性，调用getItemsToDelete，第一个参数为对象节点/路径/关系，第二个参数为属性名，第三个参数为删除的值节点的范围/[是否仅删除值节点]
-            # 以列表形式返回所有待物理删除的元素
-            delete_list_string = "scypher.getItemsToDelete(" + self.expression_converter.convert_expression(
-                delete_item.expression) + ", "
+            # 以列表形式返回所有待物理删除的属性节点和值节点
+            delete_expression_string = self.expression_converter.convert_expression(delete_item.expression)
+            delete_list_string = "scypher.getItemsToDelete(" + delete_expression_string + ", "
             if delete_item.property_name:
                 delete_list_string = delete_list_string + delete_item.property_name + ", "
             else:
                 delete_list_string = delete_list_string + "NULL, "
+                delete_object_string = delete_object_string + delete_expression_string + ", "
             if delete_item.time_window:
                 # 仅物理删除值节点
                 if delete_item.time_window.__class__ == AtTElement:
@@ -338,12 +341,14 @@ class ClauseConverter:
             else:
                 # 物理删除属性节点和值节点
                 delete_list_string = delete_list_string + "NULL)"
-            delete_operation = "DELETE"
+            delete_clause_string = delete_clause_string + "FOREACH (" + delete_item_variable + " IN " + delete_list_string + " | DETACH DELETE " + delete_item_variable + ')\n'
+        if delete_object_string != "":
             if delete_clause.is_detach:
-                delete_operation = "DETACH DELETE"
-            delete_clause_string = delete_clause_string + "\nFOREACH (" + delete_item_variable + " IN " + delete_list_string + " | " + delete_operation + " " + delete_item_variable + ')'
+                delete_clause_string = delete_clause_string + "DETACH DELETE " + delete_object_string.rstrip(", ")
+            else:
+                delete_clause_string = delete_clause_string + "DELETE " + delete_object_string.rstrip(", ")
 
-        return delete_clause_string.lstrip()
+        return delete_clause_string.rstrip()
 
     def convert_stale_clause(self, stale_clause: StaleClause) -> str:
         stale_clause_string = "FOREACH "
