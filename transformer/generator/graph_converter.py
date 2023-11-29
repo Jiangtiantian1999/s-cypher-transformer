@@ -243,6 +243,8 @@ class GraphConverter:
                 "Exactly one relationship type must be specified for CREATE. Did you forget to prefix your relationship type with a ':'?")
         elif len(relationship.labels) > 1:
             raise SyntaxError("Relationship type expressions in patterns are only allowed in MATCH clause")
+        if relationship.length != (1, 1):
+            raise SyntaxError("Variable length relationships cannot be used in CREATE")
         if relationship.variable:
             relationship_pattern = relationship.variable
         else:
