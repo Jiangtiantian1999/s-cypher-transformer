@@ -75,25 +75,19 @@ class AtTElement:
         self.interval_to = interval_to
 
 
-class PropertyLookup:
-    def __init__(self, property_name: str, time_window: AtTElement = None):
-        self.property_name = property_name
-        self.time_window = time_window
-
-
 class PropertiesLabelsExpression:
-    def __init__(self, atom: Atom, property_chains: List[PropertyLookup] = None, labels: List[str] = None):
+    def __init__(self, atom: Atom, property_chains: List[str] = None, labelsOrAtT: List[str] | AtTElement = None):
         self.atom = atom
         if property_chains is None:
             property_chains = []
         self.property_chains = property_chains
-        if labels is None:
-            labels = []
-        self.labels = labels
+        if labelsOrAtT is None:
+            labelsOrAtT = []
+        self.labelsOrAtT = labelsOrAtT
 
 
 class AtTExpression:
-    def __init__(self, atom: Atom, property_chains: List[PropertyLookup] = None, property_name: str = None,
+    def __init__(self, atom: Atom, property_chains: List[str] = None, property_name: str = None,
                  time_window: bool | AtTElement = None, time_property_chains: List[str] = None):
         self.atom = atom
         if property_chains is None:

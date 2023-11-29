@@ -137,31 +137,31 @@ class ExpressionConverter:
         else:
             return "scypher.timePoint(" + interval_from_string + ')'
 
-    def get_property_value(self, variable_name: str, property_name: str, time_window: AtTElement = None) -> str:
-        if time_window:
-            time_window_string = self.convert_at_t_element(time_window)
-        else:
-            time_window_string = "NULL"
-        # 实际上variable_name可能为对象节点/边/Map，scypher.variable_name函数内部应该加以区分
-        return "scypher.getPropertyValue(" + variable_name + ", \"" + property_name + "\", " + time_window_string + ')'
-
     def convert_properties_labels_expression(self, properties_labels_expression: PropertiesLabelsExpression) -> str:
         properties_labels_expression_string = self.convert_atom(properties_labels_expression.atom)
-        for property_lookup in properties_labels_expression.property_chains:
-            properties_labels_expression_string = self.get_property_value(properties_labels_expression_string,
-                                                                          property_lookup.property_name,
-                                                                          property_lookup.time_window)
+        for index, property_name in enumerate(properties_labels_expression.property_chains):
+            if index == len(properties_labels_expression.property_chains) - 1:
+                if properties_labels_expression.labelsOrAtT.__class__ == AtTElement:
+                    if properties_labels_expression.labelsOrAtT:
+                        time_window_string = self.convert_at_t_element(properties_labels_expression.labelsOrAtT)
+                    else:
+                        time_window_string = "NULL"
+                    properties_labels_expression_string = "scypher.getPropertyValue(" + properties_labels_expression_string + ", \"" + property_name + "\", " + time_window_string + ')'
+                elif properties_labels_expression.labelsOrAtT:
+                    properties_labels_expression_string = properties_labels_expression_string + '.' + property_name
+                    for label in properties_labels_expression.labelsOrAtT:
+                        # 判断某节点/边是否有某（些）标签
+                        properties_labels_expression_string = properties_labels_expression_string + ':' + label
+            else:
+                properties_labels_expression_string = properties_labels_expression_string + '.' + property_name
 
-        for label in properties_labels_expression.labels:
-            # 判断某节点/边是否有某（些）标签
-            properties_labels_expression_string = properties_labels_expression_string + ':' + label
         return properties_labels_expression_string
 
     def convert_at_t_expression(self, at_t_expression: AtTExpression) -> str:
         at_t_expression_string = self.convert_atom(at_t_expression.atom)
-        for index, property_lookup in enumerate(at_t_expression.property_chains):
-            at_t_expression_string = self.get_property_value(at_t_expression_string, property_lookup.property_name,
-                                                             property_lookup.time_window)
+        for property_name in at_t_expression.property_chains:
+            at_t_expression_string = at_t_expression_string + '.' + property_name
+
         # 所查询的对象节点
         element_variable = at_t_expression_string
         if at_t_expression.property_name is None:

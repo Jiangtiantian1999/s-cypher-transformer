@@ -1,4 +1,4 @@
-# Generated from .\s_cypher.g4 by ANTLR 4.13.0
+# Generated from s_cypher.g4 by ANTLR 4.13.0
 from antlr4 import *
 if "." in __name__:
     from .s_cypherParser import s_cypherParser
@@ -140,15 +140,6 @@ class s_cypherListener(ParseTreeListener):
 
     # Exit a parse tree produced by s_cypherParser#oC_RemoveItem.
     def exitOC_RemoveItem(self, ctx:s_cypherParser.OC_RemoveItemContext):
-        pass
-
-
-    # Enter a parse tree produced by s_cypherParser#s_RemovePropertyExpression.
-    def enterS_RemovePropertyExpression(self, ctx:s_cypherParser.S_RemovePropertyExpressionContext):
-        pass
-
-    # Exit a parse tree produced by s_cypherParser#s_RemovePropertyExpression.
-    def exitS_RemovePropertyExpression(self, ctx:s_cypherParser.S_RemovePropertyExpressionContext):
         pass
 
 
@@ -404,6 +395,15 @@ class s_cypherListener(ParseTreeListener):
         pass
 
 
+    # Enter a parse tree produced by s_cypherParser#oC_PropertyOrLabelsExpression.
+    def enterOC_PropertyOrLabelsExpression(self, ctx:s_cypherParser.OC_PropertyOrLabelsExpressionContext):
+        pass
+
+    # Exit a parse tree produced by s_cypherParser#oC_PropertyOrLabelsExpression.
+    def exitOC_PropertyOrLabelsExpression(self, ctx:s_cypherParser.OC_PropertyOrLabelsExpressionContext):
+        pass
+
+
     # Enter a parse tree produced by s_cypherParser#s_AtTExpression.
     def enterS_AtTExpression(self, ctx:s_cypherParser.S_AtTExpressionContext):
         pass
@@ -419,15 +419,6 @@ class s_cypherListener(ParseTreeListener):
 
     # Exit a parse tree produced by s_cypherParser#s_PropertyLookupTime.
     def exitS_PropertyLookupTime(self, ctx:s_cypherParser.S_PropertyLookupTimeContext):
-        pass
-
-
-    # Enter a parse tree produced by s_cypherParser#oC_PropertyLookup.
-    def enterOC_PropertyLookup(self, ctx:s_cypherParser.OC_PropertyLookupContext):
-        pass
-
-    # Exit a parse tree produced by s_cypherParser#oC_PropertyLookup.
-    def exitOC_PropertyLookup(self, ctx:s_cypherParser.OC_PropertyLookupContext):
         pass
 
 
@@ -1241,12 +1232,12 @@ class s_cypherListener(ParseTreeListener):
         pass
 
 
-    # Enter a parse tree produced by s_cypherParser#oC_PropertyOrLabelsExpression.
-    def enterOC_PropertyOrLabelsExpression(self, ctx:s_cypherParser.OC_PropertyOrLabelsExpressionContext):
+    # Enter a parse tree produced by s_cypherParser#oC_PropertyLookup.
+    def enterOC_PropertyLookup(self, ctx:s_cypherParser.OC_PropertyLookupContext):
         pass
 
-    # Exit a parse tree produced by s_cypherParser#oC_PropertyOrLabelsExpression.
-    def exitOC_PropertyOrLabelsExpression(self, ctx:s_cypherParser.OC_PropertyOrLabelsExpressionContext):
+    # Exit a parse tree produced by s_cypherParser#oC_PropertyLookup.
+    def exitOC_PropertyLookup(self, ctx:s_cypherParser.OC_PropertyLookupContext):
         pass
 
 

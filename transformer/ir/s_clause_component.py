@@ -1,7 +1,7 @@
 from typing import List
 
 from transformer.exceptions.s_exception import TranslateError
-from transformer.ir.s_expression import Atom, Expression, PropertyLookup, AtTElement
+from transformer.ir.s_expression import Atom, Expression, AtTElement, TimePointLiteral
 from transformer.ir.s_graph import SPath
 
 
@@ -64,7 +64,7 @@ class LabelSetting:
 
 
 class RemovePropertyExpression:
-    def __init__(self, atom: Atom, property_name: str, property_chains: List[PropertyLookup] = None):
+    def __init__(self, atom: Atom, property_name: str, property_chains: List[str] = None):
         self.atom = atom
         self.property_name = property_name
         if property_chains is None:
@@ -90,11 +90,12 @@ class EffectiveTimeSetting:
 
 
 class SetPropertyExpression:
-    def __init__(self, atom: Atom, property_chains: List[PropertyLookup]):
+    def __init__(self, atom: Atom, property_chains: List[str], operate_time: TimePointLiteral = None):
         self.atom = atom
         if len(property_chains) == 0:
             raise TranslateError("The property chains can't be empty")
         self.property_chains = property_chains
+        self.operate_time = operate_time
 
 
 class ExpressionSetting:
