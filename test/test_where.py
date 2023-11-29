@@ -64,6 +64,20 @@ class TestWhere(TestCase):
 # duration.inDays(duration.between(date("2000"), date("2005"))) >= 20
 # duration.inSeconds(duration.between(date("2000"), date("2005"))) >= 20
 
+    # def test_where_2(self):
+    #     s_cypher = 'MATCH (n1:Person)-[e:FRIEND]->(n2:Person)' \
+    #                '\nWHERE n1.name STARTS WITH "Mary"' \
+    #                '\nRETURN e'
+    #     cypher_query = transform_to_cypher(s_cypher)
+    #     print("test_where_2:", '\n', s_cypher, '\n\n', cypher_query, '\n\n')
+    #
+    # def test_where_3(self):
+    #     s_cypher = 'MATCH (n1:Person)' \
+    #                '\nWHERE (e@T.to - e@T.from) >= duration({years: 20})' \
+    #                '\nRETURN e'
+    #     cypher_query = transform_to_cypher(s_cypher)
+    #     print("test_where_3:", '\n', s_cypher, '\n\n', cypher_query, '\n\n')
+
 
 ## where 中可以套很多各种时间类型的函数判断
 ## and or not等逻辑判断

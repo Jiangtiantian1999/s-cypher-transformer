@@ -128,3 +128,26 @@ class TestCreate(TestCase):
         """)
         cypher_query = STransformer.transform(s_cypher)
         print("test_create_15:", s_cypher, '\n', cypher_query, '\n')
+
+    def test_create_16(self):
+        s_cypher = dedent("""
+        CREATE (n:Station {name@T("2013", NOW): "HangZhou East"@T("2013", NOW)})
+        """)
+        cypher_query = STransformer.transform(s_cypher)
+        print("test_create_16:", s_cypher, '\n', cypher_query, '\n')
+
+    def test_create_17(self):
+        s_cypher = dedent("""
+        CREATE (n:City {name@T("1589", NOW): "HangZhou East"@T("2013", NOW), spot: "West Lake"}
+        At TIME date("1589")
+        """)
+        cypher_query = STransformer.transform(s_cypher)
+        print("test_create_17:", s_cypher, '\n', cypher_query, '\n')
+
+    def test_create_18(self):
+        s_cypher = dedent("""
+        CREATE (n:Station {name@T("2014", NOW): "Ning Bo"@T("2014", NOW)}
+        At TIME date("2014")
+        """)
+        cypher_query = STransformer.transform(s_cypher)
+        print("test_create_18:", s_cypher, '\n', cypher_query, '\n')
