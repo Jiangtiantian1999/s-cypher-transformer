@@ -147,11 +147,12 @@ class ExpressionConverter:
                     else:
                         time_window_string = "NULL"
                     properties_labels_expression_string = "scypher.getPropertyValue(" + properties_labels_expression_string + ", \"" + property_name + "\", " + time_window_string + ')'
-                elif properties_labels_expression.labelsOrAtT:
+                else:
                     properties_labels_expression_string = properties_labels_expression_string + '.' + property_name
-                    for label in properties_labels_expression.labelsOrAtT:
-                        # 判断某节点/边是否有某（些）标签
-                        properties_labels_expression_string = properties_labels_expression_string + ':' + label
+                    if properties_labels_expression.labelsOrAtT:
+                        for label in properties_labels_expression.labelsOrAtT:
+                            # 判断某节点/边是否有某（些）标签
+                            properties_labels_expression_string = properties_labels_expression_string + ':' + label
             else:
                 properties_labels_expression_string = properties_labels_expression_string + '.' + property_name
 
