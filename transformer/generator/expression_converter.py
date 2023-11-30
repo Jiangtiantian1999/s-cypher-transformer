@@ -142,17 +142,14 @@ class ExpressionConverter:
         for index, property_name in enumerate(properties_labels_expression.property_chains):
             if index == len(properties_labels_expression.property_chains) - 1:
                 if properties_labels_expression.labelsOrAtT.__class__ == AtTElement:
-                    if properties_labels_expression.labelsOrAtT:
-                        time_window_string = self.convert_at_t_element(properties_labels_expression.labelsOrAtT)
-                    else:
-                        time_window_string = "NULL"
-                    properties_labels_expression_string = "scypher.getPropertyValue(" + properties_labels_expression_string + ", \"" + property_name + "\", " + time_window_string + ')'
+                    time_window_string = self.convert_at_t_element(properties_labels_expression.labelsOrAtT)
                 else:
-                    properties_labels_expression_string = properties_labels_expression_string + '.' + property_name
-                    if properties_labels_expression.labelsOrAtT:
-                        for label in properties_labels_expression.labelsOrAtT:
-                            # 判断某节点/边是否有某（些）标签
-                            properties_labels_expression_string = properties_labels_expression_string + ':' + label
+                    time_window_string = "NULL"
+                properties_labels_expression_string = "scypher.getPropertyValue(" + properties_labels_expression_string + ", \"" + property_name + "\", " + time_window_string + ')'
+                if properties_labels_expression.labelsOrAtT:
+                    for label in properties_labels_expression.labelsOrAtT:
+                        # 判断某节点/边是否有某（些）标签
+                        properties_labels_expression_string = properties_labels_expression_string + ':' + label
             else:
                 properties_labels_expression_string = properties_labels_expression_string + '.' + property_name
 
