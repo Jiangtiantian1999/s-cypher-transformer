@@ -1,8 +1,9 @@
 import os
 import sys
+from unittest import TextTestRunner, defaultTestLoader, TestSuite
+
 root_path = os.path.dirname(os.path.dirname(__file__))
 sys.path.append(root_path)
-from unittest import TextTestRunner, defaultTestLoader, TestSuite
 
 if __name__ == '__main__':
     current_path = os.path.dirname(__file__)
@@ -18,6 +19,7 @@ if __name__ == '__main__':
     stale_suite = defaultTestLoader.discover(current_path, "test_stale.py")
     remove_suite = defaultTestLoader.discover(current_path, "test_remove.py")
     delete_suite = defaultTestLoader.discover(current_path, "test_delete.py")
+    merge_suite = defaultTestLoader.discover(current_path, "test_merge.py")
 
     suite = TestSuite()
     suite.addTest(match_suite)
@@ -32,6 +34,7 @@ if __name__ == '__main__':
     # suite.addTest(stale_suite)
     # suite.addTest(remove_suite)
     # suite.addTest(delete_suite)
+    # suite.addTest(merge_suite)
 
     runner = TextTestRunner()
     runner.run(suite)

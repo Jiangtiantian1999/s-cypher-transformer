@@ -1,30 +1,45 @@
-from textwrap import dedent
 from unittest import TestCase
 
+from test.graphdb_connector import GraphDBConnector
 from transformer.s_transformer import STransformer
 
 
 class TestUnwind(TestCase):
+    graphdb_connector = None
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        super().setUpClass()
+        cls.graphdb_connector = GraphDBConnector()
+        cls.graphdb_connector.out_net_connect()
+
+    @classmethod
+    def tearDownClass(cls) -> None:
+        super().tearDownClass()
+        cls.graphdb_connector.close()
+
     def test_unwind_1(self):
-        s_cypher = dedent("""
+        s_cypher = """
         UNWIND [1, 2, 3] AS x
         RETURN x
-        """)
+        """
         cypher_query = STransformer.transform(s_cypher)
-        print("test_unwind_1:", s_cypher, '\n', cypher_query, '\n')
+        tx = self.graphdb_connector.driver.session().begin_transaction()
+        results = tx.run(cypher_query).data()
 
     def test_unwind_2(self):
-        s_cypher = dedent("""
+        s_cypher = """
         WITH [1, 1, 2, 2] AS coll
         UNWIND coll AS x
         WITH DISTINCT x
         RETURN collect(x) AS SET
-        """)
+        """
         cypher_query = STransformer.transform(s_cypher)
-        print("test_unwind_2:", s_cypher, '\n', cypher_query, '\n')
+        tx = self.graphdb_connector.driver.session().begin_transaction()
+        results = tx.run(cypher_query).data()
 
     def test_unwind_3(self):
-        s_cypher = dedent("""
+        s_cypher = """
         UNWIND [
         datetime('2015-07-21T21:40:32.142+0100'),
         datetime('2015-W30-2T214032.142Z'),
@@ -36,12 +51,13 @@ class TestUnwind(TestCase):
         datetime('2015-07-21T21:40:32.142-04[America/New_York]')
         ] AS theDate
         RETURN theDate;
-        """)
+        """
         cypher_query = STransformer.transform(s_cypher)
-        print("tset_unwind_3:", s_cypher, '\n', cypher_query, '\n')
+        tx = self.graphdb_connector.driver.session().begin_transaction()
+        results = tx.run(cypher_query).data()
 
     def test_unwind_4(self):
-        s_cypher = dedent("""
+        s_cypher = """
         UNWIND [
         duration("P14DT16H12M"),
         duration("P5M1.5D"),
@@ -50,12 +66,13 @@ class TestUnwind(TestCase):
         duration("P2012-02-02T14:37:21.545")
         ] AS aDuration
         RETURN aDuration;
-        """)
+        """
         cypher_query = STransformer.transform(s_cypher)
-        print("test_unwind_4:", s_cypher, '\n', cypher_query, '\n')
+        tx = self.graphdb_connector.driver.session().begin_transaction()
+        results = tx.run(cypher_query).data()
 
     def test_unwind_5(self):
-        s_cypher = dedent("""
+        s_cypher = """
         UNWIND [
         duration({days: 14, hours:16, minutes: 12}),
         duration({months: 5, days: 1.5}),
@@ -65,12 +82,13 @@ class TestUnwind(TestCase):
         duration({minutes: 1.5, seconds: 1, nanoseconds: 123456789})
         ] AS aDuration
         RETURN aDuration;
-        """)
+        """
         cypher_query = STransformer.transform(s_cypher)
-        print("test_unwind_5:", s_cypher, '\n', cypher_query, '\n')
+        tx = self.graphdb_connector.driver.session().begin_transaction()
+        results = tx.run(cypher_query).data()
 
     def test_unwind_6(self):
-        s_cypher = dedent("""
+        s_cypher = """
         UNWIND [
         datetime({year: 1984, month: 10, day: 11, hour: 12, minute: 31, second: 14, millisecond: 123, microsecond: 456, nanosecond: 789}),
         datetime({year: 1984, month: 10, day: 11, hour: 12, minute: 31, second: 14, millisecond: 645, timezone: '+01:00'}),
@@ -82,12 +100,13 @@ class TestUnwind(TestCase):
         datetime({year: 1984, month: 10, day: 11, timezone: 'Europe/Stockholm'})
         ] AS theDate
         RETURN theDate;
-        """)
+        """
         cypher_query = STransformer.transform(s_cypher)
-        print("test_unwind_6:", s_cypher, '\n', cypher_query, '\n')
+        tx = self.graphdb_connector.driver.session().begin_transaction()
+        results = tx.run(cypher_query).data()
 
     def test_unwind_7(self):
-        s_cypher = dedent("""
+        s_cypher = """
         UNWIND [
         datetime({year: 1984, week: 10, dayOfWeek: 3, hour: 12, minute: 31, second: 14, millisecond: 645}),
         datetime({year: 1984, week: 10, dayOfWeek: 3, hour: 12, minute: 31, second: 14, microsecond: 645876, timezone: '+01:00'}),
@@ -98,12 +117,13 @@ class TestUnwind(TestCase):
         datetime({year: 1984, week: 10, dayOfWeek: 3, timezone: 'Europe/Stockholm'})
         ] AS theDate
         RETURN theDate;
-        """)
+        """
         cypher_query = STransformer.transform(s_cypher)
-        print("test_unwind_7:", s_cypher, '\n', cypher_query, '\n')
+        tx = self.graphdb_connector.driver.session().begin_transaction()
+        results = tx.run(cypher_query).data()
 
     def test_unwind_8(self):
-        s_cypher = dedent("""
+        s_cypher = """
         UNWIND [
         datetime({year: 1984, quarter: 3, dayOfQuarter: 45, hour: 12, minute: 31, second: 14, microsecond: 645876}),
         datetime({year: 1984, quarter: 3, dayOfQuarter: 45, hour: 12, minute: 31, second: 14, timezone: '+01:00'}),
@@ -111,12 +131,13 @@ class TestUnwind(TestCase):
         datetime({year: 1984, quarter: 3, dayOfQuarter: 45})
         ] AS theDate
         RETURN theDate;
-        """)
+        """
         cypher_query = STransformer.transform(s_cypher)
-        print("test_unwind_8:", s_cypher, '\n', cypher_query, '\n')
+        tx = self.graphdb_connector.driver.session().begin_transaction()
+        results = tx.run(cypher_query).data()
 
     def test_unwind_9(self):
-        s_cypher = dedent("""
+        s_cypher = """
         UNWIND [
         datetime({year: 1984, ordinalDay: 202, hour: 12, minute: 31, second: 14, millisecond: 645}),
         datetime({year: 1984, ordinalDay: 202, hour: 12, minute: 31, second: 14, timezone: '+01:00'}),
@@ -124,6 +145,7 @@ class TestUnwind(TestCase):
         datetime({year: 1984, ordinalDay: 202})
         ] AS theDate
         RETURN theDate
-        """)
+        """
         cypher_query = STransformer.transform(s_cypher)
-        print("test_unwind_9:", s_cypher, '\n', cypher_query, '\n')
+        tx = self.graphdb_connector.driver.session().begin_transaction()
+        results = tx.run(cypher_query).data()

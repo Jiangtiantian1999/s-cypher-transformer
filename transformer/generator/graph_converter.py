@@ -1,5 +1,4 @@
 from transformer.generator.expression_converter import ExpressionConverter
-from transformer.generator.utils import convert_dict_to_str
 from transformer.generator.variables_manager import VariablesManager
 from transformer.ir.s_cypher_clause import AtTimeClause, BetweenClause
 from transformer.ir.s_graph import *
@@ -33,6 +32,7 @@ class GraphConverter:
 
         if path.variable:
             path_pattern = path.variable + " = " + path_pattern
+
         return path_pattern, property_patterns, path_time_window_info
 
     def match_object_node(self, object_node: ObjectNode, time_window: AtTimeClause | BetweenClause = None) -> (
