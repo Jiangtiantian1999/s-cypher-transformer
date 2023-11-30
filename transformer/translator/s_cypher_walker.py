@@ -499,11 +499,13 @@ class SCypherWalker(s_cypherListener):
         # interval_to: TimePointLiteral = None
         if len(self.time_point_literals) == 2:
             self.at_t_element = AtTElement(self.time_point_literals[0], self.time_point_literals[1])
-        elif len(self.time_point_literals) == 1 and ctx.NOW() is not None:
+        elif len(self.time_point_literals) == 1 and 'NOW' in ctx.getText():
             self.at_t_element = AtTElement(self.time_point_literals[0],
                                            TimePointLiteral('"'+ctx.NOW().getText()+'"'))
-        elif len(self.time_point_literals) == 1 and ctx.NOW() is None:
+        elif len(self.time_point_literals) == 1 and 'NOW' not in ctx.getText():
             self.at_t_element = AtTElement(self.time_point_literals[0], None)
+        elif len(self.time_point_literals) == 0 and 'NOW' in ctx.getText():
+            self.at_t_element = AtTElement(TimePointLiteral('"'+ctx.NOW().getText()+'"'))
         else:
             raise TranslateError("Invalid time format!")
         self.time_point_literals = []  # 退出清空
@@ -894,7 +896,8 @@ class SCypherWalker(s_cypherListener):
         atom = self.atom
         self.atom = None
         # 获取属性
-        if ctx.oC_PropertyLookup() is not None:
+        if len(self.property_look_up_list) > 0:
+            print(len(self.property_look_up_list))
             # 获取属性名
             property_name = self.property_look_up_list[len(self.property_look_up_list) - 1]
             if len(self.property_look_up_list) == 1:
