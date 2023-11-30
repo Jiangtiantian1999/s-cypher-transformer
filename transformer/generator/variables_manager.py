@@ -7,7 +7,8 @@ class VariablesManager:
         self.count_num = 99
         # 当前有效的用户定义的变量名
         self.user_variables = []
-        self.updating_variables = []
+        self.updating_variables = {}
+        self.updating_object_nodes = {}
         # union连接的各个语句的返回变量
         self.union_variables = []
 
@@ -22,7 +23,7 @@ class VariablesManager:
 
     def clear(self):
         self.user_variables = []
-        self.updating_variables = []
+        self.updating_variables = {}
 
     def update_multi_query_clause_variables(self):
         self.union_variables.append(self.user_variables)
@@ -77,11 +78,11 @@ class VariablesManager:
         for object_node in path.nodes:
             if object_node.variable:
                 if is_updating and object_node.variable not in self.user_variables:
-                    self.updating_variables.append(object_node.variable)
+                    self.updating_variables[object_node.variable] = False
                 self.user_variables.append(object_node.variable)
 
         for edge in path.relationships:
             if edge.variable:
                 if is_updating and edge.variable not in self.user_variables:
-                    self.updating_variables.append(edge.variable)
+                    self.updating_variables[edge.variable] = False
                 self.user_variables.append(edge.variable)

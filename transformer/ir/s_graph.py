@@ -15,6 +15,8 @@ class SNode:
         self.variable = variable
         # 节点在图模式中被限制的有效时间
         self.time_window = time_window
+        # 节点的有效时间（创建时赋予）
+        self.effective_time = None
 
 
 class PropertyNode(SNode):
