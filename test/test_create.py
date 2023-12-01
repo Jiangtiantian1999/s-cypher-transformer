@@ -18,22 +18,87 @@ class TestCreate(TestCase):
         super().tearDownClass()
         cls.graphdb_connector.close()
 
+    # 节点创建
     def test_create_1(self):
+        # 对象节点创建
         s_cypher = """
-        CREATE (n:City {name@T("1690", NOW): "London"@T("1690", NOW)})
-        AT_TIME date("1688")
-        """
+                CREATE (n:Person@T("1938", NOW))
+                RETURN n@T.from as t
+                """
         cypher_query = STransformer.transform(s_cypher)
         tx = self.graphdb_connector.driver.session().begin_transaction()
         results = tx.run(cypher_query).data()
+        assert results == [{"t": "1938"}]
 
-    def test_create_2(self):
+        # 属性节点创建
         s_cypher = """
-        CREATE (n:City@T("1688", NOW) {name@T("1690", NOW): "London"@T("1690", NOW)})
-        """
+                CREATE (n:Person {name@T("1950")})
+                RETURN n
+                """
         cypher_query = STransformer.transform(s_cypher)
         tx = self.graphdb_connector.driver.session().begin_transaction()
         results = tx.run(cypher_query).data()
+        assert len(results) == 0
+
+        s_cypher = """
+                CREATE (n:Person {name@T("1960", NOW)})
+                RETURN n
+                """
+        cypher_query = STransformer.transform(s_cypher)
+        tx = self.graphdb_connector.driver.session().begin_transaction()
+        results = tx.run(cypher_query).data()
+        assert len(results) == 0
+
+        # 值节点创建
+        s_cypher = """
+                CREATE (n:Person {name@T("1950"): "Mary Smith"})
+                RETURN n
+                """
+        cypher_query = STransformer.transform(s_cypher)
+        tx = self.graphdb_connector.driver.session().begin_transaction()
+        results = tx.run(cypher_query).data()
+        assert len(results) == 0
+
+        s_cypher = """
+                CREATE (n:Person {name@T("1960", NOW): "Mary Smith"})
+                RETURN n
+                """
+        cypher_query = STransformer.transform(s_cypher)
+        tx = self.graphdb_connector.driver.session().begin_transaction()
+        results = tx.run(cypher_query).data()
+        assert len(results) == 0
+
+        s_cypher = """
+                CREATE (n:Person {name: "Mary Smith" @T("1950")})
+                RETURN n
+                """
+        cypher_query = STransformer.transform(s_cypher)
+        tx = self.graphdb_connector.driver.session().begin_transaction()
+        results = tx.run(cypher_query).data()
+        assert len(results) == 0
+
+        s_cypher = """
+                CREATE (n:Person {name: "Mary Smith" @T("1960", NOW)})
+                RETURN n
+                """
+        cypher_query = STransformer.transform(s_cypher)
+        tx = self.graphdb_connector.driver.session().begin_transaction()
+        results = tx.run(cypher_query).data()
+        assert len(results) == 0
+
+        # 全部带时序信息
+        s_cypher = """
+                CREATE (n:City@T("1688", NOW) {name@T("1690", NOW): "London"@T("1690", NOW)})
+                RETURN n
+                """
+        cypher_query = STransformer.transform(s_cypher)
+        tx = self.graphdb_connector.driver.session().begin_transaction()
+        results = tx.run(cypher_query).data()
+        assert len(results) == 0
+
+    # 边创建
+    def test_create_2(self):
+        pass
 
     def test_create_3(self):
         s_cypher = """
