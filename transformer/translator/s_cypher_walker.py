@@ -18,6 +18,9 @@ class SCypherWalker(s_cypherListener):
         self.property_node_list = []  # 属性节点列表
         self.value_node_list = []  # 值节点列表
         self.node_labels = []
+        self.object_node_time_window = None
+        self.property_node_time_window = None
+        self.value_node_time_window = None
 
         # time
         self.at_time_clause = None
@@ -39,6 +42,7 @@ class SCypherWalker(s_cypherListener):
         self.rel_type_names = []  # 边标签
         self.rel_length_range = None  # 边长度区间
         self.pattern_part_list = []
+        self.single_path_pattern = None
 
         # clauses
         self.query_clause = None
@@ -162,6 +166,7 @@ class SCypherWalker(s_cypherListener):
         self.map_key_values = dict()
         self.integer_literals = []
         self.list_literal_expressions = []
+        self.rel_properties = None
 
         # bool
         self.is_explicit = False
@@ -422,6 +427,16 @@ class SCypherWalker(s_cypherListener):
                                       TimePointLiteral(interval_to))
         return at_t_element
 
+    # def enterOC_NodePattern(self, ctx:s_cypherParser.OC_NodePatternContext):
+    #     time_window = None
+    #     if ctx.s_AtTElement() is not None:
+    #         # n_interval = ctx.s_AtTElement()
+    #         # interval_str = n_interval.getText()
+    #         # interval = self.getAtTElement(interval_str)
+    #         time_window = self.at_t_element
+    #         self.at_t_element = None
+    #     self.object_node_time_window = time_window
+
     # 获取对象节点
     def exitOC_NodePattern(self, ctx: s_cypherParser.OC_NodePatternContext):
         # node_content = ""  # 对象节点内容
@@ -430,20 +445,23 @@ class SCypherWalker(s_cypherListener):
             self.node_labels = []  # 退出清空
         else:
             node_label_list = None
-        interval = None  # 对象节点时间
         variable = None
         if ctx.oC_Variable() is not None:
             variable = ctx.oC_Variable().getText()
+        # 对象节点时间
+        time_window = None
         if ctx.s_AtTElement() is not None:
-            n_interval = ctx.s_AtTElement()
-            interval_str = n_interval.getText()
-            interval = self.getAtTElement(interval_str)
+            # n_interval = ctx.s_AtTElement()
+            # interval_str = n_interval.getText()
+            # interval = self.getAtTElement(interval_str)
+            time_window = self.at_t_element
+            self.at_t_element = None
         if ctx.s_Properties() is not None:
             properties = self.properties
             self.properties = None  # 退出清空
         else:
             properties = None  # 对象节点属性
-        self.object_node_list.append(ObjectNode(node_label_list, variable, interval, properties))
+        self.object_node_list.append(ObjectNode(node_label_list, variable, time_window, properties))
 
     def exitOC_NodeLabel(self, ctx: s_cypherParser.OC_NodeLabelContext):
         self.node_labels.append(ctx.getText().strip(':'))
@@ -453,7 +471,7 @@ class SCypherWalker(s_cypherListener):
             self.properties = self.properties_pattern
             self.properties_pattern = dict()  # 退出清空
         elif ctx.oC_Parameter() is not None:
-            # 无法组成字典，暂未处理
+            # TODO: 无法组成字典，暂未处理
             self.properties = self.properties_parameter
             self.properties_parameter = None  # 退出清空
         else:
@@ -474,24 +492,28 @@ class SCypherWalker(s_cypherListener):
     def exitS_PropertyNode(self, ctx: s_cypherParser.S_PropertyNodeContext):
         # 获取属性节点内容
         property_content = ctx.oC_PropertyKeyName().getText()  # 属性节点内容
+        time_window = None
         # 获取属性节点的时间
-        property_interval = self.at_t_element  # 属性节点时间
-        self.at_t_element = None
-        self.property_node_list.append(PropertyNode(property_content, None, property_interval))
+        if ctx.s_AtTElement() is not None:
+            time_window = self.at_t_element  # 属性节点时间
+            self.at_t_element = None
+        self.property_node_list.append(PropertyNode(property_content, None, time_window))
 
     def exitS_ValueNode(self, ctx: s_cypherParser.S_ValueNodeContext):
         value_content = None  # 值节点内容
-        value_interval = None  # 值节点时间
         # 获取值节点内容
         if ctx.oC_Expression() is not None:
             value_content = self.expression
             self.expression = None
+        # time_window = self.value_node_time_window
         # 获取值节点的时间
+        time_window = None  # 值节点时间
         if ctx.s_AtTElement() is not None:
-            value_interval = self.at_t_element
+            time_window = self.at_t_element
             self.at_t_element = None
+        # self.value_node_time_window = None
         # 构造值节点
-        self.value_node_list.append(ValueNode(value_content, None, value_interval))
+        self.value_node_list.append(ValueNode(value_content, None, time_window))
 
     # 获取时间
     def exitS_AtTElement(self, ctx: s_cypherParser.S_AtTElementContext):
@@ -499,16 +521,19 @@ class SCypherWalker(s_cypherListener):
         # interval_to: TimePointLiteral = None
         if len(self.time_point_literals) == 2:
             self.at_t_element = AtTElement(self.time_point_literals[0], self.time_point_literals[1])
+            self.time_point_literals = []  # 退出清空
         elif len(self.time_point_literals) == 1 and 'NOW' in ctx.getText():
             self.at_t_element = AtTElement(self.time_point_literals[0],
                                            TimePointLiteral('"'+ctx.NOW().getText()+'"'))
+            self.time_point_literals = []  # 退出清空
         elif len(self.time_point_literals) == 1 and 'NOW' not in ctx.getText():
             self.at_t_element = AtTElement(self.time_point_literals[0], None)
+            self.time_point_literals = []  # 退出清空
         elif len(self.time_point_literals) == 0 and 'NOW' in ctx.getText():
             self.at_t_element = AtTElement(TimePointLiteral('"'+ctx.NOW().getText()+'"'))
+            self.time_point_literals = []  # 退出清空
         else:
             raise TranslateError("Invalid time format!")
-        self.time_point_literals = []  # 退出清空
 
     def exitS_TimePointLiteral(self, ctx: s_cypherParser.S_TimePointLiteralContext):
         if self.map_literal is not None:
@@ -517,7 +542,22 @@ class SCypherWalker(s_cypherListener):
         else:
             self.time_point_literals.append(TimePointLiteral(ctx.StringLiteral().getText()))
 
+    def exitOC_Properties(self, ctx: s_cypherParser.OC_PropertiesContext):
+        # oC_MapLiteral | oC_Parameter
+        if ctx.oC_MapLiteral() is not None:
+            self.rel_properties = self.map_literal
+            self.map_literal = dict()  # 退出清空
+        elif ctx.oC_Parameter() is not None:
+            # TODO:oC_Parameter未处理
+            pass
+
     def exitOC_RelationshipDetail(self, ctx: s_cypherParser.OC_RelationshipDetailContext):
+        # direction: str,
+        # variable: str = None,
+        # labels: List[str] = None,
+        # length: Tuple[int, int] = (1, 1),
+        # time_window: AtTElement = None,
+        # properties: dict[str, Expression] = None
         variable = None
         if ctx.oC_Variable() is not None:
             variable = ctx.oC_Variable().getText()
@@ -529,8 +569,8 @@ class SCypherWalker(s_cypherListener):
             length_tuple = (1, 1)
         labels = self.rel_type_names
         self.rel_type_names = []  # 退出清空
-        properties = self.properties
-        self.properties = None  # 退出清空
+        properties = self.rel_properties
+        self.rel_properties = None  # 退出清空
         self.relationship_pattern = SRelationship('UNDIRECTED', variable, labels, length_tuple, interval, properties)
 
     def exitOC_RangeLiteral(self, ctx: s_cypherParser.OC_RangeLiteralContext):
@@ -578,10 +618,14 @@ class SCypherWalker(s_cypherListener):
         # function_name: str,
         # path: SPath
         function_name = ctx.oC_FunctionName().getText()
-        path = SPath(self.object_node_list, self.edge_list, None)
-        # self.object_node_list = []  # 退出清空
-        # self.edge_list = []  # 退出清空
+        path = self.single_path_pattern
+        self.single_path_pattern = None  # 退出清空
         self.path_function_pattern = TemporalPathCall("", function_name, path)
+
+    def exitS_SinglePathPattern(self, ctx: s_cypherParser.S_SinglePathPatternContext):
+        self.single_path_pattern = SPath(self.object_node_list, self.edge_list, None)
+        self.object_node_list = []  # 退出清空
+        self.edge_list = []  # 退出清空
 
     def exitOC_PatternElement(self, ctx: s_cypherParser.OC_PatternElementContext):
         # nodes: List[ObjectNode],
@@ -595,15 +639,23 @@ class SCypherWalker(s_cypherListener):
 
     def exitOC_PatternPart(self, ctx: s_cypherParser.OC_PatternPartContext):
         # pattern: SPath | TemporalPathCall
-        if self.path_function_pattern is not None:
-            if self.path_function_pattern.__class__ == TemporalPathCall:
-                self.path_function_pattern.variable = ctx.oC_Variable().getText()
+        variable = None
+
+        if ctx.s_PathFunctionPattern() is not None:
+            if ctx.oC_Variable() is not None:
+                variable = ctx.oC_Variable().getText()
+                self.path_function_pattern.variable = variable
+            else:
+                raise TranslateError("The path has no variable!")
             pattern = Pattern(self.path_function_pattern)
-        else:
+        elif ctx.oC_AnonymousPatternPart() is not None:
+            if ctx.oC_Variable() is not None:
+                variable = ctx.oC_Variable().getText()
+                self.pattern_element.variable = variable
             pattern = Pattern(self.pattern_element)
+        else:
+            raise TranslateError("The path pattern format is wrong!")
         self.patterns.append(pattern)
-        self.object_node_list = []  # 退出清空
-        self.edge_list = []  # 退出清空
 
     def exitOC_Return(self, ctx: s_cypherParser.OC_ReturnContext):
         # projection_items: List[ProjectionItem] = None,
