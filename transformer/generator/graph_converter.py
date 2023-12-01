@@ -83,6 +83,7 @@ class GraphConverter:
                 node_time_window_info = [node.variable, None]
         elif node.time_window:
             node_time_window_info = [node.variable, self.expression_converter.convert_at_t_element(node.time_window)]
+
         return node_pattern, node_time_window_info
 
     def match_relationship(self, relationship: SRelationship, time_window: AtTimeClause | BetweenClause = None) -> (

@@ -139,20 +139,27 @@ class ExpressionConverter:
 
     def convert_properties_labels_expression(self, properties_labels_expression: PropertiesLabelsExpression) -> str:
         properties_labels_expression_string = self.convert_atom(properties_labels_expression.atom)
+
         for index, property_name in enumerate(properties_labels_expression.property_chains):
-            if index == len(properties_labels_expression.property_chains) - 1:
-                if properties_labels_expression.labelsOrAtT.__class__ == AtTElement:
-                    time_window_string = self.convert_at_t_element(properties_labels_expression.labelsOrAtT)
-                else:
-                    time_window_string = "NULL"
-                properties_labels_expression_string = "scypher.getPropertyValue(" + properties_labels_expression_string + ", \"" + property_name + "\", " + time_window_string + ')'
-                if properties_labels_expression.labelsOrAtT:
-                    for label in properties_labels_expression.labelsOrAtT:
-                        # 判断某节点/边是否有某（些）标签
-                        properties_labels_expression_string = properties_labels_expression_string + ':' + label
-            else:
+            if index != len(properties_labels_expression.property_chains) - 1:
                 properties_labels_expression_string = properties_labels_expression_string + '.' + property_name
 
+        if properties_labels_expression.labelsOrAtT.__class__ == AtTElement:
+            time_window_string = self.convert_at_t_element(properties_labels_expression.labelsOrAtT)
+        else:
+            time_window_string = "NULL"
+        if len(properties_labels_expression.property_chains) > 0:
+            properties_labels_expression_string = "scypher.getPropertyValue(" + properties_labels_expression_string + ", \"" + \
+                                                  properties_labels_expression.property_chains[
+                                                      -1] + "\", " + time_window_string + ')'
+        else:
+            if properties_labels_expression.labelsOrAtT.__class__ == AtTElement:
+                raise SyntaxError("When querying the property value at the specified time, the property name must be specified")
+
+        if properties_labels_expression.labelsOrAtT.__class__ == list:
+            for label in properties_labels_expression.labelsOrAtT:
+                # 判断某节点/边是否有某（些）标签
+                properties_labels_expression_string = properties_labels_expression_string + ':' + label
         return properties_labels_expression_string
 
     def convert_at_t_expression(self, at_t_expression: AtTExpression) -> str:

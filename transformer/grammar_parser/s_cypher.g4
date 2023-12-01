@@ -23,8 +23,8 @@ oC_SetItem : ( oC_PropertyExpression ( SP? AtT SP? '(' SP? ( s_TimePointLiteral 
            | ( oC_Variable SP? '+=' SP? oC_Expression )
            | ( oC_Variable SP? oC_NodeLabels )
            | ( oC_Variable SP? s_AtTElement )
-           | ( oC_Variable ( SP? s_AtTElement )? '.' s_SetPropertyItemOne )
-           | ( oC_Variable ( SP? s_AtTElement )? '.' s_SetPropertyItemTwo SP? s_SetValueItem )
+           | ( oC_Variable ( SP? s_AtTElement )? SP? '.' SP? s_SetPropertyItemOne )
+           | ( oC_Variable ( SP? s_AtTElement )? SP? '.' SP? s_SetPropertyItemTwo SP? s_SetValueItem )
            ;
 
 s_SetPropertyItemOne : oC_PropertyKeyName SP? s_AtTElement ;
@@ -51,29 +51,21 @@ s_TimeWindowLimit : s_Snapshot
                   | s_Scope
                   ;
 
-oC_InQueryCall
-           :  CALL SP oC_ExplicitProcedureInvocation ( SP? YIELD SP s_YieldItems )? ;
+oC_InQueryCall : CALL SP oC_ExplicitProcedureInvocation ( SP? YIELD SP s_YieldItems )? ;
 
-oC_StandaloneCall
-              :  CALL SP ( oC_ExplicitProcedureInvocation | oC_ImplicitProcedureInvocation ) ( SP? YIELD SP ( '*' | s_YieldItems ) )? ;
+oC_StandaloneCall : CALL SP ( oC_ExplicitProcedureInvocation | oC_ImplicitProcedureInvocation ) ( SP? YIELD SP ( '*' | s_YieldItems ) )? ;
 
-s_YieldItems
-          :  s_YieldItem ( SP? ',' SP? s_YieldItem )* ( SP? s_Where )? ;
+s_YieldItems : s_YieldItem ( SP? ',' SP? s_YieldItem )* ( SP? s_Where )? ;
 
-s_YieldItem
-         :  oC_ProcedureResultField ( SP AS SP oC_Variable )? ;
+s_YieldItem : oC_ProcedureResultField ( SP AS SP oC_Variable )? ;
 
-s_WithPartQuery
-              : ( oC_ReadingClause SP? )* ( oC_UpdatingClause SP? )* s_With SP? ;
+s_WithPartQuery : ( oC_ReadingClause SP? )* ( oC_UpdatingClause SP? )* s_With SP? ;
 
-s_With
-    :  WITH oC_ProjectionBody ( SP? s_Where )? ;
+s_With : WITH oC_ProjectionBody ( SP? s_Where )? ;
 
-oC_ExistentialSubquery
-                   :  EXISTS SP? '{' SP? ( oC_RegularQuery | ( oC_Pattern ( SP? s_Where )? ) ) SP? '}' ;
+oC_ExistentialSubquery : EXISTS SP? '{' SP? ( oC_RegularQuery | ( oC_Pattern ( SP? s_Where )? ) ) SP? '}' ;
 
-oC_FilterExpression
-                :  oC_IdInColl ( SP? s_Where )? ;
+oC_FilterExpression : oC_IdInColl ( SP? s_Where )? ;
 
 s_Snapshot : SNAPSHOT SP? oC_Expression ;
 
@@ -94,11 +86,11 @@ s_Properties : s_PropertiesPattern
               | oC_Parameter
               ;
 
-s_PropertiesPattern : '{' SP? ( s_PropertyNode ':' s_ValueNode ( ',' SP? s_PropertyNode ':' s_ValueNode )* )? '}' ;
+s_PropertiesPattern : '{' ( SP? s_PropertyNode SP? ':' SP? s_ValueNode ( SP? ',' SP? s_PropertyNode SP? ':' SP? s_ValueNode )* )? SP? '}' ;
 
-s_PropertyNode : oC_PropertyKeyName SP? ( s_AtTElement SP? )? ;
+s_PropertyNode : oC_PropertyKeyName ( SP? s_AtTElement )? ;
 
-s_ValueNode : SP? oC_Expression SP? ( s_AtTElement SP? )? ;
+s_ValueNode : oC_Expression SP? ( '(' SP? s_AtTElement SP? ')' )? ;
 
 oC_RelationshipDetail : '[' SP? ( oC_Variable SP? )? ( oC_RelationshipTypes SP? )? oC_RangeLiteral? ( s_AtTElement SP? )? ( oC_Properties SP? )? ']' ;
 
@@ -106,17 +98,17 @@ oC_StringListNullPredicateExpression : oC_AddOrSubtractExpression ( s_TimePredic
 
 oC_ListOperatorExpression : ( oC_PropertyOrLabelsExpression | s_AtTExpression ) ( s_SingleIndexExpression | s_DoubleIndexExpression )* ;
 
-s_SingleIndexExpression : SP? '[' s_LeftExpression ']' ;
+s_SingleIndexExpression : SP? '[' SP? s_LeftExpression SP? ']' ;
 
-s_DoubleIndexExpression : SP? '[' s_LeftExpression? '..' s_RightExpression? ']' ;
+s_DoubleIndexExpression : SP? '[' SP? s_LeftExpression? SP? '..' SP? s_RightExpression? SP? ']' ;
 
 s_LeftExpression : oC_Expression ;
 
 s_RightExpression : oC_Expression ;
 
-oC_PropertyOrLabelsExpression : oC_Atom ( SP? oC_PropertyLookup )* ( SP? oC_NodeLabels | s_AtTElement )? ;
+oC_PropertyOrLabelsExpression : oC_Atom ( SP? oC_PropertyLookup )* ( SP? ( oC_NodeLabels | s_AtTElement ) )? ;
 
-s_AtTExpression : oC_Atom ( ( SP? oC_PropertyLookup )* SP? oC_PropertyLookup ( SP? PoundValue | s_AtTElement)? )? SP? s_PropertyLookupTime ;
+s_AtTExpression : oC_Atom ( ( SP? oC_PropertyLookup )* SP? oC_PropertyLookup ( SP? ( PoundValue | s_AtTElement ) )? )? SP? s_PropertyLookupTime ;
 
 s_PropertyLookupTime: AtT ( SP? oC_PropertyLookup )* ;
 
@@ -124,26 +116,19 @@ s_TimePredicateExpression : SP ( DURING | OVERLAPS ) SP oC_AddOrSubtractExpressi
 
 s_AtTElement : AtT SP? '(' ( SP? s_TimePointLiteral SP? ',' )? SP? ( s_TimePointLiteral | NOW ) SP? ')';
 
-s_Where
-     :  WHERE SP s_WhereExpression ;
+s_Where : WHERE SP s_WhereExpression ;
 
-s_WhereExpression
-          :  s_OrWhereExpression ;
+s_WhereExpression : s_OrWhereExpression ;
 
-s_OrWhereExpression
-            :  s_XorWhereExpression ( SP OR SP s_XorWhereExpression )* ;
+s_OrWhereExpression : s_XorWhereExpression ( SP OR SP s_XorWhereExpression )* ;
 
-s_XorWhereExpression
-             :  s_AndWhereExpression ( SP XOR SP s_AndWhereExpression )* ;
+s_XorWhereExpression : s_AndWhereExpression ( SP XOR SP s_AndWhereExpression )* ;
 
-s_AndWhereExpression
-             :  s_NotWhereExpression ( SP AND SP s_NotWhereExpression )* ;
+s_AndWhereExpression : s_NotWhereExpression ( SP AND SP s_NotWhereExpression )* ;
 
-s_NotWhereExpression
-             :  ( NOT SP? )* s_ComparisonWhereExpression ;
+s_NotWhereExpression : ( NOT SP? )* s_ComparisonWhereExpression ;
 
-s_ComparisonWhereExpression
-                    :  s_StringListNullPredicateWhereExpression ( SP? s_ComparisonWhereOperator SP? s_StringListNullPredicateWhereExpression )* ;
+s_ComparisonWhereExpression : s_StringListNullPredicateWhereExpression ( SP? s_ComparisonWhereOperator SP? s_StringListNullPredicateWhereExpression )* ;
 
 s_MultiplyDivideModuloWhereOperator : '*' | '/' | '%' ;
 
@@ -155,37 +140,29 @@ s_ComparisonWhereOperator : '=' | '<>' | '<' | '<=' | '>' | '>=' ;
 
 s_StringListNullPredicateWhereExpression : s_AddOrSubtractWhereExpression ( s_TimePredicateWhereExpression | s_StringPredicateWhereExpression | s_ListPredicateWhereExpression | s_NullPredicateWhereExpression )? ;
 
-s_AddOrSubtractWhereExpression
-                       :  s_MultiplyDivideModuloWhereExpression ( ( SP? s_AddOrSubtractWhereOperator SP? s_MultiplyDivideModuloWhereExpression ) | ( SP? s_AddOrSubtractWhereOperator SP? s_MultiplyDivideModuloWhereExpression ) )* ;
+s_AddOrSubtractWhereExpression : s_MultiplyDivideModuloWhereExpression ( ( SP? s_AddOrSubtractWhereOperator SP? s_MultiplyDivideModuloWhereExpression ) | ( SP? s_AddOrSubtractWhereOperator SP? s_MultiplyDivideModuloWhereExpression ) )* ;
 
 s_TimePredicateWhereExpression : SP ( DURING | OVERLAPS ) SP s_AddOrSubtractWhereExpression ;
 
-s_StringPredicateWhereExpression
-                         :  ( ( SP STARTS SP WITH ) | ( SP ENDS SP WITH ) | ( SP CONTAINS ) ) SP? s_AddOrSubtractWhereExpression ;
+s_StringPredicateWhereExpression : ( ( SP STARTS SP WITH ) | ( SP ENDS SP WITH ) | ( SP CONTAINS ) ) SP? s_AddOrSubtractWhereExpression ;
 
-s_ListPredicateWhereExpression
-                       :  SP IN SP? s_AddOrSubtractWhereExpression ;
+s_ListPredicateWhereExpression : SP IN SP? s_AddOrSubtractWhereExpression ;
 
-s_NullPredicateWhereExpression
-                       :  ( SP IS SP NULL )
-                           | ( SP IS SP NOT SP NULL )
-                           ;
+s_NullPredicateWhereExpression : ( SP IS SP NULL )
+                               | ( SP IS SP NOT SP NULL )
+                               ;
 
-s_MultiplyDivideModuloWhereExpression
-                              :  s_PowerOfWhereExpression ( ( SP? s_MultiplyDivideModuloWhereOperator SP? s_PowerOfWhereExpression ) | ( SP? s_MultiplyDivideModuloWhereOperator SP? s_PowerOfWhereExpression ) | ( SP? s_MultiplyDivideModuloWhereOperator SP? s_PowerOfWhereExpression ) )* ;
+s_MultiplyDivideModuloWhereExpression : s_PowerOfWhereExpression ( ( SP? s_MultiplyDivideModuloWhereOperator SP? s_PowerOfWhereExpression ) | ( SP? s_MultiplyDivideModuloWhereOperator SP? s_PowerOfWhereExpression ) | ( SP? s_MultiplyDivideModuloWhereOperator SP? s_PowerOfWhereExpression ) )* ;
 
-s_PowerOfWhereExpression
-                 :  s_UnaryAddOrSubtractWhereExpression ( SP? s_PowerOfWhereOperator SP? s_UnaryAddOrSubtractWhereExpression )* ;
+s_PowerOfWhereExpression : s_UnaryAddOrSubtractWhereExpression ( SP? s_PowerOfWhereOperator SP? s_UnaryAddOrSubtractWhereExpression )* ;
 
-s_UnaryAddOrSubtractWhereExpression
-                            :  s_ListOperatorWhereExpression
-                                | ( ( '+' | '-' ) SP? s_ListOperatorWhereExpression )
-                                ;
+s_UnaryAddOrSubtractWhereExpression : s_ListOperatorWhereExpression
+                                    | ( ( '+' | '-' ) SP? s_ListOperatorWhereExpression )
+                                    ;
 
 s_ListOperatorWhereExpression : ( s_PropertyOrLabelsWhereExpression | s_AtTWhereExpression ) ( s_SingleIndexWhereExpression | s_DoubleIndexWhereExpression )* ;
 
-s_PropertyOrLabelsWhereExpression
-                          :  oC_Atom ( SP? oC_PropertyLookup )* ( SP? oC_NodeLabels )? ;
+s_PropertyOrLabelsWhereExpression : oC_Atom ( SP? oC_PropertyLookup )* ( SP? oC_NodeLabels )? ;
 
 
 s_AtTWhereExpression : oC_Atom ( ( SP? oC_PropertyLookup )* SP? oC_PropertyLookup ( SP? PoundValue | s_AtTElement)? )? SP? s_PropertyLookupTime ;
