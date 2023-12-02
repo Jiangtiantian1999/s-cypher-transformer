@@ -98,6 +98,10 @@ class SCypherWalker(s_cypherListener):
         self.properties_labels_expression = None
         self.remove_property_expression = None
         self.set_property_expression = None
+        self.principal_expression = None
+        self.list_expression = None
+        self.back_expression = None
+        self.filter_where_expression = None
 
         # where expression
         self.where_skip_expression = None  # Expression类型
@@ -121,6 +125,7 @@ class SCypherWalker(s_cypherListener):
         self.where_index_expressions = []
         self.where_AtT_expression = None
         self.where_properties_labels_expression = None
+        self.where_principal_expression = None
 
         # Atom
         self.atom = None
@@ -505,13 +510,11 @@ class SCypherWalker(s_cypherListener):
         if ctx.oC_Expression() is not None:
             value_content = self.expression
             self.expression = None
-        # time_window = self.value_node_time_window
         # 获取值节点的时间
         time_window = None  # 值节点时间
         if ctx.s_AtTElement() is not None:
             time_window = self.at_t_element
             self.at_t_element = None
-        # self.value_node_time_window = None
         # 构造值节点
         self.value_node_list.append(ValueNode(value_content, None, time_window))
 
@@ -871,6 +874,16 @@ class SCypherWalker(s_cypherListener):
         self.power_expressions.append(new_power_expression)
         self.list_index_expressions = []  # 退出时清空，避免重复记录
 
+    def exitOC_ListOperatorExpression(self, ctx: s_cypherParser.OC_ListOperatorExpressionContext):
+        if ctx.oC_PropertyOrLabelsExpression() is not None:
+            self.principal_expression = self.properties_labels_expression
+            self.properties_labels_expression = None
+        elif ctx.s_AtTExpression() is not None:
+            self.principal_expression = self.AtT_expression
+            self.AtT_expression = None
+        else:
+            self.principal_expression = None
+
     def exitOC_UnaryAddOrSubtractExpression(self, ctx: s_cypherParser.OC_UnaryAddOrSubtractExpressionContext):
         # 最后要返回的ListIndexExpression的参数如下
         # principal_expression: PropertiesLabelsExpression | AtTExpression,
@@ -879,13 +892,8 @@ class SCypherWalker(s_cypherListener):
         is_positive = True
         if '-' in ctx.getText():
             is_positive = False
-        principal_expression = None
-        if self.properties_labels_expression is not None:
-            principal_expression = self.properties_labels_expression
-            self.properties_labels_expression = None
-        elif self.AtT_expression is not None:
-            principal_expression = self.AtT_expression
-            self.AtT_expression = None
+        principal_expression = self.principal_expression
+        self.principal_expression = None
         index_expressions = self.index_expressions
         self.index_expressions = []  # 退出时清空，避免重复记录
         self.list_index_expressions.append(ListIndexExpression(principal_expression, is_positive, index_expressions))
@@ -1126,6 +1134,16 @@ class SCypherWalker(s_cypherListener):
         where_new_power_expression = PowerExpression(self.where_list_index_expressions)
         self.where_power_expressions.append(where_new_power_expression)
         self.where_list_index_expressions = []  # 退出时清空，避免重复记录
+
+    def exitS_ListOperatorWhereExpression(self, ctx:s_cypherParser.S_ListOperatorWhereExpressionContext):
+        if ctx.s_PropertyOrLabelsWhereExpression() is not None:
+            self.where_principal_expression = self.where_properties_labels_expression
+            self.where_properties_labels_expression = None
+        elif ctx.s_AtTWhereExpression() is not None:
+            self.where_principal_expression = self.where_AtT_expression
+            self.where_AtT_expression = None
+        else:
+            self.where_principal_expression = None
 
     def exitS_UnaryAddOrSubtractWhereExpression(self, ctx: s_cypherParser.S_UnaryAddOrSubtractWhereExpressionContext):
         is_positive = True
@@ -1524,6 +1542,31 @@ class SCypherWalker(s_cypherListener):
             atom = Atom(ctx.getText())
         self.atom = atom
 
+    def exitOC_ListComprehension(self, ctx: s_cypherParser.OC_ListComprehensionContext):
+        # variable: str,
+        # list_expression,
+        # where_expression=None,
+        # back_expression=None
+        if ctx.oC_FilterExpression().oC_IdInColl().oC_Variable() is not None:
+            variable = ctx.oC_FilterExpression().oC_IdInColl().oC_Variable().getText()
+        else:
+            raise TranslateError("The variable of oC_IdInColl is None!")
+        list_expression = self.list_expression
+        self.list_expression = None
+        where_expression = self.filter_where_expression
+        self.filter_where_expression = None
+        back_expression = self.expression
+        self.expression = None
+        self.list_comprehension = ListComprehension(variable, list_expression, where_expression, back_expression)
+
+    def exitOC_FilterExpression(self, ctx: s_cypherParser.OC_FilterExpressionContext):
+        self.filter_where_expression = self.where_expression
+        self.where_expression = None
+
+    def exitOC_IdInColl(self, ctx: s_cypherParser.OC_IdInCollContext):
+        self.list_expression = self.expression
+        self.expression = None
+
     def exitOC_ListLiteral(self, ctx: s_cypherParser.OC_ListLiteralContext):
         # expressions: List
         self.list_literal = ListLiteral(self.list_literal_expressions)
@@ -1531,6 +1574,7 @@ class SCypherWalker(s_cypherListener):
 
     def exitS_ListLiteralExpression(self, ctx: s_cypherParser.S_ListLiteralExpressionContext):
         self.list_literal_expressions.append(self.expression)
+        self.expression = None
 
     def exitOC_MapLiteral(self, ctx: s_cypherParser.OC_MapLiteralContext):
         # keys_values: dict
