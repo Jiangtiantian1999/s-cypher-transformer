@@ -101,8 +101,6 @@ class ExpressionConverter:
         return power_expression_string.lstrip('^')
 
     def convert_list_index_expression(self, list_index_expression: ListIndexExpression) -> str:
-        print(list_index_expression.principal_expression, list_index_expression.index_expressions)
-
         list_index_expression_string = ""
         if list_index_expression.principal_expression.__class__ == PropertiesLabelsExpression:
             list_index_expression_string = self.convert_properties_labels_expression(
