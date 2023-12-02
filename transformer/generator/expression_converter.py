@@ -101,6 +101,8 @@ class ExpressionConverter:
         return power_expression_string.lstrip('^')
 
     def convert_list_index_expression(self, list_index_expression: ListIndexExpression) -> str:
+        print(list_index_expression.principal_expression, list_index_expression.index_expressions)
+
         list_index_expression_string = ""
         if list_index_expression.principal_expression.__class__ == PropertiesLabelsExpression:
             list_index_expression_string = self.convert_properties_labels_expression(
@@ -144,21 +146,22 @@ class ExpressionConverter:
             if index != len(properties_labels_expression.property_chains) - 1:
                 properties_labels_expression_string = properties_labels_expression_string + '.' + property_name
 
-        if properties_labels_expression.labelsOrAtT.__class__ == AtTElement:
-            time_window_string = self.convert_at_t_element(properties_labels_expression.labelsOrAtT)
-        else:
-            time_window_string = "NULL"
         if len(properties_labels_expression.property_chains) > 0:
+            if properties_labels_expression.labelsOrAtT.__class__ == AtTElement:
+                time_window_string = self.convert_at_t_element(properties_labels_expression.labelsOrAtT)
+            else:
+                time_window_string = "NULL"
             properties_labels_expression_string = "scypher.getPropertyValue(" + properties_labels_expression_string + ", \"" + \
                                                   properties_labels_expression.property_chains[
                                                       -1] + "\", " + time_window_string + ')'
         else:
             if properties_labels_expression.labelsOrAtT.__class__ == AtTElement:
-                raise SyntaxError("When querying the property value at the specified time, the property name must be specified")
+                raise SyntaxError(
+                    "When querying the property value at the specified time, the property name must be specified")
 
         if properties_labels_expression.labelsOrAtT.__class__ == list:
+            # 判断某节点/边是否有某（些）标签
             for label in properties_labels_expression.labelsOrAtT:
-                # 判断某节点/边是否有某（些）标签
                 properties_labels_expression_string = properties_labels_expression_string + ':' + label
         return properties_labels_expression_string
 
@@ -213,7 +216,7 @@ class ExpressionConverter:
         elif particle.__class__ == CaseExpression:
             pass
         elif particle.__class__ == ListComprehension:
-            pass
+            return self.convert_list_comprehension(particle)
         elif particle.__class__ == PatternComprehension:
             pass
         elif particle.__class__ == Quantifier:
@@ -238,6 +241,17 @@ class ExpressionConverter:
         for key, value in map_literal.keys_values.items():
             map_literal_string = map_literal_string + key + ": " + self.convert_expression(value) + ", "
         return '{' + map_literal_string.rstrip(", ") + '}'
+
+    def convert_list_comprehension(self, list_comprehension: ListComprehension) -> str:
+        list_comprehension_string = list_comprehension.variable + " IN " + self.convert_expression(
+            list_comprehension.list_expression)
+        if list_comprehension.where_expression:
+            list_comprehension_string = list_comprehension_string + " WHERE " + self.convert_expression(
+                list_comprehension.where_expression)
+        if list_comprehension.filer_expression:
+            list_comprehension_string = list_comprehension_string + " | " + self.convert_expression(
+                list_comprehension.filer_expression)
+        return '[' + list_comprehension_string + ']'
 
     def convert_function_invocation(self, function_invocation: FunctionInvocation) -> str:
         function_invocation_string = ""
