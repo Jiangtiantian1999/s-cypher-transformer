@@ -87,7 +87,7 @@ class TestMatch(TestCase):
     def test_match_path(self):
         s_cypher = """
         MATCH path = (a:Person{name:"Mary Smith Taylor"})-[e:FRIEND*1..2]->(b:Person)
-        RETURN [node in nodes(path) | node.name] as path
+        RETURN [node in nodes(path) | node.name@T(NOW)] as path
         ORDER BY path
         """
         cypher_query = STransformer.transform(s_cypher)
@@ -100,7 +100,7 @@ class TestMatch(TestCase):
 
         s_cypher = """
         MATCH path = (a:Person{name:"Mary Smith Taylor"})-[e:FRIEND*1..2@T("2000")]->(b:Person)
-        RETURN [node in nodes(path) | node.name] as path
+        RETURN [node in nodes(path) | node.name@T("2000")] as path
         ORDER BY path
         """
         cypher_query = STransformer.transform(s_cypher)
