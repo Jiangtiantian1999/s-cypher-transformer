@@ -49,12 +49,20 @@ class TestCall(TestCase):
         # 带参指定返回值查询
         s_cypher = """
         CALL apoc.when(true, 'RETURN $a + 7 as b', 'RETURN $a as b',{a:3})
-        YIELD value as result
+        YIELD value
         """
         cypher_query = STransformer.transform(s_cypher)
         records, summary, keys = self.graphdb_connector.driver.execute_query(cypher_query)
-        assert records == [{"result": {"b": 10}}]
+        assert records == [{"value": {"b": 10}}]
 
     # 内部CALL查询
     def test_call_2(self):
-        pass
+        s_cypher = """
+        MATCH (n:Person {name:"Pauline Boutler"})-[:LIVE@T(NOW)]->(m:City)
+        CALL apoc.when(m.name = "London", 'RETURN true as living_in_london', 'RETURN false as living_in_london')
+        YIELD value
+        RETURN value
+        """
+        cypher_query = STransformer.transform(s_cypher)
+        records, summary, keys = self.graphdb_connector.driver.execute_query(cypher_query)
+        assert records == [{"value": {"living_in_london": True}}]
