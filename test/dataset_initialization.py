@@ -18,9 +18,7 @@ class DataSet1:
                 DETACH DELETE p,c,b
                 """
         cypher_query = STransformer.transform(s_cypher_query)
-        tx = self.driver.session().begin_transaction()
-        tx.run(cypher_query)
-        tx.commit()
+        self.driver.execute_query(cypher_query)
 
     def initialize(self):
         s_cypher_query = """
@@ -52,18 +50,15 @@ class DataSet1:
                 CREATE (p6)-[:LIKE@T("1982", NOW)]->(b1)
                 """
         cypher_query = STransformer.transform(s_cypher_query)
-        tx = self.driver.session().begin_transaction()
-        tx.run(cypher_query)
-        tx.commit()
+        self.driver.execute_query(cypher_query)
+
         s_cypher_query = """
                 MATCH (p:Person{name:"Mary Smith"})
                 SET p.name = "Mary Smith Taylor"
                 AT TIME timePoint("1960")
                 """
         cypher_query = STransformer.transform(s_cypher_query)
-        tx = self.driver.session().begin_transaction()
-        tx.run(cypher_query)
-        tx.commit()
+        self.driver.execute_query(cypher_query)
 
 
 def test():
@@ -72,6 +67,5 @@ def test():
     dataset1 = DataSet1(graphdb_connector.driver)
     dataset1.rebuild()
     graphdb_connector.close()
-
 
 # test()
