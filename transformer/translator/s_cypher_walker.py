@@ -144,7 +144,7 @@ class SCypherWalker(s_cypherListener):
         # 中间变量
         self.with_query_clauses = []
         self.union_is_all_list = []
-        self.projection_items = []
+        self.projection_items = None
         self.property_look_up_list = []
         self.property_look_up_time_list = []
         self.sort_items = dict()
@@ -271,7 +271,7 @@ class SCypherWalker(s_cypherListener):
         # skip_expression: Expression = None,
         # limit_expression: Expression = None
         projection_items = self.projection_items
-        self.projection_items = []  # 退出清空
+        self.projection_items = None  # 退出清空
         is_distinct = False
         if 'DISTINCT' in ctx.oC_ProjectionBody().getText():
             is_distinct = True
@@ -668,7 +668,7 @@ class SCypherWalker(s_cypherListener):
         # skip_expression: Expression = None,
         # limit_expression: Expression = None
         projection_items = self.projection_items
-        self.projection_items = []  # 退出清空
+        self.projection_items = None  # 退出清空
         is_distinct = False
         if ctx.oC_ProjectionBody() and ctx.oC_ProjectionBody().DISTINCT() is not None:
             is_distinct = True
@@ -684,7 +684,7 @@ class SCypherWalker(s_cypherListener):
                                           limit_expression)
 
     def exitOC_ProjectionItem(self, ctx: s_cypherParser.OC_ProjectionItemContext):
-        # expression: Expression = None,
+        # expression: Expression,
         # variable: str = None
         variable = None
         expression = self.expression
