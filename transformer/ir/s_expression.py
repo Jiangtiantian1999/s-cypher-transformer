@@ -21,12 +21,12 @@ class CaseExpression:
 
 class ListComprehension:
     # TODO variable待添加至variables_manager.user_variables
-    # 注意：该处list_expression,where_expression和filter_expression为Expression类型，由于与Expression相互引用，故此处不写明类型。
-    def __init__(self, variable: str, list_expression, where_expression=None, filter_expression=None):
+    # 注意：该处list_expression,where_expression和back_expression为Expression类型，由于与Expression相互引用，故此处不写明类型。
+    def __init__(self, variable: str, list_expression, where_expression=None, back_expression=None):
         self.variable = variable
         self.list_expression = list_expression
         self.where_expression = where_expression
-        self.filer_expression = filter_expression
+        self.back_expression = back_expression
 
 
 class PatternComprehension:

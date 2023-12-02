@@ -248,9 +248,9 @@ class ExpressionConverter:
         if list_comprehension.where_expression:
             list_comprehension_string = list_comprehension_string + " WHERE " + self.convert_expression(
                 list_comprehension.where_expression)
-        if list_comprehension.filer_expression:
+        if list_comprehension.back_expression:
             list_comprehension_string = list_comprehension_string + " | " + self.convert_expression(
-                list_comprehension.filer_expression)
+                list_comprehension.back_expression)
         return '[' + list_comprehension_string + ']'
 
     def convert_function_invocation(self, function_invocation: FunctionInvocation) -> str:
