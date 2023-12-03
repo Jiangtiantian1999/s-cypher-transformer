@@ -691,6 +691,7 @@ class SCypherWalker(s_cypherListener):
         self.expression = None
         if ctx.oC_Variable() is not None:
             variable = ctx.oC_Variable().getText()
+        self.projection_items = []
         self.projection_items.append(ProjectionItem(expression, variable))
         if ctx.getText()[0] == '*':
             self.projection_item_is_all = True
@@ -1135,7 +1136,7 @@ class SCypherWalker(s_cypherListener):
         self.where_power_expressions.append(where_new_power_expression)
         self.where_list_index_expressions = []  # 退出时清空，避免重复记录
 
-    def exitS_ListOperatorWhereExpression(self, ctx:s_cypherParser.S_ListOperatorWhereExpressionContext):
+    def exitS_ListOperatorWhereExpression(self, ctx: s_cypherParser.S_ListOperatorWhereExpressionContext):
         if ctx.s_PropertyOrLabelsWhereExpression() is not None:
             self.where_principal_expression = self.where_properties_labels_expression
             self.where_properties_labels_expression = None
