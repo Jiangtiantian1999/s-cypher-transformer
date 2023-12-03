@@ -198,7 +198,7 @@ class ExpressionConverter:
                 else:
                     interval = interval + '.' + time_property
         if interval.__class__ == dict:
-            return "{\"from\":" + interval["from"] + ", \"to\":" + interval["to"] + '}'
+            return "{from:" + interval["from"] + ", to:" + interval["to"] + '}'
         return interval
 
     def convert_atom(self, atom: Atom) -> str:
