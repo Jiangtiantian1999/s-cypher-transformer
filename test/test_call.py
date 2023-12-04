@@ -19,7 +19,7 @@ class TestCall(TestCase):
         cls.graphdb_connector.close()
 
     # 独立CALL查询
-    def test_call_1(self):
+    def test_standalone_call(self):
         # 无参不指定返回值查询
         s_cypher = """
         CALL db.info
@@ -56,7 +56,7 @@ class TestCall(TestCase):
         assert records == [{"value": {"b": 10}}]
 
     # 内部CALL查询
-    def test_call_2(self):
+    def test_in_call(self):
         s_cypher = """
         MATCH (n:Person {name:"Pauline Boutler"})-[:LIVE@T(NOW)]->(m:City)
         CALL apoc.when(m.name = "London", 'RETURN true as living_in_london', 'RETURN false as living_in_london')

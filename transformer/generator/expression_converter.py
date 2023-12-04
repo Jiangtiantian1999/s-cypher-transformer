@@ -169,14 +169,13 @@ class ExpressionConverter:
             at_t_expression_string = at_t_expression_string + '.' + property_name
 
         # 所查询的对象节点
-        element_variable = at_t_expression_string
         if at_t_expression.property_name is None:
             # 返回对象节点或边的有效时间，直接访问即可
-            interval = {"from": element_variable + ".intervalFrom", "to": element_variable + ".intervalTo"}
+            at_t_expression_string = "scypher.getPropertyEffectiveTime(" + at_t_expression_string + ", NULL)"
         elif at_t_expression.time_window is None:
             # 返回属性节点的有效时间
             # 实际上object_variable.property_name也可能为对象节点，scypher.getPropertyEffectiveTime函数内部应该加以区分
-            interval = "scypher.getPropertyEffectiveTime(" + element_variable + ", \"" + at_t_expression.property_name + "\")"
+            at_t_expression_string = "scypher.getPropertyEffectiveTime(" + at_t_expression_string + ", \"" + at_t_expression.property_name + "\")"
         else:
             # 返回值节点的有效时间
             if at_t_expression.time_window.__class__ == AtTExpression:
@@ -184,22 +183,10 @@ class ExpressionConverter:
             else:
                 interval_string = "NULL"
             # 一定是返回值节点的有效时间，否则报错
-            interval = "scypher.getValueEffectiveTime(" + element_variable + ", \"" + at_t_expression.property_name + "\", " + interval_string + ')'
-
-        for index, time_property in enumerate(at_t_expression.time_property_chains):
-            if index == 0:
-                if time_property.lower() in ["from", "to"]:
-                    time_property = time_property.lower()
-                if interval.__class__ == dict:
-                    if time_property in ["from", "to"]:
-                        interval = interval[time_property]
-                    else:
-                        interval = "NULL"
-                else:
-                    interval = interval + '.' + time_property
-        if interval.__class__ == dict:
-            return "{from:" + interval["from"] + ", to:" + interval["to"] + '}'
-        return interval
+            at_t_expression_string = "scypher.getValueEffectiveTime(" + at_t_expression_string + ", \"" + at_t_expression.property_name + "\", " + interval_string + ')'
+        for time_property in at_t_expression.time_property_chains:
+            at_t_expression_string = at_t_expression_string + '.' + time_property
+        return at_t_expression_string
 
     def convert_atom(self, atom: Atom) -> str:
         particle = atom.particle

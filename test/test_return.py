@@ -1,5 +1,8 @@
 from unittest import TestCase
 
+from neo4j.exceptions import ClientError
+from neo4j.time import DateTime
+
 from test.graphdb_connector import GraphDBConnector
 from transformer.s_transformer import STransformer
 
@@ -19,104 +22,197 @@ class TestReturn(TestCase):
         cls.graphdb_connector.close()
 
     # 返回属性
-    def test_return_1(self):
+    def test_return_property(self):
+        # 返回节点属性（单个）
         s_cypher = """
-        MATCH (n1:Person)-[e:FRIEND]->(n2:Person)
-        RETURN n1.name, e.name
+        MATCH (n1:Person)-[e:LIVE@T("2000")]->(n2:City {name: "Brussels"})
+        RETURN n1.name as person_name
+        ORDER BY person_name
         """
         cypher_query = STransformer.transform(s_cypher)
-        tx = self.graphdb_connector.driver.session().begin_transaction()
-        results = tx.run(cypher_query).data()
+        records, summery, keys = self.graphdb_connector.driver.execute_query(cypher_query)
+        assert records == [{"person_name": "Cathy Van"}, {"person_name": "Pauline Boutler"}]
+
+        # 返回节点属性（多个）
+        s_cypher = """
+        MATCH (n1:Person)-[e:LIVE@T("1990")]->(n2:City {name: "Antwerp"})
+        RETURN n1.name as person_name
+        """
+        cypher_query = STransformer.transform(s_cypher)
+        records, summery, keys = self.graphdb_connector.driver.execute_query(cypher_query)
+        assert records == [{"person_name": ["Mary Smith", "Mary Smith Taylor"]}]
+
+        # 返回指定有效时间下的节点属性
+        s_cypher = """
+        MATCH (n1:Person)-[e:LIVE@T("1990")]->(n2:City {name: "Antwerp"})
+        RETURN n1.name@T(NOW) as person_name
+        """
+        cypher_query = STransformer.transform(s_cypher)
+        records, summery, keys = self.graphdb_connector.driver.execute_query(cypher_query)
+        assert records == [{"person_name": "Mary Smith Taylor"}]
 
     # 返回有效时间
-    def test_return_2(self):
+    def test_return_effective_time(self):
+        # 返回对象节点有效时间
+        s_cypher = """
+        MATCH (n:Person {name: "Mary Smith Taylor"})
+        RETURN n@T as effective_time
+        """
+        cypher_query = STransformer.transform(s_cypher)
+        records, summery, keys = self.graphdb_connector.driver.execute_query(cypher_query)
+        assert records == [{"effective_time": {"from": DateTime(1937, 1, 1, 0, 0, 0, 0),
+                                               "to": DateTime(9999, 12, 31, 23, 59, 59, 999999999)}}]
+
+        # 返回属性节点有效时间
+        s_cypher = """
+        MATCH (n:Person {name: "Mary Smith Taylor"})
+        RETURN n.name@T as effective_time
+        """
+        cypher_query = STransformer.transform(s_cypher)
+        records, summery, keys = self.graphdb_connector.driver.execute_query(cypher_query)
+        assert records == [{"effective_time": {"from": DateTime(1937, 1, 1, 0, 0, 0, 0),
+                                               "to": DateTime(9999, 12, 31, 23, 59, 59, 999999999)}}]
+
+        # 返回值节点有效时间
+        s_cypher = """
+        MATCH (n:Person {name: "Mary Smith Taylor"})
+        RETURN n.name#Value@T as effective_time
+        """
+        cypher_query = STransformer.transform(s_cypher)
+        records, summery, keys = self.graphdb_connector.driver.execute_query(cypher_query)
+        assert records == [{"effective_time": [{"from": DateTime(1937, 1, 1, 0, 0, 0, 0),
+                                                "to": DateTime(1959, 12, 31, 23, 59, 59, 999999999)},
+                                               {"from": DateTime(1960, 1, 1, 0, 0, 0, 0),
+                                                "to": DateTime(9999, 12, 31, 23, 59, 59, 999999999)}]}]
+
+        # 返回指定有效时间下的值节点有效时间
+        s_cypher = """
+        MATCH (n:Person {name: "Mary Smith Taylor"})
+        RETURN n.name@T("NOW")@T as effective_time
+        """
+        cypher_query = STransformer.transform(s_cypher)
+        records, summery, keys = self.graphdb_connector.driver.execute_query(cypher_query)
+        assert records == [{"effective_time": {"from": DateTime(1960, 1, 1, 0, 0, 0, 0),
+                                               "to": DateTime(9999, 12, 31, 23, 59, 59, 999999999)}}]
+
+        # 错误用法检测
         s_cypher = """
         MATCH (n:Person{name: 'Pauline Boutler'})
         WITH n.name AS name
-        RETURN name@T;
+        RETURN name@T
         """
         cypher_query = STransformer.transform(s_cypher)
-        with self.assertRaises(Exception):  # 捕获类型随便写的，最好改成对应异常类
-            tx = self.graphdb_connector.driver.session().begin_transaction()
-            tx.run(cypher_query)
+        with self.assertRaises(ClientError):
+            self.graphdb_connector.driver.execute_query(cypher_query)
 
-    # 返回时间类型数据
-    def test_return_3(self):
-        s_cypher = """
-        RETURN datetime({epochSeconds: timestamp() / 1000, nanosecond: 23}) AS theDate;
-        """
-        cypher_query = STransformer.transform(s_cypher)
-        tx = self.graphdb_connector.driver.session().begin_transaction()
-        results = tx.run(cypher_query).data()
-
-    def test_return_4(self):
-        # TODO: make sure that the object a have several properties
-        s_cypher = """
-        MATCH (a:Person)
-        RETURN DISTINCT a.country;
-        """
-        cypher_query = STransformer.transform(s_cypher)
-        tx = self.graphdb_connector.driver.session().begin_transaction()
-        results = tx.run(cypher_query).data()
-
-    def test_return_5(self):
-        # TODO: is the interval sortable?
+    # 测试ORDER BY和LIMIT
+    def test_order_by(self):
+        # 根据有效时间返回结果，未作设置，默认使用map的比较方法（先比较to，再比较from）
         s_cypher = """
         MATCH (p:Person)
-        RETURN p@T as n
-        ORDER BY n DESC
+        RETURN p@T as effective_time
+        ORDER BY effective_time DESC
+        LIMIT 3
         """
         cypher_query = STransformer.transform(s_cypher)
-        tx = self.graphdb_connector.driver.session().begin_transaction()
-        results = tx.run(cypher_query).data()
+        records, summery, keys = self.graphdb_connector.driver.execute_query(cypher_query)
+        assert records == [{"effective_time": {"from": DateTime(1995, 1, 1, 0, 0, 0, 0),
+                                               "to": DateTime(9999, 12, 31, 23, 59, 59, 999999999)}},
+                           {"effective_time": {"from": DateTime(1978, 1, 1, 0, 0, 0, 0),
+                                               "to": DateTime(9999, 12, 31, 23, 59, 59, 999999999)}},
+                           {"effective_time": {"from": DateTime(1967, 1, 1, 0, 0, 0, 0),
+                                               "to": DateTime(9999, 12, 31, 23, 59, 59, 999999999)}}]
 
-    def test_return_6(self):
-        # TODO: test collect
-        s_cypher = """
-        MATCH (a:Person)-[:FRIENDS_WITH]->(b)
-        RETURN a.name, collect(b.name) AS Friends;
-        """
-        cypher_query = STransformer.transform(s_cypher)
-        tx = self.graphdb_connector.driver.session().begin_transaction()
-        results = tx.run(cypher_query).data()
-
-    def test_return_7(self):
-        # TODO: test aggregate functions
         s_cypher = """
         MATCH (p:Person)
-        RETURN avg(p.age) AS AverageAge, max(p.age) AS Oldest, min(p.age) AS Youngest;
+        RETURN p.name@T(NOW) as name, p@T.from.year as birth_year
+        ORDER BY birth_year, name
+        LIMIT 3
         """
         cypher_query = STransformer.transform(s_cypher)
-        tx = self.graphdb_connector.driver.session().begin_transaction()
-        results = tx.run(cypher_query).data()
+        records, summery, keys = self.graphdb_connector.driver.execute_query(cypher_query)
+        assert records == [{"name": "Cathy Van", "birth_year": 1960}, {"name": "Peter Burton", "birth_year": 1960},
+                           {"name": "Mary Smith Taylor", "birth_year": 1960}]
 
-    def test_return_8(self):
-        # TODO: test aggregate functions for interval
+    # 测试聚合函数
+    def test_aggregate_function(self):
+        # 测试collect
+        s_cypher = """
+        MATCH (a:Person)-[:FRIEND]->(b:Person)
+        WITH *
+        ORDER BY b.name
+        RETURN a.name as person, collect(b.name@T(NOW)) as friends
+        """
+        cypher_query = STransformer.transform(s_cypher)
+        records, summery, keys = self.graphdb_connector.driver.execute_query(cypher_query)
+        assert records == [
+            {"person": ["Mary Smith", "Mary Smith Taylor"], "friends": ["Pauline Boutler", "Peter Burton"]},
+            {"person": "Pauline Boutler", "friends": ["Cathy Van"]},
+            {"person": "Peter Burton", "friends": ["Cathy Van", "Daniel Yang"]}]
+
+        # 测试avg, max, min
+        s_cypher = """
+        MATCH (p:Person)
+        WITH 2023 - p@T.from.year as age
+        RETURN round(avg(age), 2) AS AverageAge, max(age) AS Oldest, min(age) AS Youngest;
+        """
+
+        cypher_query = STransformer.transform(s_cypher)
+        records, summery, keys = self.graphdb_connector.driver.execute_query(cypher_query)
+        assert records == [{"AverageAge": 56.83, "Oldest": 86, "Youngest": 28}]
+
+        # 不能对时间点或时间区间做avg聚合运算
         s_cypher = """
         MATCH (p:Person)
         RETURN avg(p@T.from) AS AverageBirth, min(p@T.from) AS Oldest;
         """
         cypher_query = STransformer.transform(s_cypher)
-        tx = self.graphdb_connector.driver.session().begin_transaction()
-        results = tx.run(cypher_query).data()
+        with self.assertRaises(ClientError):
+            self.graphdb_connector.driver.execute_query(cypher_query)
 
-    def test_return_9(self):
-        # TODO: test aggregate functions for 'Now' with other timestamp
+    # 测试时间点和时间区间的运算操作
+    def test_time_operate(self):
+        # 时间点DURING时间区间
         s_cypher = """
-        MATCH (p:Person)
-        RETURN max(p@T.to) AS Oldest;
+        WITH timePoint("2015-W30") as time_point, interval("2015Q20",NOW) as interval
+        RETURN time_point, interval, time_point DURING interval as result
         """
         cypher_query = STransformer.transform(s_cypher)
-        tx = self.graphdb_connector.driver.session().begin_transaction()
-        results = tx.run(cypher_query).data()
+        records, summery, keys = self.graphdb_connector.driver.execute_query(cypher_query)
+        assert records == [{"time_point": DateTime(2015, 6, 20, 0, 0, 0, 0),
+                            "interval": {"from": DateTime(2015, 4, 1, 0, 0, 0, 0),
+                                         "to": DateTime(9999, 12, 31, 23, 59, 59, 999999999)}, "result": True}]
 
-    def test_return_10(self):
-        # TODO: test calculation for interval
+        # 时间区间DURING时间点
         s_cypher = """
-        MATCH (p:Person)-[:FRIENDS_WITH]->(b:Person)
-        WHERE p.name STARTS WITH "Mary"
-        RETURN p,b, p@T.from-b@T.from AS AgeDiff;
+        WITH interval("2015202",timePoint({year:2016, month:10, day:1})) as interval1, interval("2015Q20",timePoint.current()) as interval2
+        RETURN interval1, interval2, interval1 DURING interval2 as result
         """
         cypher_query = STransformer.transform(s_cypher)
-        tx = self.graphdb_connector.driver.session().begin_transaction()
-        results = tx.run(cypher_query).data()
+        records, summery, keys = self.graphdb_connector.driver.execute_query(cypher_query)
+        assert records == [{"interval1": {"from": DateTime(2015, 7, 21, 0, 0, 0, 0),
+                                          "to": DateTime(2016, 10, 1, 0, 0, 0, 0)},
+                            "interval2": {"from": DateTime(2015, 4, 1, 0, 0, 0, 0),
+                                          "to": DateTime(9999, 12, 31, 23, 59, 59, 999999999)}, "result": True}]
+
+        # OVERLAPS
+        s_cypher = """
+        WITH interval("2015-Q2","2015-06-30") as interval1, interval("2015Q260","2015-W30-2") as interval2
+        RETURN interval1, interval2, interval1 OVERLAP interval2 as result
+        """
+        cypher_query = STransformer.transform(s_cypher)
+        records, summery, keys = self.graphdb_connector.driver.execute_query(cypher_query)
+        assert records == [{"interval1": {"from": DateTime(2015, 4, 1, 0, 0, 0, 0),
+                                          "to": DateTime(2015, 6, 30, 0, 0, 0, 0)},
+                            "interval2": {"from": DateTime(2015, 5, 30, 0, 0, 0, 0),
+                                          "to": DateTime(2015, 7, 21, 0, 0, 0, 0)}, "result": True}]
+
+        # 时间点之间不能相减
+        s_cypher = """
+        MATCH (p:Person{name: "Mary Smith Taylor"})-[:FRIEND]->(b:Person)
+        RETURN p.name@T(NOW) as person1, b.name@T(NOW) as person2, p@T.from - b@T.from AS AgeDiff
+        ORDER BY person2
+        """
+        cypher_query = STransformer.transform(s_cypher)
+        with self.assertRaises(ClientError):
+            self.graphdb_connector.driver.execute_query(cypher_query)
