@@ -175,6 +175,70 @@ s_LeftWhereExpression : oC_Expression ;
 
 s_RightWhereExpression : oC_Expression ;
 
+// ProjectionItem
+oC_ProjectionItem
+              :  ( s_ProjectionItemExpression SP AS SP oC_Variable )
+                  | s_ProjectionItemExpression
+                  ;
+
+s_ProjectionItemExpression : s_OrProjectionItemExpression ;
+
+s_OrProjectionItemExpression : s_XorProjectionItemExpression ( SP OR SP s_XorProjectionItemExpression )* ;
+
+s_XorProjectionItemExpression : s_AndProjectionItemExpression ( SP XOR SP s_AndProjectionItemExpression )* ;
+
+s_AndProjectionItemExpression : s_NotProjectionItemExpression ( SP AND SP s_NotProjectionItemExpression )* ;
+
+s_NotProjectionItemExpression : ( NOT SP? )* s_ComparisonProjectionItemExpression ;
+
+s_ComparisonProjectionItemExpression : s_StringListNullPredicateProjectionItemExpression ( SP? s_ComparisonProjectionItemOperator SP? s_StringListNullPredicateProjectionItemExpression )* ;
+
+s_MultiplyDivideModuloProjectionItemOperator : '*' | '/' | '%' ;
+
+s_PowerOfProjectionItemOperator : '^' ;
+
+s_AddOrSubtractProjectionItemOperator : '+' | '-' ;
+
+s_ComparisonProjectionItemOperator : '=' | '<>' | '<' | '<=' | '>' | '>=' ;
+
+s_StringListNullPredicateProjectionItemExpression : s_AddOrSubtractProjectionItemExpression ( s_TimePredicateProjectionItemExpression | s_StringPredicateProjectionItemExpression | s_ListPredicateProjectionItemExpression | s_NullPredicateProjectionItemExpression )? ;
+
+s_AddOrSubtractProjectionItemExpression : s_MultiplyDivideModuloProjectionItemExpression ( ( SP? s_AddOrSubtractProjectionItemOperator SP? s_MultiplyDivideModuloProjectionItemExpression ) | ( SP? s_AddOrSubtractProjectionItemOperator SP? s_MultiplyDivideModuloProjectionItemExpression ) )* ;
+
+s_TimePredicateProjectionItemExpression : SP ( DURING | OVERLAPS ) SP s_AddOrSubtractProjectionItemExpression ;
+
+s_StringPredicateProjectionItemExpression : ( ( SP STARTS SP WITH ) | ( SP ENDS SP WITH ) | ( SP CONTAINS ) ) SP? s_AddOrSubtractProjectionItemExpression ;
+
+s_ListPredicateProjectionItemExpression : SP IN SP? s_AddOrSubtractProjectionItemExpression ;
+
+s_NullPredicateProjectionItemExpression : ( SP IS SP NULL )
+                               | ( SP IS SP NOT SP NULL )
+                               ;
+
+s_MultiplyDivideModuloProjectionItemExpression : s_PowerOfProjectionItemExpression ( ( SP? s_MultiplyDivideModuloProjectionItemOperator SP? s_PowerOfProjectionItemExpression ) | ( SP? s_MultiplyDivideModuloProjectionItemOperator SP? s_PowerOfProjectionItemExpression ) | ( SP? s_MultiplyDivideModuloProjectionItemOperator SP? s_PowerOfProjectionItemExpression ) )* ;
+
+s_PowerOfProjectionItemExpression : s_UnaryAddOrSubtractProjectionItemExpression ( SP? s_PowerOfProjectionItemOperator SP? s_UnaryAddOrSubtractProjectionItemExpression )* ;
+
+s_UnaryAddOrSubtractProjectionItemExpression : s_ListOperatorProjectionItemExpression
+                                    | ( ( '+' | '-' ) SP? s_ListOperatorProjectionItemExpression )
+                                    ;
+
+s_ListOperatorProjectionItemExpression : ( s_PropertyOrLabelsProjectionItemExpression | s_AtTProjectionItemExpression ) ( s_SingleIndexProjectionItemExpression | s_DoubleIndexProjectionItemExpression )* ;
+
+s_PropertyOrLabelsProjectionItemExpression : oC_Atom ( SP? oC_PropertyLookup )* ( SP? oC_NodeLabels )? ;
+
+
+s_AtTProjectionItemExpression : oC_Atom ( ( SP? oC_PropertyLookup )* SP? oC_PropertyLookup ( SP? PoundValue | s_AtTElement)? )? SP? s_PropertyLookupTime ;
+
+s_SingleIndexProjectionItemExpression : SP? '[' s_LeftProjectionItemExpression ']' ;
+
+s_DoubleIndexProjectionItemExpression : SP? '[' s_LeftProjectionItemExpression? '..' s_RightProjectionItemExpression? ']' ;
+
+s_LeftProjectionItemExpression : oC_Expression ;
+
+s_RightProjectionItemExpression : oC_Expression ;
+//--------------------
+
 s_TimePointLiteral : StringLiteral
                    | oC_MapLiteral
                    ;

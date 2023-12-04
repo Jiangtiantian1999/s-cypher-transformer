@@ -445,7 +445,9 @@ oC_ExistentialSubquery
 EXISTS : ( 'E' | 'e' ) ( 'X' | 'x' ) ( 'I' | 'i' ) ( 'S' | 's' ) ( 'T' | 't' ) ( 'S' | 's' ) ;
 
 oC_ExplicitProcedureInvocation
-                           :  oC_ProcedureName SP? '(' SP? ( oC_Expression SP? ( ',' SP? oC_Expression SP? )* )? ')' ;
+                           :  oC_ProcedureName SP? '(' SP? ( s_ExplicitExpression SP? ( ',' SP? s_ExplicitExpression SP? )* )? ')' ;
+
+s_ExplicitExpression : oC_Expression ;
 
 oC_ImplicitProcedureInvocation
                            :  oC_ProcedureName ;
@@ -818,4 +820,3 @@ fragment VT : [\u000B] ;
 fragment US : [\u001F] ;
 
 fragment ID_Start : [\p{ID_Start}] ;
-

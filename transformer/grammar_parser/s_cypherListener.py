@@ -1,4 +1,4 @@
-# Generated from s_cypher.g4 by ANTLR 4.13.0
+# Generated from .\transformer\grammar_parser\s_cypher.g4 by ANTLR 4.13.0
 from antlr4 import *
 if "." in __name__:
     from .s_cypherParser import s_cypherParser
@@ -683,6 +683,249 @@ class s_cypherListener(ParseTreeListener):
         pass
 
 
+    # Enter a parse tree produced by s_cypherParser#oC_ProjectionItem.
+    def enterOC_ProjectionItem(self, ctx:s_cypherParser.OC_ProjectionItemContext):
+        pass
+
+    # Exit a parse tree produced by s_cypherParser#oC_ProjectionItem.
+    def exitOC_ProjectionItem(self, ctx:s_cypherParser.OC_ProjectionItemContext):
+        pass
+
+
+    # Enter a parse tree produced by s_cypherParser#s_ProjectionItemExpression.
+    def enterS_ProjectionItemExpression(self, ctx:s_cypherParser.S_ProjectionItemExpressionContext):
+        pass
+
+    # Exit a parse tree produced by s_cypherParser#s_ProjectionItemExpression.
+    def exitS_ProjectionItemExpression(self, ctx:s_cypherParser.S_ProjectionItemExpressionContext):
+        pass
+
+
+    # Enter a parse tree produced by s_cypherParser#s_OrProjectionItemExpression.
+    def enterS_OrProjectionItemExpression(self, ctx:s_cypherParser.S_OrProjectionItemExpressionContext):
+        pass
+
+    # Exit a parse tree produced by s_cypherParser#s_OrProjectionItemExpression.
+    def exitS_OrProjectionItemExpression(self, ctx:s_cypherParser.S_OrProjectionItemExpressionContext):
+        pass
+
+
+    # Enter a parse tree produced by s_cypherParser#s_XorProjectionItemExpression.
+    def enterS_XorProjectionItemExpression(self, ctx:s_cypherParser.S_XorProjectionItemExpressionContext):
+        pass
+
+    # Exit a parse tree produced by s_cypherParser#s_XorProjectionItemExpression.
+    def exitS_XorProjectionItemExpression(self, ctx:s_cypherParser.S_XorProjectionItemExpressionContext):
+        pass
+
+
+    # Enter a parse tree produced by s_cypherParser#s_AndProjectionItemExpression.
+    def enterS_AndProjectionItemExpression(self, ctx:s_cypherParser.S_AndProjectionItemExpressionContext):
+        pass
+
+    # Exit a parse tree produced by s_cypherParser#s_AndProjectionItemExpression.
+    def exitS_AndProjectionItemExpression(self, ctx:s_cypherParser.S_AndProjectionItemExpressionContext):
+        pass
+
+
+    # Enter a parse tree produced by s_cypherParser#s_NotProjectionItemExpression.
+    def enterS_NotProjectionItemExpression(self, ctx:s_cypherParser.S_NotProjectionItemExpressionContext):
+        pass
+
+    # Exit a parse tree produced by s_cypherParser#s_NotProjectionItemExpression.
+    def exitS_NotProjectionItemExpression(self, ctx:s_cypherParser.S_NotProjectionItemExpressionContext):
+        pass
+
+
+    # Enter a parse tree produced by s_cypherParser#s_ComparisonProjectionItemExpression.
+    def enterS_ComparisonProjectionItemExpression(self, ctx:s_cypherParser.S_ComparisonProjectionItemExpressionContext):
+        pass
+
+    # Exit a parse tree produced by s_cypherParser#s_ComparisonProjectionItemExpression.
+    def exitS_ComparisonProjectionItemExpression(self, ctx:s_cypherParser.S_ComparisonProjectionItemExpressionContext):
+        pass
+
+
+    # Enter a parse tree produced by s_cypherParser#s_MultiplyDivideModuloProjectionItemOperator.
+    def enterS_MultiplyDivideModuloProjectionItemOperator(self, ctx:s_cypherParser.S_MultiplyDivideModuloProjectionItemOperatorContext):
+        pass
+
+    # Exit a parse tree produced by s_cypherParser#s_MultiplyDivideModuloProjectionItemOperator.
+    def exitS_MultiplyDivideModuloProjectionItemOperator(self, ctx:s_cypherParser.S_MultiplyDivideModuloProjectionItemOperatorContext):
+        pass
+
+
+    # Enter a parse tree produced by s_cypherParser#s_PowerOfProjectionItemOperator.
+    def enterS_PowerOfProjectionItemOperator(self, ctx:s_cypherParser.S_PowerOfProjectionItemOperatorContext):
+        pass
+
+    # Exit a parse tree produced by s_cypherParser#s_PowerOfProjectionItemOperator.
+    def exitS_PowerOfProjectionItemOperator(self, ctx:s_cypherParser.S_PowerOfProjectionItemOperatorContext):
+        pass
+
+
+    # Enter a parse tree produced by s_cypherParser#s_AddOrSubtractProjectionItemOperator.
+    def enterS_AddOrSubtractProjectionItemOperator(self, ctx:s_cypherParser.S_AddOrSubtractProjectionItemOperatorContext):
+        pass
+
+    # Exit a parse tree produced by s_cypherParser#s_AddOrSubtractProjectionItemOperator.
+    def exitS_AddOrSubtractProjectionItemOperator(self, ctx:s_cypherParser.S_AddOrSubtractProjectionItemOperatorContext):
+        pass
+
+
+    # Enter a parse tree produced by s_cypherParser#s_ComparisonProjectionItemOperator.
+    def enterS_ComparisonProjectionItemOperator(self, ctx:s_cypherParser.S_ComparisonProjectionItemOperatorContext):
+        pass
+
+    # Exit a parse tree produced by s_cypherParser#s_ComparisonProjectionItemOperator.
+    def exitS_ComparisonProjectionItemOperator(self, ctx:s_cypherParser.S_ComparisonProjectionItemOperatorContext):
+        pass
+
+
+    # Enter a parse tree produced by s_cypherParser#s_StringListNullPredicateProjectionItemExpression.
+    def enterS_StringListNullPredicateProjectionItemExpression(self, ctx:s_cypherParser.S_StringListNullPredicateProjectionItemExpressionContext):
+        pass
+
+    # Exit a parse tree produced by s_cypherParser#s_StringListNullPredicateProjectionItemExpression.
+    def exitS_StringListNullPredicateProjectionItemExpression(self, ctx:s_cypherParser.S_StringListNullPredicateProjectionItemExpressionContext):
+        pass
+
+
+    # Enter a parse tree produced by s_cypherParser#s_AddOrSubtractProjectionItemExpression.
+    def enterS_AddOrSubtractProjectionItemExpression(self, ctx:s_cypherParser.S_AddOrSubtractProjectionItemExpressionContext):
+        pass
+
+    # Exit a parse tree produced by s_cypherParser#s_AddOrSubtractProjectionItemExpression.
+    def exitS_AddOrSubtractProjectionItemExpression(self, ctx:s_cypherParser.S_AddOrSubtractProjectionItemExpressionContext):
+        pass
+
+
+    # Enter a parse tree produced by s_cypherParser#s_TimePredicateProjectionItemExpression.
+    def enterS_TimePredicateProjectionItemExpression(self, ctx:s_cypherParser.S_TimePredicateProjectionItemExpressionContext):
+        pass
+
+    # Exit a parse tree produced by s_cypherParser#s_TimePredicateProjectionItemExpression.
+    def exitS_TimePredicateProjectionItemExpression(self, ctx:s_cypherParser.S_TimePredicateProjectionItemExpressionContext):
+        pass
+
+
+    # Enter a parse tree produced by s_cypherParser#s_StringPredicateProjectionItemExpression.
+    def enterS_StringPredicateProjectionItemExpression(self, ctx:s_cypherParser.S_StringPredicateProjectionItemExpressionContext):
+        pass
+
+    # Exit a parse tree produced by s_cypherParser#s_StringPredicateProjectionItemExpression.
+    def exitS_StringPredicateProjectionItemExpression(self, ctx:s_cypherParser.S_StringPredicateProjectionItemExpressionContext):
+        pass
+
+
+    # Enter a parse tree produced by s_cypherParser#s_ListPredicateProjectionItemExpression.
+    def enterS_ListPredicateProjectionItemExpression(self, ctx:s_cypherParser.S_ListPredicateProjectionItemExpressionContext):
+        pass
+
+    # Exit a parse tree produced by s_cypherParser#s_ListPredicateProjectionItemExpression.
+    def exitS_ListPredicateProjectionItemExpression(self, ctx:s_cypherParser.S_ListPredicateProjectionItemExpressionContext):
+        pass
+
+
+    # Enter a parse tree produced by s_cypherParser#s_NullPredicateProjectionItemExpression.
+    def enterS_NullPredicateProjectionItemExpression(self, ctx:s_cypherParser.S_NullPredicateProjectionItemExpressionContext):
+        pass
+
+    # Exit a parse tree produced by s_cypherParser#s_NullPredicateProjectionItemExpression.
+    def exitS_NullPredicateProjectionItemExpression(self, ctx:s_cypherParser.S_NullPredicateProjectionItemExpressionContext):
+        pass
+
+
+    # Enter a parse tree produced by s_cypherParser#s_MultiplyDivideModuloProjectionItemExpression.
+    def enterS_MultiplyDivideModuloProjectionItemExpression(self, ctx:s_cypherParser.S_MultiplyDivideModuloProjectionItemExpressionContext):
+        pass
+
+    # Exit a parse tree produced by s_cypherParser#s_MultiplyDivideModuloProjectionItemExpression.
+    def exitS_MultiplyDivideModuloProjectionItemExpression(self, ctx:s_cypherParser.S_MultiplyDivideModuloProjectionItemExpressionContext):
+        pass
+
+
+    # Enter a parse tree produced by s_cypherParser#s_PowerOfProjectionItemExpression.
+    def enterS_PowerOfProjectionItemExpression(self, ctx:s_cypherParser.S_PowerOfProjectionItemExpressionContext):
+        pass
+
+    # Exit a parse tree produced by s_cypherParser#s_PowerOfProjectionItemExpression.
+    def exitS_PowerOfProjectionItemExpression(self, ctx:s_cypherParser.S_PowerOfProjectionItemExpressionContext):
+        pass
+
+
+    # Enter a parse tree produced by s_cypherParser#s_UnaryAddOrSubtractProjectionItemExpression.
+    def enterS_UnaryAddOrSubtractProjectionItemExpression(self, ctx:s_cypherParser.S_UnaryAddOrSubtractProjectionItemExpressionContext):
+        pass
+
+    # Exit a parse tree produced by s_cypherParser#s_UnaryAddOrSubtractProjectionItemExpression.
+    def exitS_UnaryAddOrSubtractProjectionItemExpression(self, ctx:s_cypherParser.S_UnaryAddOrSubtractProjectionItemExpressionContext):
+        pass
+
+
+    # Enter a parse tree produced by s_cypherParser#s_ListOperatorProjectionItemExpression.
+    def enterS_ListOperatorProjectionItemExpression(self, ctx:s_cypherParser.S_ListOperatorProjectionItemExpressionContext):
+        pass
+
+    # Exit a parse tree produced by s_cypherParser#s_ListOperatorProjectionItemExpression.
+    def exitS_ListOperatorProjectionItemExpression(self, ctx:s_cypherParser.S_ListOperatorProjectionItemExpressionContext):
+        pass
+
+
+    # Enter a parse tree produced by s_cypherParser#s_PropertyOrLabelsProjectionItemExpression.
+    def enterS_PropertyOrLabelsProjectionItemExpression(self, ctx:s_cypherParser.S_PropertyOrLabelsProjectionItemExpressionContext):
+        pass
+
+    # Exit a parse tree produced by s_cypherParser#s_PropertyOrLabelsProjectionItemExpression.
+    def exitS_PropertyOrLabelsProjectionItemExpression(self, ctx:s_cypherParser.S_PropertyOrLabelsProjectionItemExpressionContext):
+        pass
+
+
+    # Enter a parse tree produced by s_cypherParser#s_AtTProjectionItemExpression.
+    def enterS_AtTProjectionItemExpression(self, ctx:s_cypherParser.S_AtTProjectionItemExpressionContext):
+        pass
+
+    # Exit a parse tree produced by s_cypherParser#s_AtTProjectionItemExpression.
+    def exitS_AtTProjectionItemExpression(self, ctx:s_cypherParser.S_AtTProjectionItemExpressionContext):
+        pass
+
+
+    # Enter a parse tree produced by s_cypherParser#s_SingleIndexProjectionItemExpression.
+    def enterS_SingleIndexProjectionItemExpression(self, ctx:s_cypherParser.S_SingleIndexProjectionItemExpressionContext):
+        pass
+
+    # Exit a parse tree produced by s_cypherParser#s_SingleIndexProjectionItemExpression.
+    def exitS_SingleIndexProjectionItemExpression(self, ctx:s_cypherParser.S_SingleIndexProjectionItemExpressionContext):
+        pass
+
+
+    # Enter a parse tree produced by s_cypherParser#s_DoubleIndexProjectionItemExpression.
+    def enterS_DoubleIndexProjectionItemExpression(self, ctx:s_cypherParser.S_DoubleIndexProjectionItemExpressionContext):
+        pass
+
+    # Exit a parse tree produced by s_cypherParser#s_DoubleIndexProjectionItemExpression.
+    def exitS_DoubleIndexProjectionItemExpression(self, ctx:s_cypherParser.S_DoubleIndexProjectionItemExpressionContext):
+        pass
+
+
+    # Enter a parse tree produced by s_cypherParser#s_LeftProjectionItemExpression.
+    def enterS_LeftProjectionItemExpression(self, ctx:s_cypherParser.S_LeftProjectionItemExpressionContext):
+        pass
+
+    # Exit a parse tree produced by s_cypherParser#s_LeftProjectionItemExpression.
+    def exitS_LeftProjectionItemExpression(self, ctx:s_cypherParser.S_LeftProjectionItemExpressionContext):
+        pass
+
+
+    # Enter a parse tree produced by s_cypherParser#s_RightProjectionItemExpression.
+    def enterS_RightProjectionItemExpression(self, ctx:s_cypherParser.S_RightProjectionItemExpressionContext):
+        pass
+
+    # Exit a parse tree produced by s_cypherParser#s_RightProjectionItemExpression.
+    def exitS_RightProjectionItemExpression(self, ctx:s_cypherParser.S_RightProjectionItemExpressionContext):
+        pass
+
+
     # Enter a parse tree produced by s_cypherParser#s_TimePointLiteral.
     def enterS_TimePointLiteral(self, ctx:s_cypherParser.S_TimePointLiteralContext):
         pass
@@ -896,15 +1139,6 @@ class s_cypherListener(ParseTreeListener):
 
     # Exit a parse tree produced by s_cypherParser#oC_ProjectionItems.
     def exitOC_ProjectionItems(self, ctx:s_cypherParser.OC_ProjectionItemsContext):
-        pass
-
-
-    # Enter a parse tree produced by s_cypherParser#oC_ProjectionItem.
-    def enterOC_ProjectionItem(self, ctx:s_cypherParser.OC_ProjectionItemContext):
-        pass
-
-    # Exit a parse tree produced by s_cypherParser#oC_ProjectionItem.
-    def exitOC_ProjectionItem(self, ctx:s_cypherParser.OC_ProjectionItemContext):
         pass
 
 
@@ -1355,6 +1589,15 @@ class s_cypherListener(ParseTreeListener):
 
     # Exit a parse tree produced by s_cypherParser#oC_ExplicitProcedureInvocation.
     def exitOC_ExplicitProcedureInvocation(self, ctx:s_cypherParser.OC_ExplicitProcedureInvocationContext):
+        pass
+
+
+    # Enter a parse tree produced by s_cypherParser#s_ExplicitExpression.
+    def enterS_ExplicitExpression(self, ctx:s_cypherParser.S_ExplicitExpressionContext):
+        pass
+
+    # Exit a parse tree produced by s_cypherParser#s_ExplicitExpression.
+    def exitS_ExplicitExpression(self, ctx:s_cypherParser.S_ExplicitExpressionContext):
         pass
 
 
