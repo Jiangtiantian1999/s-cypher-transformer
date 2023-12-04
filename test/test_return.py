@@ -1,7 +1,7 @@
 from unittest import TestCase
 
 from neo4j.exceptions import ClientError
-from neo4j.time import DateTime
+from neo4j.time import DateTime, Time, Duration
 
 from test.graphdb_connector import GraphDBConnector
 from transformer.s_transformer import STransformer
@@ -179,8 +179,8 @@ class TestReturn(TestCase):
         """
         cypher_query = STransformer.transform(s_cypher)
         records, summery, keys = self.graphdb_connector.driver.execute_query(cypher_query)
-        assert records == [{"time_point": DateTime(2015, 6, 20, 0, 0, 0, 0),
-                            "interval": {"from": DateTime(2015, 4, 1, 0, 0, 0, 0),
+        assert records == [{"time_point": DateTime(2015, 6, 20),
+                            "interval": {"from": DateTime(2015, 4, 1),
                                          "to": DateTime(9999, 12, 31, 23, 59, 59, 999999999)}, "result": True}]
 
         # 时间区间DURING时间点
@@ -190,9 +190,8 @@ class TestReturn(TestCase):
         """
         cypher_query = STransformer.transform(s_cypher)
         records, summery, keys = self.graphdb_connector.driver.execute_query(cypher_query)
-        assert records == [{"interval1": {"from": DateTime(2015, 7, 21, 0, 0, 0, 0),
-                                          "to": DateTime(2016, 10, 1, 0, 0, 0, 0)},
-                            "interval2": {"from": DateTime(2015, 4, 1, 0, 0, 0, 0),
+        assert records == [{"interval1": {"from": DateTime(2015, 7, 21), "to": DateTime(2016, 10, 1)},
+                            "interval2": {"from": DateTime(2015, 4, 1),
                                           "to": DateTime(9999, 12, 31, 23, 59, 59, 999999999)}, "result": True}]
 
         # OVERLAPS
@@ -202,16 +201,59 @@ class TestReturn(TestCase):
         """
         cypher_query = STransformer.transform(s_cypher)
         records, summery, keys = self.graphdb_connector.driver.execute_query(cypher_query)
-        assert records == [{"interval1": {"from": DateTime(2015, 4, 1, 0, 0, 0, 0),
-                                          "to": DateTime(2015, 6, 30, 0, 0, 0, 0)},
-                            "interval2": {"from": DateTime(2015, 5, 30, 0, 0, 0, 0),
-                                          "to": DateTime(2015, 7, 21, 0, 0, 0, 0)}, "result": True}]
+        assert records == [{"interval1": {"from": DateTime(2015, 4, 1), "to": DateTime(2015, 6, 30)},
+                            "interval2": {"from": DateTime(2015, 5, 30), "to": DateTime(2015, 7, 21)}, "result": True}]
 
         # 时间点之间不能相减
         s_cypher = """
         MATCH (p:Person{name: "Mary Smith Taylor"})-[:FRIEND]->(b:Person)
         RETURN p.name@T(NOW) as person1, b.name@T(NOW) as person2, p@T.from - b@T.from AS AgeDiff
         ORDER BY person2
+        """
+        cypher_query = STransformer.transform(s_cypher)
+        with self.assertRaises(ClientError):
+            self.graphdb_connector.driver.execute_query(cypher_query)
+
+    # 测试时间区间的运算函数
+    def test_time_function(self):
+        # interval.range
+        s_cypher = """
+        WITH interval(datetime("2015-Q2"), datetime("2015-06-30")) as interval1, interval(datetime("2015Q260"), datetime("2015-W30-2")) as interval2
+        RETURN interval1, interval2, interval.range([interval1, interval2]) as range_interval
+        """
+        cypher_query = STransformer.transform(s_cypher)
+        print(cypher_query)
+        records, summery, keys = self.graphdb_connector.driver.execute_query(cypher_query)
+        assert records == [{"interval1": {"from": DateTime(2015, 4, 1), "to": DateTime(2015, 6, 30)},
+                            "interval2": {"from": DateTime(2015, 5, 30), "to": DateTime(2015, 7, 21)},
+                            "range_interval": {"from": DateTime(2015, 4, 1), "to": DateTime(2015, 7, 21)}}]
+        # interval.intersection
+        s_cypher = """
+        WITH interval(datetime("2015-Q2"), datetime("2015-06-30")) as interval1, interval(datetime("2015Q260"), datetime("2015-W30-2")) as interval2
+        RETURN interval1, interval2, interval.intersection([interval1, interval2]) as intersection_interval
+        """
+        cypher_query = STransformer.transform(s_cypher)
+        records, summery, keys = self.graphdb_connector.driver.execute_query(cypher_query)
+        assert records == [{"interval1": {"from": DateTime(2015, 4, 1), "to": DateTime(2015, 6, 30)},
+                            "interval2": {"from": DateTime(2015, 5, 30), "to": DateTime(2015, 7, 21)},
+                            "intersection_interval": {"from": DateTime(2015, 5, 30), "to": DateTime(2015, 6, 30)}}]
+
+        # interval.difference
+        s_cypher = """
+        WITH interval(time("8:20"), time("13:00")) as interval1, interval(time("15:08"), time("23:00")) as interval2
+        RETURN interval1, interval2, interval.difference(interval1, interval2) as difference_interval
+        """
+        cypher_query = STransformer.transform(s_cypher)
+        records, summery, keys = self.graphdb_connector.driver.execute_query(cypher_query)
+        print(records)
+        assert records == [{"interval1": {"from": Time(8, 20), "to": Time(13)},
+                            "interval2": {"from": Time(15, 8), "to": Time(23)},
+                            "difference_interval": Duration(hours=2, minutes=8)}]
+
+        # 不能对相交的时间区间做difference
+        s_cypher = """
+        WITH interval(date("2015"), date("2019")) as interval1, interval(date("2017"), date("2023")) as interval2
+        RETURN interval1, interval2, interval.difference(interval1, interval2) as difference_interval
         """
         cypher_query = STransformer.transform(s_cypher)
         with self.assertRaises(ClientError):
