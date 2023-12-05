@@ -1,4 +1,4 @@
-# Generated from .\transformer\grammar_parser\s_cypher.g4 by ANTLR 4.13.0
+# Generated from s_cypher.g4 by ANTLR 4.13.0
 from antlr4 import *
 if "." in __name__:
     from .s_cypherParser import s_cypherParser

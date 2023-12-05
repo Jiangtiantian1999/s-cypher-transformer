@@ -185,7 +185,7 @@ class TestReturn(TestCase):
 
         # 时间区间DURING时间点
         s_cypher = """
-        WITH interval("2015202",timePoint({year:2016, month:10, day:1})) as interval1, interval("2015Q20",timePoint.current()) as interval2
+        WITH interval("2015202",timePoint({year:2016, month:10, day:1})) as interval1, interval("2015Q20",now()) as interval2
         RETURN interval1, interval2, interval1 DURING interval2 as result
         """
         cypher_query = STransformer.transform(s_cypher)
