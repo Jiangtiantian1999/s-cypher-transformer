@@ -386,9 +386,9 @@ class ClauseConverter:
         set_item_variable = self.variables_manager.get_random_variable()
         set_sub_item_variable = self.variables_manager.get_random_variable()
         for set_item in set_clause.set_items:
-            # 为在set时检查约束，调用scypher.getItemToSetX
             if set_item.__class__ == EffectiveTimeSetting:
-                # 设置对象节点/属性节点/值节点/关系的有效时间，调用scypher.getItemsToSetEffectiveTime，第一个参数为对象节点/关系及其有效时间，第二个参数为属性名及属性节点的有效时间，第三个参数为值节点的有效时间，第四个参数为set语句的操作时间
+                # 设置对象节点/属性节点/值节点/关系的有效时间，调用getItemsToSetEffectiveTime，第一个参数为对象节点/关系及其有效时间，第二个参数为属性名及属性节点的有效时间，第三个参数为值节点的有效时间，第四个参数为set语句的操作时间（用于限制值节点的有效时间）
+                # getItemsToSetEffectiveTime需要检查各类约束
                 set_clause_string = set_clause_string + "\nFOREACH (" + set_item_variable + " IN scypher.getItemsToSetEffectiveTime("
                 object_info = {"object": set_item.object_setting.variable,
                                "effectiveTime": self.expression_converter.convert_at_t_element(
@@ -410,77 +410,88 @@ class ClauseConverter:
                 set_clause_string = set_clause_string + " | SET " + set_item_variable + ".item.intervalFrom = " + set_item_variable + ".intervalFrom, " + \
                                     set_item_variable + ".item.intervalTo = " + set_item_variable + ".intervalTo)"
             elif set_item.__class__ == ExpressionSetting:
-                # 修改节点/关系的属性，调用scypher.getItemsToSetExpression，第一个参数为对象节点/关系，第二个参数为属性名，
-                # 第三个参数为set的操作时间，第四个参数为【是否为+=】，第五个参数为表达式
-                set_clause_string = set_clause_string + "\nFOREACH (" + set_item_variable + " IN scypher.getItemsToSetExpression("
-                # 设置第1~3个参数
+                # 设置节点/关系的属性
                 if set_item.expression_left.__class__ == SetPropertyExpression:
-                    # set n.property[@T(...)] =  expression
                     object_variable = self.expression_converter.convert_atom(set_item.expression_left.atom)
                     for index, property_name in enumerate(set_item.expression_left.property_chains):
                         if index != len(set_item.expression_left.property_chains) - 1:
                             object_variable = object_variable + '.' + property_name
-
-                    set_clause_string = set_clause_string + object_variable + ", "
                     property_name = set_item.expression_left.property_chains[-1]
-                    set_clause_string = set_clause_string + '\"' + property_name + "\", "
-                    if set_item.expression_left.operate_time:
-                        operate_time = self.expression_converter.convert_time_point_literal(
-                            set_item.expression_left.operate_time)
-                    set_clause_string = set_clause_string + operate_time + ", "
+                    property_value = self.expression_converter.convert_expression(set_item.expression_right)
+                    if set_item.expression_left.time_window:
+                        # 修改某个值节点的内容，调用getItemsToSetValue，第一个参数为对象节点，第二个参数为属性名，第三个参数为限定值节点有效时间的time_window
+                        # 如果没有满足条件的值节点，则将新建一个值节点（属性节点），该值节点的有效时间由timeWindow确定
+                        # set n.property[@T(...)] = expression，关系属性没有有效时间
+                        set_clause_string = set_clause_string + "\nFOREACH (" + set_item_variable + " IN scypher.getItemsToSetValue(" + object_variable + ", " + property_name + ", " + self.expression_converter.convert_at_t_element(
+                            set_item.expression_left.time_window) + ") | "
+                        # 存在符合要求的值节点时，直接修改这些值节点的内容
+                        # valueNodesToAlter返回符合要求的值节点
+                        set_clause_string = set_clause_string + "\n FOREACH ( " + set_sub_item_variable + " IN " + set_item_variable + ".valueNodesToAlter | SET " + set_sub_item_variable + ".content = " + property_value + ')'
+                        # 不存在符合要求的值节点时，创建值节点（和属性节点）
+                        start_time = self.expression_converter.convert_time_point_literal(
+                            set_item.expression_left.time_window.interval_from)
+                        if set_item.expression_left.time_window.interval_to:
+                            end_time = self.expression_converter.convert_time_point_literal(
+                                set_item.expression_left.time_window.interval_to)
+                        else:
+                            end_time = "scypher.timePoint('NOW')"
+                        # 创建属性节点和值节点（没有属性节点时）
+                        # createPropertyNode返回属性节点所连接的对象节点
+                        set_clause_string = set_clause_string + "\nFOREACH (" + set_sub_item_variable + " IN " + set_item_variable + ".createPropertyNode | CREATE (" + set_sub_item_variable + ")-[:OBJECT_PROPERTY]->(:Property{content:\"" + property_name + "\", intervalFrom:" + \
+                                            start_time + ", intervalTo: " + end_time + "})-[:PROPERTY_VALUE]->(:Value{content:" + property_value + ",intervalFrom:" + \
+                                            start_time + ", intervalTo: " + end_time + "}))"
+                        # 仅创建值节点
+                        # createValueNode返回待创建的值节点所连接的属性节点
+                        set_clause_string = set_clause_string + "\nFOREACH (" + set_sub_item_variable + " IN " + set_item_variable + ".createValueNode | CREATE (" + set_sub_item_variable + ")-[:PROPERTY_VALUE]->(:Value{content:" + property_value + ",intervalFrom:" + \
+                                            start_time + ", intervalTo: " + end_time + "}))"
+                        set_clause_string = set_clause_string + ')'
+                    else:
+                        # 添加/删除单个属性，调用scypher.getItemsToSetProperty，第一个参数为对象节点/关系，第二个参数为属性名，第三个参数为属性值（用于确定是否为null），第三个参数为set的操作时间
+                        # set n.property = expression
+                        set_clause_string = set_clause_string + "\nFOREACH (" + set_item_variable + " IN scypher.getItemsToSetProperty(" + object_variable + ", " + property_name + ", " + operate_time + ") | "
+                        # 创建属性节点和值节点（没有属性节点时）
+                        # createPropertyNode返回属性节点所连接的对象节点
+                        set_clause_string = set_clause_string + "\nFOREACH (" + set_sub_item_variable + " IN " + set_item_variable + ".createPropertyNode | CREATE (" + set_sub_item_variable + ")-[:OBJECT_PROPERTY]->(:Property{content:\"" + property_name + "\", intervalFrom:" + \
+                                            operate_time + ", intervalTo: scypher.timePoint('NOW')})-[:PROPERTY_VALUE]->(:Value{content:" + property_value + ",intervalFrom:" + \
+                                            operate_time + ", intervalTo: scypher.timePoint('NOW')}))"
+                        # 仅创建值节点，可能要修改已有值节点的结束时间
+                        # createValueNode返回待创建的值节点所连接的属性节点
+                        set_clause_string = set_clause_string + "\nFOREACH (" + set_sub_item_variable + " IN " + set_item_variable + ".createValueNode | CREATE (" + set_sub_item_variable + ")-[:PROPERTY_VALUE]->(:Value{content:" + property_value + ",intervalFrom:" + \
+                                            operate_time + ", intervalTo: scypher.timePoint('NOW')}))"
+                        # 修改已有值节点的结束时间
+                        # staleValueNode返回待逻辑删除的值节点
+                        set_clause_string = set_clause_string + "\nFOREACH (" + set_sub_item_variable + " IN " + set_item_variable + ".staleValueNode | SET " + set_sub_item_variable + ".intervalTo = " + operate_time + " - scypher.timePoint.unit())"
+                        # 修改关系属性
+                        # setRelationshipProperty返回待修改的关系
+                        set_clause_string = set_clause_string + "\nFOREACH (" + set_sub_item_variable + " IN " + set_item_variable + ".setRelationshipProperty | "
+                        set_clause_string = set_clause_string + "SET " + set_sub_item_variable + "." + property_name + " = " + property_value + ')'
+                        set_clause_string = set_clause_string + ')'
                 else:
+                    propertyMap = self.expression_converter.convert_expression(set_item.expression_right)
+                    # 添加/删除一组属性，调用scypher.getItemsToSetProperties，第一个参数为对象节点/关系，第二个参数为待设置的属性键值对，第三个参数为set的操作时间，第四个参数为【是否为+=】
                     # set n = {...}或set n += {...}
-                    set_clause_string = set_clause_string + set_item.expression_left + ", NULL, " + operate_time + ", "
-                # 设置第四个参数
-                set_clause_string = set_clause_string + str(set_item.is_added) + ", "
-                # 设置第五个参数
-                set_expression_right_string = self.expression_converter.convert_expression(set_item.expression_right)
-                set_clause_string = set_clause_string + set_expression_right_string + ') | '
-
-                # 删除属性节点/值节点/属性节点和值节点的相连边（值为null时即删除属性）
-                set_clause_string = set_clause_string + "\nFOREACH (" + set_sub_item_variable + " IN " + set_item_variable + ".deleteItems | "
-                set_clause_string = set_clause_string + "DELETE " + set_sub_item_variable + ')'
-                # 创建属性节点和值节点（没有属性节点时）
-                if set_item.expression_left.__class__ == SetPropertyExpression:
-                    set_clause_string = set_clause_string + "\nFOREACH (" + set_sub_item_variable + " IN " + set_item_variable + ".createPropertyNode | "
-                    # 此时，createPropertyNode返回属性节点所连接的对象节点
-                    set_clause_string = set_clause_string + "CREATE (" + set_sub_item_variable + ")-[:OBJECT_PROPERTY]->(:Property{content:\"" + property_name + "\", intervalFrom:" + \
-                                        operate_time + ", intervalTo: scypher.timePoint('NOW')})-[:PROPERTY_VALUE]->(:Value{content:" + set_expression_right_string + ",intervalFrom:" + \
+                    set_clause_string = set_clause_string + "\nFOREACH (" + set_item_variable + " IN scypher.getItemsToSetProperties(" + set_item.expression_left + ", " + propertyMap + ", " + operate_time + ", " + str(
+                        set_item.is_added) + ") | "
+                    # 创建属性节点和值节点（没有属性节点时）
+                    # createPropertyNodes返回属性节点的属性名和值节点的值
+                    set_clause_string = set_clause_string + "\nFOREACH (" + set_sub_item_variable + " IN " + set_item_variable + ".createPropertyNodes | CREATE (" + set_item.expression_left + ")-[:OBJECT_PROPERTY]->(:Property{content:" + set_sub_item_variable + ".propertyName, intervalFrom:" + \
+                                        operate_time + ", intervalTo: scypher.timePoint('NOW')})-[:PROPERTY_VALUE]->(:Value{content:" + set_sub_item_variable + ".propertyValue, intervalFrom:" + \
                                         operate_time + ", intervalTo: scypher.timePoint('NOW')}))"
-                else:
-                    set_clause_string = set_clause_string + "\nFOREACH (" + set_sub_item_variable + " IN " + set_item_variable + ".createPropertyNodes | "
-                    # 此时，createPropertyNodes返回属性节点的属性名和值节点的值
-                    set_clause_string = set_clause_string + "CREATE (" + set_item.expression_left + ")-[:OBJECT_PROPERTY]->(:Property{content:" + set_sub_item_variable + ".propertyName,intervalFrom:" + \
-                                        operate_time + ", intervalTo: scypher.timePoint('NOW')})-[:PROPERTY_VALUE]->(:Value{content:" + set_sub_item_variable + ".propertyValue,intervalFrom:" + \
+                    # 仅创建值节点，可能要修改已有值节点的结束时间
+                    # createValueNodes返回属性节点的属性名和待创建的值节点的值
+                    set_clause_string = set_clause_string + "\nFOREACH( " + set_sub_item_variable + " IN " + set_item_variable + ".createValueNodes | MERGE (" + set_item.expression_left + ")-[:OBJECT_PROPERTY]->(" + self.variables_manager.get_random_variable() + ":Property{content:" + set_sub_item_variable + ".propertyName})-[:PROPERTY_VALUE]->(:Value{content:" + set_sub_item_variable + ".propertyValue, intervalFrom:" + \
                                         operate_time + ", intervalTo: scypher.timePoint('NOW')}))"
-                # 仅创建值节点，可能要修改已有值节点的结束时间
-                if set_item.expression_left.__class__ == SetPropertyExpression:
-                    set_clause_string = set_clause_string + "\nFOREACH (" + set_sub_item_variable + " IN " + set_item_variable + ".createValueNode | "
-                    # 此时，createValueNode返回待创建的值节点所连接的属性节点
-                    set_clause_string = set_clause_string + "CREATE (" + set_sub_item_variable + ")-[:PROPERTY_VALUE]->(:Value{content:" + set_expression_right_string + ",intervalFrom:" + \
-                                        operate_time + ", intervalTo: scypher.timePoint('NOW')}))"
-                else:
-                    set_clause_string = set_clause_string + "\nFOREACH( " + set_sub_item_variable + " IN " + set_item_variable + ".createValueNodes | "
-                    # 此时，createValueNodes返回属性节点的属性名和待创建的值节点的值
-                    set_clause_string = set_clause_string + "MERGE (" + set_item.expression_left + ")-[:OBJECT_PROPERTY]->(" + self.variables_manager.get_random_variable() + ":Property{content:" + set_sub_item_variable + ".propertyName})-[:PROPERTY_VALUE]->(:Value{content:" + set_sub_item_variable + ".propertyValue, intervalFrom:" + \
-                                        operate_time + ", intervalTo: scypher.timePoint('NOW')}))"
-
-                # 修改已有值节点的结束时间
-                set_clause_string = set_clause_string + "\nFOREACH (" + set_sub_item_variable + " IN " + set_item_variable + ".staleValueNodes | "
-                set_clause_string = set_clause_string + "SET " + set_sub_item_variable + ".intervalTo = " + operate_time + " - scypher.timePoint.unit())"
-                # 修改关系属性
-                if set_item.expression_left.__class__ == SetPropertyExpression:
-                    # 此时，setRelationshipProperty返回待修改的关系
-                    set_clause_string = set_clause_string + "\nFOREACH (" + set_sub_item_variable + " IN " + set_item_variable + ".setRelationshipProperty | "
-                    set_clause_string = set_clause_string + "SET " + set_sub_item_variable + "." + property_name + " = " + set_expression_right_string + ')'
-                else:
-                    # 此时，setRelationshipProperties返回待修改的属性键值对
+                    # 修改已有值节点的结束时间
+                    # staleNodes返回待逻辑删除的值节点和属性节点
+                    set_clause_string = set_clause_string + "\nFOREACH (" + set_sub_item_variable + " IN " + set_item_variable + ".staleNodes | SET " + set_sub_item_variable + ".intervalTo = " + operate_time + " - scypher.timePoint.unit())"
+                    # 修改关系属性
+                    # setRelationshipProperties返回待修改的关系
                     set_clause_string = set_clause_string + "\nFOREACH (" + set_sub_item_variable + " IN " + set_item_variable + ".setRelationshipProperties | "
                     if set_item.is_added:
-                        set_clause_string = set_clause_string + "SET " + set_item.expression_left + " += " + set_sub_item_variable + ')'
+                        set_clause_string = set_clause_string + "SET " + set_sub_item_variable + " += " + propertyMap + ')'
                     else:
-                        set_clause_string = set_clause_string + "SET " + set_item.expression_left + " = " + set_sub_item_variable + ')'
-                set_clause_string = set_clause_string + ')'
+                        set_clause_string = set_clause_string + "SET " + set_sub_item_variable + " = " + propertyMap + ')'
+                    set_clause_string = set_clause_string + ')'
             else:
                 # 设置节点的标签
                 set_clause_string = set_clause_string + "\nSET " + set_item.variable

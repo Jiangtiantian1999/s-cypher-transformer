@@ -18,7 +18,7 @@ s_Set : SET SP? oC_SetItem ( SP? ',' SP? oC_SetItem )* ( SP? s_AtTime )? ;
 
 s_Stale : STALE SP? s_StaleItem ( SP? ',' SP? s_StaleItem )* ( SP? s_AtTime )? ;
 
-oC_SetItem : ( oC_PropertyExpression ( SP? AtT SP? '(' SP? ( s_TimePointLiteral | NOW ) SP? ')' )? SP? '=' SP? oC_Expression )
+oC_SetItem : ( oC_PropertyExpression ( SP? s_AtTElement )? SP? '=' SP? oC_Expression )
            | ( oC_Variable SP? '=' SP? oC_Expression )
            | ( oC_Variable SP? '+=' SP? oC_Expression )
            | ( oC_Variable SP? oC_NodeLabels )

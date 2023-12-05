@@ -89,12 +89,12 @@ class EffectiveTimeSetting:
 
 
 class SetPropertyExpression:
-    def __init__(self, atom: Atom, property_chains: List[str], operate_time: TimePointLiteral = None):
+    def __init__(self, atom: Atom, property_chains: List[str], time_window: AtTElement = None):
         self.atom = atom
         if len(property_chains) == 0:
             raise TranslateError("The property chains can't be empty")
         self.property_chains = property_chains
-        self.operate_time = operate_time
+        self.time_window = time_window
 
 
 class ExpressionSetting:
