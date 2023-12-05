@@ -116,6 +116,9 @@ class ClauseConverter:
             with_clause_string = with_clause_string + ", "
         with_clause_string = with_clause_string.rstrip(", ")
 
+        if with_clause.where_expression:
+            with_clause_string = with_clause_string + "\nWHERE " + self.expression_converter.convert_expression(
+                with_clause.where_expression)
         if with_clause.order_by_clause:
             with_clause_string = with_clause_string + '\n' + self.convert_order_by_clause(with_clause.order_by_clause)
         if with_clause.skip_expression:

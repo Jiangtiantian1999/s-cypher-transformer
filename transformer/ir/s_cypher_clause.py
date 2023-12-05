@@ -172,8 +172,8 @@ class SingleQueryClause:
 
 class WithClause:
     def __init__(self, projection_items: List[ProjectionItem] = None, is_all: bool = False, is_distinct: bool = False,
-                 order_by_clause: OrderByClause = None, skip_expression: Expression = None,
-                 limit_expression: Expression = None):
+                 where_expression: Expression = None, order_by_clause: OrderByClause = None,
+                 skip_expression: Expression = None, limit_expression: Expression = None):
         if projection_items is None:
             projection_items = []
         if len(projection_items) == 0 and is_all is False:
@@ -182,6 +182,7 @@ class WithClause:
         # 第一个返回值为*
         self.is_all = is_all
         self.is_distinct = is_distinct
+        self.where_expression = where_expression
         self.order_by_clause = order_by_clause
         self.skip_expression = skip_expression
         self.limit_expression = limit_expression

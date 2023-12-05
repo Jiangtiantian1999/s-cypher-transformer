@@ -108,7 +108,7 @@ s_RightExpression : oC_Expression ;
 
 oC_PropertyOrLabelsExpression : oC_Atom ( SP? oC_PropertyLookup )* ( SP? ( oC_NodeLabels | s_AtTElement ) )? ;
 
-s_AtTExpression : oC_Atom ( ( SP? oC_PropertyLookup )* SP? oC_PropertyLookup ( SP? ( PoundValue | s_AtTElement ) )? )? SP? s_PropertyLookupTime ;
+s_AtTExpression : oC_Atom ( SP? oC_PropertyLookup )* ( SP? oC_PropertyLookup ( SP? ( PoundValue | s_AtTElement ) )? )? SP? s_PropertyLookupTime ;
 
 s_PropertyLookupTime: AtT ( SP? oC_PropertyLookup )* ;
 

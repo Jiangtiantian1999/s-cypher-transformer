@@ -533,15 +533,15 @@ def serializedATN():
         1033,5,135,0,0,1032,1031,1,0,0,0,1032,1033,1,0,0,0,1033,1036,1,0,
         0,0,1034,1037,3,226,113,0,1035,1037,3,94,47,0,1036,1034,1,0,0,0,
         1036,1035,1,0,0,0,1037,1039,1,0,0,0,1038,1032,1,0,0,0,1038,1039,
-        1,0,0,0,1039,87,1,0,0,0,1040,1063,3,274,137,0,1041,1043,5,135,0,
+        1,0,0,0,1039,87,1,0,0,0,1040,1047,3,274,137,0,1041,1043,5,135,0,
         0,1042,1041,1,0,0,0,1042,1043,1,0,0,0,1043,1044,1,0,0,0,1044,1046,
         3,272,136,0,1045,1042,1,0,0,0,1046,1049,1,0,0,0,1047,1045,1,0,0,
-        0,1047,1048,1,0,0,0,1048,1051,1,0,0,0,1049,1047,1,0,0,0,1050,1052,
+        0,1047,1048,1,0,0,0,1048,1063,1,0,0,0,1049,1047,1,0,0,0,1050,1052,
         5,135,0,0,1051,1050,1,0,0,0,1051,1052,1,0,0,0,1052,1053,1,0,0,0,
         1053,1061,3,272,136,0,1054,1056,5,135,0,0,1055,1054,1,0,0,0,1055,
         1056,1,0,0,0,1056,1059,1,0,0,0,1057,1060,5,47,0,0,1058,1060,3,94,
         47,0,1059,1057,1,0,0,0,1059,1058,1,0,0,0,1060,1062,1,0,0,0,1061,
-        1055,1,0,0,0,1061,1062,1,0,0,0,1062,1064,1,0,0,0,1063,1047,1,0,0,
+        1055,1,0,0,0,1061,1062,1,0,0,0,1062,1064,1,0,0,0,1063,1051,1,0,0,
         0,1063,1064,1,0,0,0,1064,1066,1,0,0,0,1065,1067,5,135,0,0,1066,1065,
         1,0,0,0,1066,1067,1,0,0,0,1067,1068,1,0,0,0,1068,1069,3,90,45,0,
         1069,89,1,0,0,0,1070,1077,5,46,0,0,1071,1073,5,135,0,0,1072,1071,
@@ -5716,29 +5716,29 @@ class s_cypherParser ( Parser ):
             self.enterOuterAlt(localctx, 1)
             self.state = 1040
             self.oC_Atom()
+            self.state = 1047
+            self._errHandler.sync(self)
+            _alt = self._interp.adaptivePredict(self._input,171,self._ctx)
+            while _alt!=2 and _alt!=ATN.INVALID_ALT_NUMBER:
+                if _alt==1:
+                    self.state = 1042
+                    self._errHandler.sync(self)
+                    _la = self._input.LA(1)
+                    if _la==135:
+                        self.state = 1041
+                        self.match(s_cypherParser.SP)
+
+
+                    self.state = 1044
+                    self.oC_PropertyLookup() 
+                self.state = 1049
+                self._errHandler.sync(self)
+                _alt = self._interp.adaptivePredict(self._input,171,self._ctx)
+
             self.state = 1063
             self._errHandler.sync(self)
             la_ = self._interp.adaptivePredict(self._input,176,self._ctx)
             if la_ == 1:
-                self.state = 1047
-                self._errHandler.sync(self)
-                _alt = self._interp.adaptivePredict(self._input,171,self._ctx)
-                while _alt!=2 and _alt!=ATN.INVALID_ALT_NUMBER:
-                    if _alt==1:
-                        self.state = 1042
-                        self._errHandler.sync(self)
-                        _la = self._input.LA(1)
-                        if _la==135:
-                            self.state = 1041
-                            self.match(s_cypherParser.SP)
-
-
-                        self.state = 1044
-                        self.oC_PropertyLookup() 
-                    self.state = 1049
-                    self._errHandler.sync(self)
-                    _alt = self._interp.adaptivePredict(self._input,171,self._ctx)
-
                 self.state = 1051
                 self._errHandler.sync(self)
                 _la = self._input.LA(1)
