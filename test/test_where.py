@@ -18,204 +18,184 @@ class TestWhere(TestCase):
         super().tearDownClass()
         cls.graphdb_connector.close()
 
-    # 测试字符串运算
-    def test_where_1(self):
+    # 测试逻辑操作
+    def test_where_logic_operation(self):
         s_cypher = """
-        MATCH (n1:Person)-[e:FRIEND]->(n2:Person)
-        WHERE n1.name STARTS WITH "Mary" AND (e@T.to - e@T.from) >= duration({years: 20})
-        RETURN e
+        MATCH (n:Person)-[r:LIVE@T("2000", "2010")]->(m:City)
+        WHERE n.name@T(NOW) = "Mary Smith Taylor" XOR (m.name = "Paris" and n.name = "Cathy Van") OR NOT(n.name@T(NOW) = "Mary Smith Taylor" or n.name = "Cathy Van")
+        RETURN n.name as person, m.name as city
+        ORDER BY person, city
         """
         cypher_query = STransformer.transform(s_cypher)
-        tx = self.graphdb_connector.driver.session().begin_transaction()
-        results = tx.run(cypher_query).data()
+        records, summary, keys = self.graphdb_connector.driver.execute_query(cypher_query)
+        assert records == [{"person": ["Mary Smith", "Mary Smith Taylor"], "city": "Antwerp"},
+                           {"person": "Cathy Van", "city": "Brussels"},
+                           {"person": "Daniel Yang", "city": "Antwerp"},
+                           {"person": "Pauline Boutler", "city": "Brussels"},
+                           {"person": "Pauline Boutler", "city": "London"},
+                           {"person": "Peter Burton", "city": "New York"},
+                           {"person": "Sandra Carter", "city": "New York"}]
 
+    # 测试比较操作
+    def test_compare_operation(self):
         s_cypher = """
-        MATCH (n:City)
-        AT_TIME date("2000")
-        WHERE n.spot STARTS WITH "West"
-        RETURN n.name;
+        MATCH (n:Person)-[r:LIVE]->(m:City {name: "Antwerp"})
+        WHERE r@T.from > timePoint('1990')
+        RETURN n
         """
         cypher_query = STransformer.transform(s_cypher)
-        tx = self.graphdb_connector.driver.session().begin_transaction()
-        results = tx.run(cypher_query).data()
+        records, summary, keys = self.graphdb_connector.driver.execute_query(cypher_query)
+        assert len(records) == 0
 
         s_cypher = """
-        MATCH (n1:Person)-[e:FRIEND]->(n2:Person {name: 'Cathy Van'})
-        WHERE n1.name ENDS WITH 'Burton'
-        RETURN n1;
+        MATCH (n:Person)-[r:LIVE]->(m:City {name: "Antwerp"})
+        WHERE r@T.from >= timePoint('1990')
+        RETURN n.name@T(NOW) as person
         """
         cypher_query = STransformer.transform(s_cypher)
-        tx = self.graphdb_connector.driver.session().begin_transaction()
-        results = tx.run(cypher_query).data()
+        records, summary, keys = self.graphdb_connector.driver.execute_query(cypher_query)
+        assert records == [{"person": "Mary Smith Taylor"}]
 
         s_cypher = """
-        MATCH (n1:Person)
-        WHERE n1.name CONTAINS 'Mary Smith'
-        RETURN n1;
+        MATCH (a:Person)-[r:FRIEND]->(b:Person)
+        WHERE r@T.from < timePoint('2002')
+        RETURN a.name@T(NOW) as person1, b.name@T(NOW) as person2
+        ORDER BY person1, person2
         """
         cypher_query = STransformer.transform(s_cypher)
-        tx = self.graphdb_connector.driver.session().begin_transaction()
-        results = tx.run(cypher_query).data()
+        records, summary, keys = self.graphdb_connector.driver.execute_query(cypher_query)
+        assert records == [{"person1": "Peter Burton", "person2": "Cathy Van"},
+                           {"person1": "Mary Smith Taylor", "person2": "Peter Burton"}]
 
         s_cypher = """
-        MATCH (n1:Person)-[:LIVED@T("2001","2022")]->(n2:City)
-        WHERE n2.name CONTAINS 'Paris' AND n1@T.from <= date('1960')
-        RETURN n1;
+        MATCH (a:Person)-[r:FRIEND]->(b:Person)
+        WHERE r@T.from <= timePoint('2002')
+        RETURN a.name@T(NOW) as person1, b.name@T(NOW) as person2
+        ORDER BY person1, person2
         """
         cypher_query = STransformer.transform(s_cypher)
-        tx = self.graphdb_connector.driver.session().begin_transaction()
-        results = tx.run(cypher_query).data()
+        records, summary, keys = self.graphdb_connector.driver.execute_query(cypher_query)
+        assert records == [{"person1": "Pauline Boutler", "person2": "Cathy Van"},
+                           {"person1": "Peter Burton", "person2": "Cathy Van"},
+                           {"person1": "Mary Smith Taylor", "person2": "Peter Burton"}]
 
-    # 测试用有效时间过滤数据
-    def test_where_2(self):
+    # 测试算术运算
+    def test_arithmetic_operation(self):
+        # 加减
         s_cypher = """
-        MATCH (a:Person)-[r:FRIENDS_WITH]->(b:Person)
-        WHERE r@T.from < '2022-01-01'
-        RETURN a, b;
+        MATCH (n:Person)-[e:LIVE]->(m:City)
+        WHERE ( e@T.from + Duration({year: 20}) <= e@T.to and e@T.to <> timePoint(NOW) ) or ( e@T.from <= timePoint("2023") - Duration({year: 20}) and e@T.to = timePoint(NOW) )
+        RETURN n.name as person, m.name as city
+        ORDER BY person, city
         """
         cypher_query = STransformer.transform(s_cypher)
-        tx = self.graphdb_connector.driver.session().begin_transaction()
-        results = tx.run(cypher_query).data()
+        records, summery, keys = self.graphdb_connector.driver.execute_query(cypher_query)
+        assert records == [{"person": ["Mary Smith", "Mary Smith Taylor"], "city": "Brussels"},
+                           {"person": "Cathy Van", "city": "Brussels"},
+                           {"person": "Pauline Boutler", "city": "London"}]
 
+        # 乘除余
         s_cypher = """
-        MATCH (n:City {name: "London"}) -[r:route]->(m:City@T("1000", NOW) {name@T("1900", NOW): "Birmingham"@T("2200", NOW)})
-        WHERE r@T.from < '2022-01-01'
-        RETURN n;
+        MATCH (n:Person)-[e:LIVE]->(m:City)
+        WHERE (duration.between(timePoint('2023'), n@T.from) * 10).months < (duration.between(timePoint('2023'), m@.from) / 10).months and 10 % 3 = 1
+        RETURN n.name as person, m.name as city
+        ORDER BY person, city
         """
         cypher_query = STransformer.transform(s_cypher)
-        tx = self.graphdb_connector.driver.session().begin_transaction()
-        results = tx.run(cypher_query).data()
+        records, summery, keys = self.graphdb_connector.driver.execute_query(cypher_query)
+        assert records == [{"person": "Daniel Yang", "city": "Antwerp"}]
 
+        # 幂
         s_cypher = """
-        MATCH (n:City@T("1690", NOW) {name@T("1900", NOW): "London"@T("2000", NOW)})-[r:route]->(m:City@T("1000", NOW) {name@T("1900", NOW): "Birmingham"@T("2200", NOW)})
-        WHERE r@T.from < '2022-01-01'
-        RETURN n;
+        MATCH (n:Person)
+        WHERE duration.between(timePoint('2023'), n@T.from).months^2 > 1000000
+        RETURN n.name as person
+        ORDER BY person
         """
         cypher_query = STransformer.transform(s_cypher)
-        tx = self.graphdb_connector.driver.session().begin_transaction()
-        results = tx.run(cypher_query).data()
+        records, summery, keys = self.graphdb_connector.driver.execute_query(cypher_query)
+        assert records == [{"person": ["Mary Smith", "Mary Smith Taylor"]}]
 
+    # 测试字符串操作
+    def test_string_operation(self):
+        # STARTS WITH
         s_cypher = """
-        MATCH (n:Person{name@T("1937", NOW): "Mary Smith"@T("1937", "1959")}) -[r:LIVE_IN]->(m:City@T("1581", NOW) {name@T("1581", NOW): "Antwerp"@T("1581", NOW)})
-        WHERE r@T.from > '1989-08-09'
-        RETURN n;
+        MATCH (n:Person)
+        UNWIND n.name as name
+        WITH name
+        WHERE name STARTS WITH "Mary"
+        RETURN name
+        ORDER BY name
         """
         cypher_query = STransformer.transform(s_cypher)
-        tx = self.graphdb_connector.driver.session().begin_transaction()
-        results = tx.run(cypher_query).data()
+        records, summery, keys = self.graphdb_connector.driver.execute_query(cypher_query)
+        assert records == [{"name": "Mary Smith"}, {"name": "Mary Smith Taylor"}]
 
+        # ENDS WITH
         s_cypher = """
-        MATCH (n:Person{name@T("1937", NOW): "Mary Smith"@T("1937", "1959")}) -[r:LIKE]->(m:Brand@T("1938", NOW) {name@T("1938", NOW): "Samsung"@T("1938", NOW)})
-        WHERE r@T.from > '1890-08-09'
-        RETURN m;
+        MATCH (n:Person)
+        WHERE n.name@T(NOW) ENDS WITH 'er'
+        RETURN n.name as name
+        ORDER BY name
         """
         cypher_query = STransformer.transform(s_cypher)
-        tx = self.graphdb_connector.driver.session().begin_transaction()
-        results = tx.run(cypher_query).data()
+        records, summery, keys = self.graphdb_connector.driver.execute_query(cypher_query)
+        assert records == [{"name": "Pauline Boutler"}, {"name": "Sandra Carter"}]
 
+        # CONTAINS
         s_cypher = """
-        MATCH (n:Person@T("1937", NOW) {name@T("1937", NOW): "Mary Smith"@T("1937", "1959")}) -[r:LIVE_IN]->(m:City@T("1581", NOW) {name@T("1581", NOW): "Antwerp"@T("1581", NOW)})
-        WHERE r@T.from > '1989-08-09'
-        RETURN n;
+        MATCH (n:Person)
+        WHERE n.name CONTAINS 'an'
+        RETURN n.name as name
+        ORDER BY name
         """
         cypher_query = STransformer.transform(s_cypher)
-        tx = self.graphdb_connector.driver.session().begin_transaction()
-        results = tx.run(cypher_query).data()
+        records, summery, keys = self.graphdb_connector.driver.execute_query(cypher_query)
+        assert records == [{"name": "Cathy Van"}, {"name": "Daniel Yang"}, {"name": "Sandra Carter"}]
 
+    # 测试列表操作
+    def test_list_operation(self):
         s_cypher = """
-        MATCH (n1:Person)-[e:FRIEND]->(n2:Person {name: 'Cathy Van'})
-        WHERE e@T.from >= date ('1990')
-        RETURN n1;
+        MATCH (n:Person)-[:LIVE]->(m:City)
+        WHERE m.name IN ["London", "Brussels"]
+        RETURN n.name as person
+        ORDER BY person
         """
         cypher_query = STransformer.transform(s_cypher)
-        tx = self.graphdb_connector.driver.session().begin_transaction()
-        results = tx.run(cypher_query).data()
+        records, summery, keys = self.graphdb_connector.driver.execute_query(cypher_query)
+        assert records == [{"person": ["Mary Smith", "Mary Smith Taylor"]}, {"name": "Cathy Van"},
+                           {"name": "Pauline Boutler"}]
 
+    # 测试NULL操作
+    def test_null_operation(self):
         s_cypher = """
-        MATCH (n1:Person {name: 'Pauline Boutler'})-[e:FRIEND]->(n2:Person)
-        WHERE e@T.to >= date ('2000')
-        RETURN n2;
+        UNWIND [{k:1,v:NULL},{k:2,v:"v"}] as t
+        WITH t
+        WHERE t.v is null
+        RETURN t.k
         """
         cypher_query = STransformer.transform(s_cypher)
-        tx = self.graphdb_connector.driver.session().begin_transaction()
-        results = tx.run(cypher_query).data()
+        records, summery, keys = self.graphdb_connector.driver.execute_query(cypher_query)
+        assert records == [{"t.k": 1}]
 
         s_cypher = """
-        MATCH (n:City {name: "London"}) -[r:route]->(m:City@T("1000", NOW) {name@T("1900", NOW): "Birmingham"@T("2200", NOW)})
-        WHERE r@T.from < '2022-01-01'
-        RETURN n;
+        UNWIND [{k:1,v:NULL},{k:2,v:"v"}] as t
+        WITH t
+        WHERE t.v is not null
+        RETURN t.k
         """
         cypher_query = STransformer.transform(s_cypher)
-        tx = self.graphdb_connector.driver.session().begin_transaction()
-        results = tx.run(cypher_query).data()
+        records, summery, keys = self.graphdb_connector.driver.execute_query(cypher_query)
+        assert records == [{"t.k": 2}]
 
-    # 测试时间区间的运算符
-    def test_where_3(self):
+    # 测试标签
+    def test_label_operation(self):
         s_cypher = """
-        MATCH (n1:Person)-[e:FRIEND]->(n2:Person)
-        WHERE n1@T DURING interval.intersection([[date("2000"), date("2005")], [date("2003"), date("2015")]])
-        RETURN e
+        MATCH (n)
+        WHERE n:Brand
+        RETURN n.name as brand
+        ORDER BY brand
         """
         cypher_query = STransformer.transform(s_cypher)
-        tx = self.graphdb_connector.driver.session().begin_transaction()
-        results = tx.run(cypher_query).data()
-
-        s_cypher = """
-        MATCH (n1:Person)-[e:FRIEND]->(n2:Person)
-        WHERE n1@T DURING interval.range([[date("2000"), date("2005")], [date("2003"), date("2015")]])
-        RETURN e
-        """
-        cypher_query = STransformer.transform(s_cypher)
-        tx = self.graphdb_connector.driver.session().begin_transaction()
-        results = tx.run(cypher_query).data()
-
-        s_cypher = """
-        MATCH (n1:Person)-[e:FRIEND]->(n2:Person)
-        WHERE n1@T DURING interval.elapsed_time([[date("2000"), date("2005")], [date("2010"), date("2015")]])
-        RETURN e
-        """
-        cypher_query = STransformer.transform(s_cypher)
-        tx = self.graphdb_connector.driver.session().begin_transaction()
-        results = tx.run(cypher_query).data()
-
-    def test_where_4(self):
-        s_cypher = """
-        MATCH (n1:Person)-[e:FRIEND]->(n2:Person)
-        WHERE n1@T OVERLAPS interval.range([[date("2000"), date("2005")], [date("2010"), date("2015")]])
-        RETURN e
-        """
-        cypher_query = STransformer.transform(s_cypher)
-        tx = self.graphdb_connector.driver.session().begin_transaction()
-        results = tx.run(cypher_query).data()
-
-        s_cypher = """
-                MATCH (n1:Person)-[e:FRIEND]->(n2:Person)
-                WHERE n1@T OVERLAPS interval.range([[date("2000"), date("2005")], [date("2010"), date("2015")]])
-                RETURN e
-                """
-        cypher_query = STransformer.transform(s_cypher)
-        tx = self.graphdb_connector.driver.session().begin_transaction()
-        results = tx.run(cypher_query).data()
-
-# duration.between(date("2000"), date("2005")) >= duration({years: 20})
-# duration.inMonths(duration.between(date("2000"), date("2005"))) >= 20
-# duration.inDays(duration.between(date("2000"), date("2005"))) >= 20
-# duration.inSeconds(duration.between(date("2000"), date("2005"))) >= 20
-
-# def test_where_2(self):
-#     s_cypher = 'MATCH (n1:Person)-[e:FRIEND]->(n2:Person)' \
-#                '\nWHERE n1.name STARTS WITH "Mary"' \
-#                '\nRETURN e'
-#     cypher_query = transform_to_cypher(s_cypher)
-#     print("test_where_2:", '\n', s_cypher, '\n\n', cypher_query, '\n\n')
-#
-# def test_where_3(self):
-#     s_cypher = 'MATCH (n1:Person)' \
-#                '\nWHERE (e@T.to - e@T.from) >= duration({years: 20})' \
-#                '\nRETURN e'
-#     cypher_query = transform_to_cypher(s_cypher)
-#     print("test_where_3:", '\n', s_cypher, '\n\n', cypher_query, '\n\n')
-
-
-## where 中可以套很多各种时间类型的函数判断
-## and or not等逻辑判断
+        records, summery, keys = self.graphdb_connector.driver.execute_query(cypher_query)
+        assert records == [{"brand": "Lucky Goldstar"}, {"brand": "Samsung"}]
