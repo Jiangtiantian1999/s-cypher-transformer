@@ -6,6 +6,9 @@ oC_Query : oC_RegularQuery
          | s_TimeWindowLimit
          ;
 
+oC_MultiPartQuery
+              :  s_WithPartQuery+ oC_SinglePartQuery ;
+
 oC_Match : ( OPTIONAL SP )? MATCH SP? oC_Pattern ( SP? ( s_AtTime | s_Between ) )? ( SP? oC_Where )? ;
 
 oC_UpdatingClause : s_Create | s_Merge | s_Set | oC_Remove | s_Stale | s_Delete ;
@@ -94,7 +97,27 @@ s_ValueNode : oC_Expression SP? ( '(' SP? s_AtTElement SP? ')' )? ;
 
 oC_RelationshipDetail : '[' SP? ( oC_Variable SP? )? ( oC_RelationshipTypes SP? )? oC_RangeLiteral? ( s_AtTElement SP? )? ( oC_Properties SP? )? ']' ;
 
+oC_ComparisonExpression
+                    :  oC_StringListNullPredicateExpression ( SP? s_ComparisonOperator SP? oC_StringListNullPredicateExpression )* ;
+
 oC_StringListNullPredicateExpression : oC_AddOrSubtractExpression ( s_TimePredicateExpression | oC_StringPredicateExpression | oC_ListPredicateExpression | oC_NullPredicateExpression )? ;
+
+oC_AddOrSubtractExpression
+                       :  oC_MultiplyDivideModuloExpression ( ( SP? s_AddOrSubtractOperator SP? oC_MultiplyDivideModuloExpression ) )* ;
+
+s_MultiplyDivideModuloOperator : '*' | '/' | '%' ;
+
+s_PowerOfOperator : '^' ;
+
+s_AddOrSubtractOperator : '+' | '-' ;
+
+s_ComparisonOperator : '=' | '<>' | '<' | '<=' | '>' | '>=' ;
+
+oC_MultiplyDivideModuloExpression
+                              :  oC_PowerOfExpression ( ( SP? s_MultiplyDivideModuloOperator SP? oC_PowerOfExpression ) )* ;
+
+oC_PowerOfExpression
+                 :  oC_UnaryAddOrSubtractExpression ( SP? s_PowerOfOperator SP? oC_UnaryAddOrSubtractExpression )* ;
 
 oC_ListOperatorExpression : ( oC_PropertyOrLabelsExpression | s_AtTExpression ) ( s_SingleIndexExpression | s_DoubleIndexExpression )* ;
 
@@ -121,6 +144,22 @@ s_AtTElement : AtT SP? '(' ( SP? s_TimePointLiteral SP? ',' )? SP? ( s_TimePoint
 s_TimePointLiteral : StringLiteral
                    | oC_MapLiteral
                    ;
+
+oC_FunctionInvocation
+                  :  oC_FunctionName SP? '(' SP? ( DISTINCT SP? )? ( s_FunctionInvocationExpression SP? ( ',' SP? s_FunctionInvocationExpression SP? )* )? ')' ;
+
+s_FunctionInvocationExpression: oC_Expression ;
+
+oC_ListLiteral
+           :  '[' SP? ( s_ListLiteralExpression SP? ( ',' SP? s_ListLiteralExpression SP? )* )? ']' ;
+
+s_ListLiteralExpression : oC_Expression ;
+
+oC_MapLiteral
+          :  '{' SP? ( s_MapKeyValue ( ',' SP? s_MapKeyValue )* )? '}' ;
+
+s_MapKeyValue
+          :  oC_PropertyKeyName SP? ':' SP? oC_Expression SP? ;
 
 oC_SymbolicName : UnescapedSymbolicName
                 | EscapedSymbolicName
