@@ -1427,6 +1427,7 @@ class SCypherWalker(s_cypherListener):
             property_chains = None
         else:
             property_chains = self.property_look_up_list
+            self.property_look_up_list = []
         # 获取属性名
         property_name = self.property_look_up_name
         self.property_look_up_name = None
