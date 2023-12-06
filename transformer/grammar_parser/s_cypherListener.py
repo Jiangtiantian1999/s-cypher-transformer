@@ -512,6 +512,15 @@ class s_cypherListener(ParseTreeListener):
         pass
 
 
+    # Enter a parse tree produced by s_cypherParser#s_TimePropertyItem.
+    def enterS_TimePropertyItem(self, ctx:s_cypherParser.S_TimePropertyItemContext):
+        pass
+
+    # Exit a parse tree produced by s_cypherParser#s_TimePropertyItem.
+    def exitS_TimePropertyItem(self, ctx:s_cypherParser.S_TimePropertyItemContext):
+        pass
+
+
     # Enter a parse tree produced by s_cypherParser#s_TimePredicateExpression.
     def enterS_TimePredicateExpression(self, ctx:s_cypherParser.S_TimePredicateExpressionContext):
         pass

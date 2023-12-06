@@ -133,9 +133,12 @@ oC_PropertyOrLabelsExpression : oC_Atom ( SP? oC_PropertyLookup )* ( SP? ( oC_No
 
 s_AtTExpression : oC_Atom ( SP? oC_PropertyLookup )* ( s_PropertyLookupName ( SP? ( PoundValue | s_AtTElement ) )? )? SP? s_PropertyLookupTime ;
 
-s_PropertyLookupName : SP? oC_PropertyLookup ;
+s_PropertyLookupName : SP? '.' SP? ( oC_PropertyKeyName ) ;
 
-s_PropertyLookupTime : AtT ( SP? oC_PropertyLookup )* ;
+s_PropertyLookupTime : AtT ( SP? s_TimePropertyItem )* ;
+
+s_TimePropertyItem
+              :  '.' SP? ( oC_PropertyKeyName ) ;
 
 s_TimePredicateExpression : SP ( DURING | OVERLAPS ) SP oC_AddOrSubtractExpression ;
 
