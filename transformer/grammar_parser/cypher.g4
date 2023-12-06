@@ -301,15 +301,6 @@ NOT : ( 'N' | 'n' ) ( 'O' | 'o' ) ( 'T' | 't' ) ;
 oC_ComparisonExpression
                     :  oC_StringListNullPredicateExpression ( SP? s_ComparisonOperator SP? oC_StringListNullPredicateExpression )* ;
 
-//oC_PartialComparisonExpression
-//                           :  ( s_ComparisonOperator SP? oC_StringListNullPredicateExpression )
-//                               | ( s_ComparisonOperator SP? oC_StringListNullPredicateExpression )
-//                               | ( s_ComparisonOperator SP? oC_StringListNullPredicateExpression )
-//                               | ( s_ComparisonOperator SP? oC_StringListNullPredicateExpression )
-//                               | ( s_ComparisonOperator SP? oC_StringListNullPredicateExpression )
-//                               | ( s_ComparisonOperator SP? oC_StringListNullPredicateExpression )
-//                               ;
-
 oC_StringListNullPredicateExpression
                                  :  oC_AddOrSubtractExpression ( oC_StringPredicateExpression | oC_ListPredicateExpression | oC_NullPredicateExpression )* ;
 
@@ -337,7 +328,7 @@ IS : ( 'I' | 'i' ) ( 'S' | 's' ) ;
 NULL : ( 'N' | 'n' ) ( 'U' | 'u' ) ( 'L' | 'l' ) ( 'L' | 'l' ) ;
 
 oC_AddOrSubtractExpression
-                       :  oC_MultiplyDivideModuloExpression ( ( SP? s_AddOrSubtractOperator SP? oC_MultiplyDivideModuloExpression ) | ( SP? s_AddOrSubtractOperator SP? oC_MultiplyDivideModuloExpression ) )* ;
+                       :  oC_MultiplyDivideModuloExpression ( ( SP? s_AddOrSubtractOperator SP? oC_MultiplyDivideModuloExpression ) )* ;
 
 s_MultiplyDivideModuloOperator : '*' | '/' | '%' ;
 
@@ -348,7 +339,7 @@ s_AddOrSubtractOperator : '+' | '-' ;
 s_ComparisonOperator : '=' | '<>' | '<' | '<=' | '>' | '>=' ;
 
 oC_MultiplyDivideModuloExpression
-                              :  oC_PowerOfExpression ( ( SP? s_MultiplyDivideModuloOperator SP? oC_PowerOfExpression ) | ( SP? s_MultiplyDivideModuloOperator SP? oC_PowerOfExpression ) | ( SP? s_MultiplyDivideModuloOperator SP? oC_PowerOfExpression ) )* ;
+                              :  oC_PowerOfExpression ( ( SP? s_MultiplyDivideModuloOperator SP? oC_PowerOfExpression ) )* ;
 
 oC_PowerOfExpression
                  :  oC_UnaryAddOrSubtractExpression ( SP? s_PowerOfOperator SP? oC_UnaryAddOrSubtractExpression )* ;

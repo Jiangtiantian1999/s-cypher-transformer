@@ -1,4 +1,4 @@
-# Generated from s_cypher.g4 by ANTLR 4.13.0
+# Generated from .\transformer\grammar_parser\s_cypher.g4 by ANTLR 4.13.0
 from antlr4 import *
 if "." in __name__:
     from .s_cypherParser import s_cypherParser
@@ -413,6 +413,15 @@ class s_cypherListener(ParseTreeListener):
         pass
 
 
+    # Enter a parse tree produced by s_cypherParser#s_PropertyLookupName.
+    def enterS_PropertyLookupName(self, ctx:s_cypherParser.S_PropertyLookupNameContext):
+        pass
+
+    # Exit a parse tree produced by s_cypherParser#s_PropertyLookupName.
+    def exitS_PropertyLookupName(self, ctx:s_cypherParser.S_PropertyLookupNameContext):
+        pass
+
+
     # Enter a parse tree produced by s_cypherParser#s_PropertyLookupTime.
     def enterS_PropertyLookupTime(self, ctx:s_cypherParser.S_PropertyLookupTimeContext):
         pass
@@ -437,249 +446,6 @@ class s_cypherListener(ParseTreeListener):
 
     # Exit a parse tree produced by s_cypherParser#s_AtTElement.
     def exitS_AtTElement(self, ctx:s_cypherParser.S_AtTElementContext):
-        pass
-
-
-    # Enter a parse tree produced by s_cypherParser#s_Where.
-    def enterS_Where(self, ctx:s_cypherParser.S_WhereContext):
-        pass
-
-    # Exit a parse tree produced by s_cypherParser#s_Where.
-    def exitS_Where(self, ctx:s_cypherParser.S_WhereContext):
-        pass
-
-
-    # Enter a parse tree produced by s_cypherParser#s_WhereExpression.
-    def enterS_WhereExpression(self, ctx:s_cypherParser.S_WhereExpressionContext):
-        pass
-
-    # Exit a parse tree produced by s_cypherParser#s_WhereExpression.
-    def exitS_WhereExpression(self, ctx:s_cypherParser.S_WhereExpressionContext):
-        pass
-
-
-    # Enter a parse tree produced by s_cypherParser#s_OrWhereExpression.
-    def enterS_OrWhereExpression(self, ctx:s_cypherParser.S_OrWhereExpressionContext):
-        pass
-
-    # Exit a parse tree produced by s_cypherParser#s_OrWhereExpression.
-    def exitS_OrWhereExpression(self, ctx:s_cypherParser.S_OrWhereExpressionContext):
-        pass
-
-
-    # Enter a parse tree produced by s_cypherParser#s_XorWhereExpression.
-    def enterS_XorWhereExpression(self, ctx:s_cypherParser.S_XorWhereExpressionContext):
-        pass
-
-    # Exit a parse tree produced by s_cypherParser#s_XorWhereExpression.
-    def exitS_XorWhereExpression(self, ctx:s_cypherParser.S_XorWhereExpressionContext):
-        pass
-
-
-    # Enter a parse tree produced by s_cypherParser#s_AndWhereExpression.
-    def enterS_AndWhereExpression(self, ctx:s_cypherParser.S_AndWhereExpressionContext):
-        pass
-
-    # Exit a parse tree produced by s_cypherParser#s_AndWhereExpression.
-    def exitS_AndWhereExpression(self, ctx:s_cypherParser.S_AndWhereExpressionContext):
-        pass
-
-
-    # Enter a parse tree produced by s_cypherParser#s_NotWhereExpression.
-    def enterS_NotWhereExpression(self, ctx:s_cypherParser.S_NotWhereExpressionContext):
-        pass
-
-    # Exit a parse tree produced by s_cypherParser#s_NotWhereExpression.
-    def exitS_NotWhereExpression(self, ctx:s_cypherParser.S_NotWhereExpressionContext):
-        pass
-
-
-    # Enter a parse tree produced by s_cypherParser#s_ComparisonWhereExpression.
-    def enterS_ComparisonWhereExpression(self, ctx:s_cypherParser.S_ComparisonWhereExpressionContext):
-        pass
-
-    # Exit a parse tree produced by s_cypherParser#s_ComparisonWhereExpression.
-    def exitS_ComparisonWhereExpression(self, ctx:s_cypherParser.S_ComparisonWhereExpressionContext):
-        pass
-
-
-    # Enter a parse tree produced by s_cypherParser#s_MultiplyDivideModuloWhereOperator.
-    def enterS_MultiplyDivideModuloWhereOperator(self, ctx:s_cypherParser.S_MultiplyDivideModuloWhereOperatorContext):
-        pass
-
-    # Exit a parse tree produced by s_cypherParser#s_MultiplyDivideModuloWhereOperator.
-    def exitS_MultiplyDivideModuloWhereOperator(self, ctx:s_cypherParser.S_MultiplyDivideModuloWhereOperatorContext):
-        pass
-
-
-    # Enter a parse tree produced by s_cypherParser#s_PowerOfWhereOperator.
-    def enterS_PowerOfWhereOperator(self, ctx:s_cypherParser.S_PowerOfWhereOperatorContext):
-        pass
-
-    # Exit a parse tree produced by s_cypherParser#s_PowerOfWhereOperator.
-    def exitS_PowerOfWhereOperator(self, ctx:s_cypherParser.S_PowerOfWhereOperatorContext):
-        pass
-
-
-    # Enter a parse tree produced by s_cypherParser#s_AddOrSubtractWhereOperator.
-    def enterS_AddOrSubtractWhereOperator(self, ctx:s_cypherParser.S_AddOrSubtractWhereOperatorContext):
-        pass
-
-    # Exit a parse tree produced by s_cypherParser#s_AddOrSubtractWhereOperator.
-    def exitS_AddOrSubtractWhereOperator(self, ctx:s_cypherParser.S_AddOrSubtractWhereOperatorContext):
-        pass
-
-
-    # Enter a parse tree produced by s_cypherParser#s_ComparisonWhereOperator.
-    def enterS_ComparisonWhereOperator(self, ctx:s_cypherParser.S_ComparisonWhereOperatorContext):
-        pass
-
-    # Exit a parse tree produced by s_cypherParser#s_ComparisonWhereOperator.
-    def exitS_ComparisonWhereOperator(self, ctx:s_cypherParser.S_ComparisonWhereOperatorContext):
-        pass
-
-
-    # Enter a parse tree produced by s_cypherParser#s_StringListNullPredicateWhereExpression.
-    def enterS_StringListNullPredicateWhereExpression(self, ctx:s_cypherParser.S_StringListNullPredicateWhereExpressionContext):
-        pass
-
-    # Exit a parse tree produced by s_cypherParser#s_StringListNullPredicateWhereExpression.
-    def exitS_StringListNullPredicateWhereExpression(self, ctx:s_cypherParser.S_StringListNullPredicateWhereExpressionContext):
-        pass
-
-
-    # Enter a parse tree produced by s_cypherParser#s_AddOrSubtractWhereExpression.
-    def enterS_AddOrSubtractWhereExpression(self, ctx:s_cypherParser.S_AddOrSubtractWhereExpressionContext):
-        pass
-
-    # Exit a parse tree produced by s_cypherParser#s_AddOrSubtractWhereExpression.
-    def exitS_AddOrSubtractWhereExpression(self, ctx:s_cypherParser.S_AddOrSubtractWhereExpressionContext):
-        pass
-
-
-    # Enter a parse tree produced by s_cypherParser#s_TimePredicateWhereExpression.
-    def enterS_TimePredicateWhereExpression(self, ctx:s_cypherParser.S_TimePredicateWhereExpressionContext):
-        pass
-
-    # Exit a parse tree produced by s_cypherParser#s_TimePredicateWhereExpression.
-    def exitS_TimePredicateWhereExpression(self, ctx:s_cypherParser.S_TimePredicateWhereExpressionContext):
-        pass
-
-
-    # Enter a parse tree produced by s_cypherParser#s_StringPredicateWhereExpression.
-    def enterS_StringPredicateWhereExpression(self, ctx:s_cypherParser.S_StringPredicateWhereExpressionContext):
-        pass
-
-    # Exit a parse tree produced by s_cypherParser#s_StringPredicateWhereExpression.
-    def exitS_StringPredicateWhereExpression(self, ctx:s_cypherParser.S_StringPredicateWhereExpressionContext):
-        pass
-
-
-    # Enter a parse tree produced by s_cypherParser#s_ListPredicateWhereExpression.
-    def enterS_ListPredicateWhereExpression(self, ctx:s_cypherParser.S_ListPredicateWhereExpressionContext):
-        pass
-
-    # Exit a parse tree produced by s_cypherParser#s_ListPredicateWhereExpression.
-    def exitS_ListPredicateWhereExpression(self, ctx:s_cypherParser.S_ListPredicateWhereExpressionContext):
-        pass
-
-
-    # Enter a parse tree produced by s_cypherParser#s_NullPredicateWhereExpression.
-    def enterS_NullPredicateWhereExpression(self, ctx:s_cypherParser.S_NullPredicateWhereExpressionContext):
-        pass
-
-    # Exit a parse tree produced by s_cypherParser#s_NullPredicateWhereExpression.
-    def exitS_NullPredicateWhereExpression(self, ctx:s_cypherParser.S_NullPredicateWhereExpressionContext):
-        pass
-
-
-    # Enter a parse tree produced by s_cypherParser#s_MultiplyDivideModuloWhereExpression.
-    def enterS_MultiplyDivideModuloWhereExpression(self, ctx:s_cypherParser.S_MultiplyDivideModuloWhereExpressionContext):
-        pass
-
-    # Exit a parse tree produced by s_cypherParser#s_MultiplyDivideModuloWhereExpression.
-    def exitS_MultiplyDivideModuloWhereExpression(self, ctx:s_cypherParser.S_MultiplyDivideModuloWhereExpressionContext):
-        pass
-
-
-    # Enter a parse tree produced by s_cypherParser#s_PowerOfWhereExpression.
-    def enterS_PowerOfWhereExpression(self, ctx:s_cypherParser.S_PowerOfWhereExpressionContext):
-        pass
-
-    # Exit a parse tree produced by s_cypherParser#s_PowerOfWhereExpression.
-    def exitS_PowerOfWhereExpression(self, ctx:s_cypherParser.S_PowerOfWhereExpressionContext):
-        pass
-
-
-    # Enter a parse tree produced by s_cypherParser#s_UnaryAddOrSubtractWhereExpression.
-    def enterS_UnaryAddOrSubtractWhereExpression(self, ctx:s_cypherParser.S_UnaryAddOrSubtractWhereExpressionContext):
-        pass
-
-    # Exit a parse tree produced by s_cypherParser#s_UnaryAddOrSubtractWhereExpression.
-    def exitS_UnaryAddOrSubtractWhereExpression(self, ctx:s_cypherParser.S_UnaryAddOrSubtractWhereExpressionContext):
-        pass
-
-
-    # Enter a parse tree produced by s_cypherParser#s_ListOperatorWhereExpression.
-    def enterS_ListOperatorWhereExpression(self, ctx:s_cypherParser.S_ListOperatorWhereExpressionContext):
-        pass
-
-    # Exit a parse tree produced by s_cypherParser#s_ListOperatorWhereExpression.
-    def exitS_ListOperatorWhereExpression(self, ctx:s_cypherParser.S_ListOperatorWhereExpressionContext):
-        pass
-
-
-    # Enter a parse tree produced by s_cypherParser#s_PropertyOrLabelsWhereExpression.
-    def enterS_PropertyOrLabelsWhereExpression(self, ctx:s_cypherParser.S_PropertyOrLabelsWhereExpressionContext):
-        pass
-
-    # Exit a parse tree produced by s_cypherParser#s_PropertyOrLabelsWhereExpression.
-    def exitS_PropertyOrLabelsWhereExpression(self, ctx:s_cypherParser.S_PropertyOrLabelsWhereExpressionContext):
-        pass
-
-
-    # Enter a parse tree produced by s_cypherParser#s_AtTWhereExpression.
-    def enterS_AtTWhereExpression(self, ctx:s_cypherParser.S_AtTWhereExpressionContext):
-        pass
-
-    # Exit a parse tree produced by s_cypherParser#s_AtTWhereExpression.
-    def exitS_AtTWhereExpression(self, ctx:s_cypherParser.S_AtTWhereExpressionContext):
-        pass
-
-
-    # Enter a parse tree produced by s_cypherParser#s_SingleIndexWhereExpression.
-    def enterS_SingleIndexWhereExpression(self, ctx:s_cypherParser.S_SingleIndexWhereExpressionContext):
-        pass
-
-    # Exit a parse tree produced by s_cypherParser#s_SingleIndexWhereExpression.
-    def exitS_SingleIndexWhereExpression(self, ctx:s_cypherParser.S_SingleIndexWhereExpressionContext):
-        pass
-
-
-    # Enter a parse tree produced by s_cypherParser#s_DoubleIndexWhereExpression.
-    def enterS_DoubleIndexWhereExpression(self, ctx:s_cypherParser.S_DoubleIndexWhereExpressionContext):
-        pass
-
-    # Exit a parse tree produced by s_cypherParser#s_DoubleIndexWhereExpression.
-    def exitS_DoubleIndexWhereExpression(self, ctx:s_cypherParser.S_DoubleIndexWhereExpressionContext):
-        pass
-
-
-    # Enter a parse tree produced by s_cypherParser#s_LeftWhereExpression.
-    def enterS_LeftWhereExpression(self, ctx:s_cypherParser.S_LeftWhereExpressionContext):
-        pass
-
-    # Exit a parse tree produced by s_cypherParser#s_LeftWhereExpression.
-    def exitS_LeftWhereExpression(self, ctx:s_cypherParser.S_LeftWhereExpressionContext):
-        pass
-
-
-    # Enter a parse tree produced by s_cypherParser#s_RightWhereExpression.
-    def enterS_RightWhereExpression(self, ctx:s_cypherParser.S_RightWhereExpressionContext):
-        pass
-
-    # Exit a parse tree produced by s_cypherParser#s_RightWhereExpression.
-    def exitS_RightWhereExpression(self, ctx:s_cypherParser.S_RightWhereExpressionContext):
         pass
 
 
