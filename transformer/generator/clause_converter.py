@@ -422,7 +422,7 @@ class ClauseConverter:
                         # 修改某个值节点的内容，调用getItemsToSetValue，第一个参数为对象节点，第二个参数为属性名，第三个参数为限定值节点有效时间的time_window
                         # 如果没有满足条件的值节点，则将新建一个值节点（属性节点），该值节点的有效时间由timeWindow确定
                         # set n.property[@T(...)] = expression，关系属性没有有效时间
-                        set_clause_string = set_clause_string + "\nFOREACH (" + set_item_variable + " IN scypher.getItemsToSetValue(" + object_variable + ", " + property_name + ", " + self.expression_converter.convert_at_t_element(
+                        set_clause_string = set_clause_string + "\nFOREACH (" + set_item_variable + " IN scypher.getItemsToSetValue(" + object_variable + ", " + property_name + ", " + property_value + ", " + self.expression_converter.convert_at_t_element(
                             set_item.expression_left.time_window) + ") | "
                         # 存在符合要求的值节点时，直接修改这些值节点的内容
                         # valueNodesToAlter返回符合要求的值节点
