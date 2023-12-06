@@ -8,7 +8,6 @@ class VariablesManager:
         # 当前有效的用户定义的变量名
         self.user_variables = []
         self.updating_variables = {}
-        self.updating_object_nodes = {}
         # union连接的各个语句的返回变量
         self.union_variables = []
 
