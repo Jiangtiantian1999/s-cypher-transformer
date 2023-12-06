@@ -168,10 +168,9 @@ class ExpressionConverter:
         for property_name in at_t_expression.property_chains:
             at_t_expression_string = at_t_expression_string + '.' + property_name
 
-        # 所查询的对象节点
         if at_t_expression.property_name is None:
             # 返回对象节点或边的有效时间，直接访问即可
-            at_t_expression_string = "scypher.getPropertyEffectiveTime(" + at_t_expression_string + ", NULL)"
+            at_t_expression_string = "scypher.getObjectEffectiveTime(" + at_t_expression_string + ')'
         elif at_t_expression.time_window is None:
             # 返回属性节点的有效时间
             # 实际上object_variable.property_name也可能为对象节点，scypher.getPropertyEffectiveTime函数内部应该加以区分

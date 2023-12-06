@@ -1,3 +1,4 @@
+from datetime import timezone
 from unittest import TestCase
 
 from neo4j.exceptions import ClientError
@@ -60,8 +61,9 @@ class TestReturn(TestCase):
         """
         cypher_query = STransformer.transform(s_cypher)
         records, summery, keys = self.graphdb_connector.driver.execute_query(cypher_query)
-        assert records == [{"effective_time": {"from": DateTime(1937, 1, 1, 0, 0, 0, 0),
-                                               "to": DateTime(9999, 12, 31, 23, 59, 59, 999999999)}}]
+        assert records == [{"effective_time": {"from": DateTime(1937, 1, 1, tzinfo=timezone.utc),
+                                               "to": DateTime(9999, 12, 31, 23, 59, 59, 999999999,
+                                                              tzinfo=timezone.utc)}}]
 
         # 返回属性节点有效时间
         s_cypher = """
@@ -70,8 +72,9 @@ class TestReturn(TestCase):
         """
         cypher_query = STransformer.transform(s_cypher)
         records, summery, keys = self.graphdb_connector.driver.execute_query(cypher_query)
-        assert records == [{"effective_time": {"from": DateTime(1937, 1, 1, 0, 0, 0, 0),
-                                               "to": DateTime(9999, 12, 31, 23, 59, 59, 999999999)}}]
+        assert records == [{"effective_time": {"from": DateTime(1937, 1, 1, tzinfo=timezone.utc),
+                                               "to": DateTime(9999, 12, 31, 23, 59, 59, 999999999,
+                                                              tzinfo=timezone.utc)}}]
 
         # 返回值节点有效时间
         s_cypher = """
@@ -79,11 +82,14 @@ class TestReturn(TestCase):
         RETURN n.name#Value@T as effective_time
         """
         cypher_query = STransformer.transform(s_cypher)
+        print(cypher_query)
         records, summery, keys = self.graphdb_connector.driver.execute_query(cypher_query)
-        assert records == [{"effective_time": [{"from": DateTime(1937, 1, 1, 0, 0, 0, 0),
-                                                "to": DateTime(1959, 12, 31, 23, 59, 59, 999999999)},
-                                               {"from": DateTime(1960, 1, 1, 0, 0, 0, 0),
-                                                "to": DateTime(9999, 12, 31, 23, 59, 59, 999999999)}]}]
+        assert records == [{"effective_time": [{"from": DateTime(1937, 1, 1, tzinfo=timezone.utc),
+                                                "to": DateTime(1959, 12, 31, 23, 59, 59, 999999999,
+                                                               tzinfo=timezone.utc)},
+                                               {"from": DateTime(1960, 1, 1, tzinfo=timezone.utc),
+                                                "to": DateTime(9999, 12, 31, 23, 59, 59, 999999999,
+                                                               tzinfo=timezone.utc)}]}]
 
         # 返回指定有效时间下的值节点有效时间
         s_cypher = """
@@ -92,8 +98,9 @@ class TestReturn(TestCase):
         """
         cypher_query = STransformer.transform(s_cypher)
         records, summery, keys = self.graphdb_connector.driver.execute_query(cypher_query)
-        assert records == [{"effective_time": {"from": DateTime(1960, 1, 1, 0, 0, 0, 0),
-                                               "to": DateTime(9999, 12, 31, 23, 59, 59, 999999999)}}]
+        assert records == [{"effective_time": {"from": DateTime(1960, 1, 1, tzinfo=timezone.utc),
+                                               "to": DateTime(9999, 12, 31, 23, 59, 59, 999999999,
+                                                              tzinfo=timezone.utc)}}]
 
         # 错误用法检测
         s_cypher = """
@@ -105,7 +112,8 @@ class TestReturn(TestCase):
         with self.assertRaises(ClientError):
             self.graphdb_connector.driver.execute_query(cypher_query)
 
-    # 测试ORDER BY和LIMIT
+            # 测试ORDER BY和LIMIT
+
     def test_order_by(self):
         # 根据有效时间返回结果，未作设置，默认使用map的比较方法（先比较to，再比较from）
         s_cypher = """
@@ -116,12 +124,15 @@ class TestReturn(TestCase):
         """
         cypher_query = STransformer.transform(s_cypher)
         records, summery, keys = self.graphdb_connector.driver.execute_query(cypher_query)
-        assert records == [{"effective_time": {"from": DateTime(1995, 1, 1, 0, 0, 0, 0),
-                                               "to": DateTime(9999, 12, 31, 23, 59, 59, 999999999)}},
-                           {"effective_time": {"from": DateTime(1978, 1, 1, 0, 0, 0, 0),
-                                               "to": DateTime(9999, 12, 31, 23, 59, 59, 999999999)}},
-                           {"effective_time": {"from": DateTime(1967, 1, 1, 0, 0, 0, 0),
-                                               "to": DateTime(9999, 12, 31, 23, 59, 59, 999999999)}}]
+        assert records == [{"effective_time": {"from": DateTime(1995, 1, 1, tzinfo=timezone.utc),
+                                               "to": DateTime(9999, 12, 31, 23, 59, 59, 999999999,
+                                                              tzinfo=timezone.utc)}},
+                           {"effective_time": {"from": DateTime(1978, 1, 1, tzinfo=timezone.utc),
+                                               "to": DateTime(9999, 12, 31, 23, 59, 59, 999999999,
+                                                              tzinfo=timezone.utc)}},
+                           {"effective_time": {"from": DateTime(1967, 1, 1, tzinfo=timezone.utc),
+                                               "to": DateTime(9999, 12, 31, 23, 59, 59, 999999999,
+                                                              tzinfo=timezone.utc)}}]
 
         s_cypher = """
         MATCH (p:Person)
@@ -179,9 +190,10 @@ class TestReturn(TestCase):
         """
         cypher_query = STransformer.transform(s_cypher)
         records, summery, keys = self.graphdb_connector.driver.execute_query(cypher_query)
-        assert records == [{"time_point": DateTime(2015, 6, 20),
-                            "interval": {"from": DateTime(2015, 4, 1),
-                                         "to": DateTime(9999, 12, 31, 23, 59, 59, 999999999)}, "result": True}]
+        assert records == [{"time_point": DateTime(2015, 6, 20, tzinfo=timezone.utc),
+                            "interval": {"from": DateTime(2015, 4, 1, tzinfo=timezone.utc),
+                                         "to": DateTime(9999, 12, 31, 23, 59, 59, 999999999, tzinfo=timezone.utc)},
+                            "result": True}]
 
         # 时间区间DURING时间点
         s_cypher = """
@@ -190,9 +202,11 @@ class TestReturn(TestCase):
         """
         cypher_query = STransformer.transform(s_cypher)
         records, summery, keys = self.graphdb_connector.driver.execute_query(cypher_query)
-        assert records == [{"interval1": {"from": DateTime(2015, 7, 21), "to": DateTime(2016, 10, 1)},
-                            "interval2": {"from": DateTime(2015, 4, 1),
-                                          "to": DateTime(9999, 12, 31, 23, 59, 59, 999999999)}, "result": True}]
+        assert records == [{"interval1": {"from": DateTime(2015, 7, 21, tzinfo=timezone.utc),
+                                          "to": DateTime(2016, 10, 1, tzinfo=timezone.utc)},
+                            "interval2": {"from": DateTime(2015, 4, 1, tzinfo=timezone.utc),
+                                          "to": DateTime(9999, 12, 31, 23, 59, 59, 999999999, tzinfo=timezone.utc)},
+                            "result": True}]
 
         # OVERLAPS
         s_cypher = """
@@ -201,8 +215,10 @@ class TestReturn(TestCase):
         """
         cypher_query = STransformer.transform(s_cypher)
         records, summery, keys = self.graphdb_connector.driver.execute_query(cypher_query)
-        assert records == [{"interval1": {"from": DateTime(2015, 4, 1), "to": DateTime(2015, 6, 30)},
-                            "interval2": {"from": DateTime(2015, 5, 30), "to": DateTime(2015, 7, 21)}, "result": True}]
+        assert records == [{"interval1": {"from": DateTime(2015, 4, 1, tzinfo=timezone.utc),
+                                          "to": DateTime(2015, 6, 30, tzinfo=timezone.utc)},
+                            "interval2": {"from": DateTime(2015, 5, 30, tzinfo=timezone.utc),
+                                          "to": DateTime(2015, 7, 21, tzinfo=timezone.utc)}, "result": True}]
 
         # 时间点之间不能相减
         s_cypher = """
@@ -222,11 +238,13 @@ class TestReturn(TestCase):
         RETURN interval1, interval2, interval.range([interval1, interval2]) as range_interval
         """
         cypher_query = STransformer.transform(s_cypher)
-        print(cypher_query)
         records, summery, keys = self.graphdb_connector.driver.execute_query(cypher_query)
-        assert records == [{"interval1": {"from": DateTime(2015, 4, 1), "to": DateTime(2015, 6, 30)},
-                            "interval2": {"from": DateTime(2015, 5, 30), "to": DateTime(2015, 7, 21)},
-                            "range_interval": {"from": DateTime(2015, 4, 1), "to": DateTime(2015, 7, 21)}}]
+        assert records == [{"interval1": {"from": DateTime(2015, 4, 1, tzinfo=timezone.utc),
+                                          "to": DateTime(2015, 6, 30, tzinfo=timezone.utc)},
+                            "interval2": {"from": DateTime(2015, 5, 30, tzinfo=timezone.utc),
+                                          "to": DateTime(2015, 7, 21, tzinfo=timezone.utc)},
+                            "range_interval": {"from": DateTime(2015, 4, 1, tzinfo=timezone.utc),
+                                               "to": DateTime(2015, 7, 21, tzinfo=timezone.utc)}}]
         # interval.intersection
         s_cypher = """
         WITH interval(datetime("2015-Q2"), datetime("2015-06-30")) as interval1, interval(datetime("2015Q260"), datetime("2015-W30-2")) as interval2
@@ -234,9 +252,12 @@ class TestReturn(TestCase):
         """
         cypher_query = STransformer.transform(s_cypher)
         records, summery, keys = self.graphdb_connector.driver.execute_query(cypher_query)
-        assert records == [{"interval1": {"from": DateTime(2015, 4, 1), "to": DateTime(2015, 6, 30)},
-                            "interval2": {"from": DateTime(2015, 5, 30), "to": DateTime(2015, 7, 21)},
-                            "intersection_interval": {"from": DateTime(2015, 5, 30), "to": DateTime(2015, 6, 30)}}]
+        assert records == [{"interval1": {"from": DateTime(2015, 4, 1, tzinfo=timezone.utc),
+                                          "to": DateTime(2015, 6, 30, tzinfo=timezone.utc)},
+                            "interval2": {"from": DateTime(2015, 5, 30, tzinfo=timezone.utc),
+                                          "to": DateTime(2015, 7, 21, tzinfo=timezone.utc)},
+                            "intersection_interval": {"from": DateTime(2015, 5, 30, tzinfo=timezone.utc),
+                                                      "to": DateTime(2015, 6, 30, tzinfo=timezone.utc)}}]
 
         # interval.difference
         s_cypher = """
@@ -246,9 +267,10 @@ class TestReturn(TestCase):
         cypher_query = STransformer.transform(s_cypher)
         records, summery, keys = self.graphdb_connector.driver.execute_query(cypher_query)
         print(records)
-        assert records == [{"interval1": {"from": Time(8, 20), "to": Time(13)},
-                            "interval2": {"from": Time(15, 8), "to": Time(23)},
-                            "difference_interval": Duration(hours=2, minutes=8)}]
+        assert records == [
+            {"interval1": {"from": Time(8, 20, tzinfo=timezone.utc), "to": Time(13, tzinfo=timezone.utc)},
+             "interval2": {"from": Time(15, 8, tzinfo=timezone.utc), "to": Time(23, tzinfo=timezone.utc)},
+             "difference_interval": Duration(hours=2, minutes=8)}]
 
         # 不能对相交的时间区间做difference
         s_cypher = """

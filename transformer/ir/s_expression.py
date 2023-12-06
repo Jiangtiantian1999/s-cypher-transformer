@@ -98,6 +98,9 @@ class AtTExpression:
         self.atom = atom
         if property_chains is None:
             property_chains = []
+        if property_name is None and len(property_chains) > 0:
+            property_name = property_chains[-1]
+            property_chains.pop(-1)
         self.property_chains = property_chains
         self.property_name = property_name
         # #Value表示获取所有值节点的有效时间，传入True；@T表示获取该时间窗口下的值节点的有效时间，传入时间区间/时间点
