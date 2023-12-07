@@ -707,7 +707,6 @@ class SCypherWalker(s_cypherListener):
         elif ctx.DESC() is not None:
             string = 'DESC'
         self.sort_items[expression] = string
-        print("t")
 
     def exitOC_Skip(self, ctx: s_cypherParser.OC_SkipContext):
         if self.expression.is_empty() is False:
@@ -1136,7 +1135,7 @@ class SCypherWalker(s_cypherListener):
             self.function_invocation_expressions.peek().append(self.expression.pop())
         else:
             raise TranslateError("Expect expression but there is none in expression stack.")
-        
+
     # expression新方案，使用栈来存储已经遍历过的语法子树信息
     def exitOC_Expression(self, ctx: s_cypherParser.OC_ExpressionContext):
         expression = Expression(self.or_expression.pop())
@@ -1165,6 +1164,9 @@ class SCypherWalker(s_cypherListener):
     def exitOC_AndExpression(self, ctx: s_cypherParser.OC_AndExpressionContext):
         # not_expressions: List[NotExpression]
         self.and_expressions.peek().append(AndExpression(self.not_expressions.pop()))
+
+    # def enterOC_NotExpression(self, ctx: s_cypherParser.OC_NotExpressionContext):
+    #     self.subject_expressions.push([])
 
     def exitOC_NotExpression(self, ctx: s_cypherParser.OC_NotExpressionContext):
         # comparison_expression: ComparisonExpression,
@@ -1211,6 +1213,8 @@ class SCypherWalker(s_cypherListener):
             predicate_expression = self.list_predicate_expression.pop()
         elif ctx.oC_NullPredicateExpression() is not None:
             predicate_expression = self.null_predicate_expression.pop()
+
+        peek = self.subject_expressions.peek()
         self.subject_expressions.peek().append(SubjectExpression(add_or_subtract_expression, predicate_expression))
 
     def exitS_TimePredicateExpression(self, ctx: s_cypherParser.S_TimePredicateExpressionContext):
