@@ -204,9 +204,7 @@ class GraphConverter:
                 "to": "scypher.timePoint(\"NOW\")"
             }
         else:
-            node_interval = {
-                "from": "scypher.operateTime()", "to": "scypher.timePoint(\"NOW\")"
-            }
+            node_interval = {"from": "scypher.operateTime()", "to": "scypher.timePoint(\"NOW\")"}
         if node.__class__ == ObjectNode:
             node_pattern = node_pattern + "{intervalFrom: " + node_interval["from"] + ", intervalTo: " + node_interval[
                 "to"] + "}"
@@ -260,9 +258,7 @@ class GraphConverter:
                 "to": "scypher.timePoint(\"NOW\")"
             }
         else:
-            relationship_effective_time = {
-                "from": "scypher.operateTime()", "to": "scypher.timePoint(\"NOW\")"
-            }
+            relationship_effective_time = {"from": "scypher.operateTime()", "to": "scypher.timePoint(\"NOW\")"}
         # getIntervalFromOfRelationship和getIntervalToOfRelationship用于检查关系的有效时间是否符合约束，以及是否有重复关系
         relationship_pattern = relationship_pattern + "intervalFrom: scypher.getIntervalFromOfRelationship(" + start_node.variable + ", " + end_node.variable + ", \"" + \
                                relationship.labels[0] + "\", " + relationship_effective_time["from"] + "), "

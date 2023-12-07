@@ -134,9 +134,11 @@ class MergeClause:
         self.pattern = pattern
         if actions is None:
             actions = {}
-        for action in actions.keys():
+        for (action, set_clause) in actions.items():
             if action not in [MergeClause.ON_MATCH, MergeClause.ON_CREATE]:
                 raise TranslateError("Uncertain action")
+            if set_clause.at_time_clause is None:
+                set_clause.at_time_clause = at_time_clause
         self.actions = actions
         self.at_time_clause = at_time_clause
 

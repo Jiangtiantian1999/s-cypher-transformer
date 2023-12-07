@@ -7,6 +7,7 @@ class VariablesManager:
         self.count_num = 99
         # 当前有效的用户定义的变量名
         self.user_variables = []
+        # 更新语句中创建的变量名：是否已创建
         self.updating_variables = {}
         # union连接的各个语句的返回变量
         self.union_variables = []
