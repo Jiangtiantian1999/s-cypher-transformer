@@ -197,6 +197,24 @@ class s_cypherListener(ParseTreeListener):
         pass
 
 
+    # Enter a parse tree produced by s_cypherParser#oC_ExplicitProcedureInvocation.
+    def enterOC_ExplicitProcedureInvocation(self, ctx:s_cypherParser.OC_ExplicitProcedureInvocationContext):
+        pass
+
+    # Exit a parse tree produced by s_cypherParser#oC_ExplicitProcedureInvocation.
+    def exitOC_ExplicitProcedureInvocation(self, ctx:s_cypherParser.OC_ExplicitProcedureInvocationContext):
+        pass
+
+
+    # Enter a parse tree produced by s_cypherParser#s_ExplicitExpression.
+    def enterS_ExplicitExpression(self, ctx:s_cypherParser.S_ExplicitExpressionContext):
+        pass
+
+    # Exit a parse tree produced by s_cypherParser#s_ExplicitExpression.
+    def exitS_ExplicitExpression(self, ctx:s_cypherParser.S_ExplicitExpressionContext):
+        pass
+
+
     # Enter a parse tree produced by s_cypherParser#s_YieldItems.
     def enterS_YieldItems(self, ctx:s_cypherParser.S_YieldItemsContext):
         pass
@@ -1166,15 +1184,6 @@ class s_cypherListener(ParseTreeListener):
 
     # Exit a parse tree produced by s_cypherParser#oC_FunctionName.
     def exitOC_FunctionName(self, ctx:s_cypherParser.OC_FunctionNameContext):
-        pass
-
-
-    # Enter a parse tree produced by s_cypherParser#oC_ExplicitProcedureInvocation.
-    def enterOC_ExplicitProcedureInvocation(self, ctx:s_cypherParser.OC_ExplicitProcedureInvocationContext):
-        pass
-
-    # Exit a parse tree produced by s_cypherParser#oC_ExplicitProcedureInvocation.
-    def exitOC_ExplicitProcedureInvocation(self, ctx:s_cypherParser.OC_ExplicitProcedureInvocationContext):
         pass
 
 

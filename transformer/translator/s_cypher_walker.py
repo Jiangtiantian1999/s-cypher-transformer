@@ -70,7 +70,7 @@ class SCypherWalker(s_cypherListener):
         self.remove_clause = None
         self.stale_clause = None
 
-        # TODO expression
+        # expression
         self.skip_expression = Stack()
         self.limit_expression = Stack()
         self.expression = Stack()
@@ -124,8 +124,7 @@ class SCypherWalker(s_cypherListener):
         self.projection_items = []
         self.sort_items = dict()
         self.yield_items = []
-        self.explicit_input_items = []  # 带参程序调用
-        self.implicit_input_item = None  # 不带参程序调用
+        self.explicit_input_items = Stack()  # 带参程序调用
         self.delete_items = []
         self.set_items = []
         self.remove_items = []
@@ -339,8 +338,9 @@ class SCypherWalker(s_cypherListener):
         # procedure_name: str,
         # input_items: List[Expression] = None,
         # yield_clause: YieldClause = None
-        self.in_query_call_clause = CallClause(self.procedure_name, self.explicit_input_items, self.yield_clause)
-        self.explicit_input_items = []  # 退出清空
+        self.in_query_call_clause = CallClause(self.procedure_name, self.explicit_input_items.pop(), self.yield_clause)
+        self.yield_clause = None
+        self.procedure_name = None
 
     def enterOC_ProcedureName(self, ctx: s_cypherParser.OC_ProcedureNameContext):
         self.procedure_name = ctx.getText()
@@ -376,26 +376,24 @@ class SCypherWalker(s_cypherListener):
         # yield_clause: YieldClause = None
         input_items = None
         if ctx.oC_ExplicitProcedureInvocation() is not None:
-            input_items = self.explicit_input_items
-            self.explicit_input_items = []  # 退出清空
-        elif ctx.oC_ImplicitProcedureInvocation() is not None:
-            # input_items = self.implicit_input_item
-            # self.implicit_input_item = None  # 退出清空
-            input_items = None
+            input_items = self.explicit_input_items.pop()
         if '*' in ctx.getText():
             yield_clause = YieldClause(None, True, None)
         else:
             yield_clause = self.yield_clause
         self.stand_alone_call_clause = CallClause(self.procedure_name, input_items, yield_clause)
+        self.yield_clause = None
+        self.procedure_name = None
 
     def enterOC_ExplicitProcedureInvocation(self, ctx: s_cypherParser.OC_ExplicitProcedureInvocationContext):
         self.is_explicit = True
+        self.explicit_input_items.push([])
 
     def exitOC_ExplicitProcedureInvocation(self, ctx: s_cypherParser.OC_ExplicitProcedureInvocationContext):
         self.is_explicit = False
 
-    def exitOC_ImplicitProcedureInvocation(self, ctx: s_cypherParser.OC_ImplicitProcedureInvocationContext):
-        self.implicit_input_item = ctx.oC_ProcedureName().getText()
+    def exitS_ExplicitExpression(self, ctx: s_cypherParser.S_ExplicitExpressionContext):
+        self.explicit_input_items.peek().append(self.expression.pop())
 
     @staticmethod
     def getAtTElement(interval_str) -> AtTElement:
@@ -1143,8 +1141,6 @@ class SCypherWalker(s_cypherListener):
     def exitOC_Expression(self, ctx: s_cypherParser.OC_ExpressionContext):
         expression = Expression(self.or_expression.pop())
         self.expression.push(expression)
-        if self.is_explicit:
-            self.explicit_input_items.append(expression)
 
     def enterOC_OrExpression(self, ctx: s_cypherParser.OC_OrExpressionContext):
         self.xor_expressions.push([])

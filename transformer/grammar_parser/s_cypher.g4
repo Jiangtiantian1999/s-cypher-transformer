@@ -58,6 +58,11 @@ oC_InQueryCall : CALL SP oC_ExplicitProcedureInvocation ( SP? YIELD SP s_YieldIt
 
 oC_StandaloneCall : CALL SP ( oC_ExplicitProcedureInvocation | oC_ImplicitProcedureInvocation ) ( SP? YIELD SP ( '*' | s_YieldItems ) )? ;
 
+oC_ExplicitProcedureInvocation
+                           :  oC_ProcedureName SP? '(' SP? ( s_ExplicitExpression ( ',' SP? s_ExplicitExpression )* )? ')' ;
+
+s_ExplicitExpression : oC_Expression SP? ;
+
 s_YieldItems : s_YieldItem ( SP? ',' SP? s_YieldItem )* ( SP? oC_Where )? ;
 
 s_YieldItem : oC_ProcedureResultField ( SP AS SP oC_Variable )? ;
