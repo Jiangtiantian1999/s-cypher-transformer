@@ -448,7 +448,7 @@ class ClauseConverter:
                     else:
                         # 添加/删除单个属性，调用scypher.getItemsToSetProperty，第一个参数为对象节点/关系，第二个参数为属性名，第三个参数为属性值（用于确定是否为null），第三个参数为set的操作时间
                         # set n.property = expression
-                        set_clause_string = set_clause_string + "\nFOREACH (" + set_item_variable + " IN scypher.getItemsToSetProperty(" + object_variable + ", " + property_name + ", " + operate_time + ") | "
+                        set_clause_string = set_clause_string + "\nFOREACH (" + set_item_variable + " IN scypher.getItemsToSetProperty(" + object_variable + ", \"" + property_name + "\", " + property_value + ", " + operate_time + ") | "
                         # 创建属性节点和值节点（没有属性节点时）
                         # createPropertyNode返回属性节点所连接的对象节点
                         set_clause_string = set_clause_string + "\nFOREACH (" + set_sub_item_variable + " IN " + set_item_variable + ".createPropertyNode | CREATE (" + set_sub_item_variable + ")-[:OBJECT_PROPERTY]->(:Property{content:\"" + property_name + "\", intervalFrom:" + \
@@ -485,12 +485,13 @@ class ClauseConverter:
                     # staleNodes返回待逻辑删除的值节点和属性节点
                     set_clause_string = set_clause_string + "\nFOREACH (" + set_sub_item_variable + " IN " + set_item_variable + ".staleNodes | SET " + set_sub_item_variable + ".intervalTo = " + operate_time + " - scypher.timePoint.unit())"
                     # 修改关系属性
-                    # setRelationshipProperties返回待修改的关系
                     set_clause_string = set_clause_string + "\nFOREACH (" + set_sub_item_variable + " IN " + set_item_variable + ".setRelationshipProperties | "
                     if set_item.is_added:
+                        # setRelationshipProperties返回待修改的关系
                         set_clause_string = set_clause_string + "SET " + set_sub_item_variable + " += " + propertyMap + ')'
                     else:
-                        set_clause_string = set_clause_string + "SET " + set_sub_item_variable + " = " + propertyMap + ')'
+                        # setRelationshipProperties返回待设置的属性map，将intervalFrom和intervalTo也添加到propertyMap
+                        set_clause_string = set_clause_string + "SET " + set_item.expression_left + " = " + set_sub_item_variable + ')'
                     set_clause_string = set_clause_string + ')'
             else:
                 # 设置节点的标签
