@@ -505,11 +505,9 @@ class ClauseConverter:
         merge_clause_string = "MERGE "
         object_node_patterns, property_node_patterns, value_node_patterns, path_pattern = self.graph_converter.create_path(
             merge_clause.pattern, merge_clause.at_time_clause)
-        if len(object_node_patterns) == 1 and path_pattern:
-            # merge一条长度为0的路径
-            merge_clause_string = merge_clause_string + path_pattern
-        else:
-            # merge一条长度>0的路径，先merge对象节点
+        if len(object_node_patterns) > 0:
+            # merge对象节点
+            merge_clause_string = merge_clause_string + "\nMERGE"
             for object_node_pattern in object_node_patterns:
                 merge_clause_string = merge_clause_string + object_node_pattern + ", "
             merge_clause_string = merge_clause_string.rstrip(", ")
@@ -525,8 +523,8 @@ class ClauseConverter:
             for value_node_pattern in value_node_patterns:
                 merge_clause_string = merge_clause_string + value_node_pattern + ", "
             merge_clause_string = merge_clause_string.rstrip(", ")
-        if len(object_node_patterns) > 1 and path_pattern:
-            # 当路径长度>0时，merge路径（创建对象节点之间的关系）
+        if path_pattern:
+            # merge路径
             merge_clause_string = merge_clause_string + "\nMERGE" + path_pattern
 
         for action, set_clause in merge_clause.actions.items():
