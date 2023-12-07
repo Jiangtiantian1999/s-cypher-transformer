@@ -82,7 +82,6 @@ class TestReturn(TestCase):
         RETURN n.name#Value@T as effective_time
         """
         cypher_query = STransformer.transform(s_cypher)
-        print(cypher_query)
         records, summery, keys = self.graphdb_connector.driver.execute_query(cypher_query)
         assert records == [{"effective_time": [{"from": DateTime(1937, 1, 1, tzinfo=timezone.utc),
                                                 "to": DateTime(1959, 12, 31, 23, 59, 59, 999999999,
@@ -230,6 +229,14 @@ class TestReturn(TestCase):
         with self.assertRaises(ClientError):
             self.graphdb_connector.driver.execute_query(cypher_query)
 
+        # 开始时间不能晚于结束时间
+        s_cypher = """
+        RETURN interval("2010","2009")
+        """
+        cypher_query = STransformer.transform(s_cypher)
+        with self.assertRaises(ClientError):
+            self.graphdb_connector.driver.execute_query(cypher_query)
+
     # 测试时间区间的运算函数
     def test_time_function(self):
         # interval.range
@@ -266,7 +273,6 @@ class TestReturn(TestCase):
         """
         cypher_query = STransformer.transform(s_cypher)
         records, summery, keys = self.graphdb_connector.driver.execute_query(cypher_query)
-        print(records)
         assert records == [
             {"interval1": {"from": Time(8, 20, tzinfo=timezone.utc), "to": Time(13, tzinfo=timezone.utc)},
              "interval2": {"from": Time(15, 8, tzinfo=timezone.utc), "to": Time(23, tzinfo=timezone.utc)},
