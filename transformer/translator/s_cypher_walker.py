@@ -4,6 +4,7 @@ from transformer.ir.s_cypher_clause import *
 from transformer.ir.s_graph import *
 from transformer.ir.s_expression import *
 from transformer.exceptions.s_exception import *
+from queue import Queue
 
 
 # This class records important information about the query
@@ -75,21 +76,21 @@ class SCypherWalker(s_cypherListener):
         self.limit_expression = Stack()
         self.expression = Stack()
         self.or_expression = Stack()
-        self.xor_expressions = Stack()
-        self.and_expressions = Stack()
-        self.not_expressions = Stack()
+        self.xor_expressions = Queue()
+        self.and_expressions = Queue()
+        self.not_expressions = Queue()
         self.comparison_expression = Stack()
-        self.subject_expressions = Stack()
+        self.subject_expressions = Queue()
         self.string_list_null_predicate_expression = Stack()
         self.null_predicate_expression = Stack()
         self.list_predicate_expression = Stack()
         self.string_predicate_expression = Stack()
         self.time_predicate_expression = Stack()
         self.add_subtract_expression = Stack()  # 第一个是oC_StringListNullPredicateExpression里的，第二个是PredicateExpression里的
-        self.multiply_divide_modulo_expressions = Stack()
-        self.power_expressions = Stack()
-        self.list_index_expressions = Stack()
-        self.index_expressions = Stack()
+        self.multiply_divide_modulo_expressions = Queue()
+        self.power_expressions = Queue()
+        self.list_index_expressions = Queue()
+        self.index_expressions = Queue()
         self.AtT_expression = Stack()
         self.properties_labels_expression = Stack()
         self.remove_property_expression = Stack()
@@ -103,8 +104,9 @@ class SCypherWalker(s_cypherListener):
         self.where_expression = Stack()
         self.case_expression = Stack()
         self.parenthesized_expression = Stack()
-        self.function_invocation_expressions = Stack()
-        self.list_literal_expressions = Stack()
+        self.function_invocation = Stack()
+        self.function_invocation_expressions = Queue()
+        self.list_literal_expressions = Queue()
 
         # Atom
         self.atom = None
@@ -116,7 +118,7 @@ class SCypherWalker(s_cypherListener):
         self.quantifier = None
         self.pattern_predicate = None
         # self.parenthesized_expression = None
-        self.function_invocation = None
+        # self.function_invocation = None
         self.existential_subquery = None
         # self.function_invocation_expressions = []
 
@@ -124,7 +126,7 @@ class SCypherWalker(s_cypherListener):
         self.projection_items = []
         self.sort_items = dict()
         self.yield_items = []
-        self.explicit_input_items = Stack()  # 带参程序调用
+        self.explicit_input_items = Queue()  # 带参程序调用
         self.delete_items = []
         self.set_items = []
         self.remove_items = []
@@ -169,7 +171,7 @@ class SCypherWalker(s_cypherListener):
     # 获取UNION/UNION ALL
     def enterOC_Union(self, ctx: s_cypherParser.OC_UnionContext):
         if ctx.UNION() is not None:
-            if "UNION ALL" in ctx.UNION().getText():
+            if ctx.UNION() is not None and ctx.ALL() is not None:
                 self.union_is_all_list.append(True)
             else:
                 self.union_is_all_list.append(False)
@@ -246,7 +248,7 @@ class SCypherWalker(s_cypherListener):
         is_all = self.projection_item_is_all
         self.projection_item_is_all = False
         is_distinct = False
-        if 'DISTINCT' in ctx.oC_ProjectionBody().getText():
+        if ctx.oC_ProjectionBody().DISTINCT() is not None:
             is_distinct = True
         if ctx.oC_Where() is not None:
             where_expression = self.where_expression.pop()
@@ -266,8 +268,8 @@ class SCypherWalker(s_cypherListener):
         else:
             limit_expression = None
 
-        self.with_clause = WithClause(projection_items, is_all, is_distinct, where_expression, order_by_clause, skip_expression,
-                                      limit_expression)
+        self.with_clause = WithClause(projection_items, is_all, is_distinct, where_expression, order_by_clause,
+                                      skip_expression, limit_expression)
 
     def exitOC_ReadingClause(self, ctx: s_cypherParser.OC_ReadingClauseContext):
         # reading_clause: MatchClause | UnwindClause | CallClause
@@ -314,14 +316,14 @@ class SCypherWalker(s_cypherListener):
         if self.expression.is_empty() is False:
             interval = self.expression.pop()
         else:
-            raise TranslateError("Expect expression but there is none in expression stack.")
+            raise ParseError("Expect expression but there is none in expression stack.")
         self.between_clause = BetweenClause(interval)
 
     def exitS_AtTime(self, ctx: s_cypherParser.S_AtTimeContext):
         if self.expression.is_empty() is False:
             expression = self.expression.pop()
         else:
-            raise TranslateError("Expect expression but there is none in expression stack.")
+            raise ParseError("Expect expression but there is none in expression stack.")
         self.at_time_clause = AtTimeClause(expression)
 
     def exitOC_Unwind(self, ctx: s_cypherParser.OC_UnwindContext):
@@ -330,7 +332,7 @@ class SCypherWalker(s_cypherListener):
         if self.expression.is_empty() is False:
             expression = self.expression.pop()
         else:
-            raise TranslateError("Expect expression but there is none in expression stack.")
+            raise ParseError("Expect expression but there is none in expression stack.")
         variable = ctx.oC_Variable().getText()
         self.unwind_clause = UnwindClause(expression, variable)
 
@@ -338,7 +340,7 @@ class SCypherWalker(s_cypherListener):
         # procedure_name: str,
         # input_items: List[Expression] = None,
         # yield_clause: YieldClause = None
-        self.in_query_call_clause = CallClause(self.procedure_name, self.explicit_input_items.pop(), self.yield_clause)
+        self.in_query_call_clause = CallClause(self.procedure_name, self.explicit_input_items.get(), self.yield_clause)
         self.yield_clause = None
         self.procedure_name = None
 
@@ -370,13 +372,18 @@ class SCypherWalker(s_cypherListener):
         self.yield_items.append(YieldItem(procedure_result, variable))
 
     # CALL查询
+    def enterOC_StandaloneCall(self, ctx: s_cypherParser.OC_StandaloneCallContext):
+        if ctx.oC_ExplicitProcedureInvocation() is not None:
+            self.explicit_input_items.put([])
+
     def exitOC_StandaloneCall(self, ctx: s_cypherParser.OC_StandaloneCallContext):
         # procedure_name: str,
         # input_items: List[Expression] = None,
         # yield_clause: YieldClause = None
         input_items = None
         if ctx.oC_ExplicitProcedureInvocation() is not None:
-            input_items = self.explicit_input_items.pop()
+            input_items = self.explicit_input_items.get()
+        # 检查*
         if '*' in ctx.getText():
             yield_clause = YieldClause(None, True, None)
         else:
@@ -387,13 +394,16 @@ class SCypherWalker(s_cypherListener):
 
     def enterOC_ExplicitProcedureInvocation(self, ctx: s_cypherParser.OC_ExplicitProcedureInvocationContext):
         self.is_explicit = True
-        self.explicit_input_items.push([])
+        # self.explicit_input_items.put([])
 
     def exitOC_ExplicitProcedureInvocation(self, ctx: s_cypherParser.OC_ExplicitProcedureInvocationContext):
         self.is_explicit = False
 
+    def enterS_ExplicitExpression(self, ctx: s_cypherParser.S_ExplicitExpressionContext):
+        self.explicit_input_items.put([])
+
     def exitS_ExplicitExpression(self, ctx: s_cypherParser.S_ExplicitExpressionContext):
-        self.explicit_input_items.peek().append(self.expression.pop())
+        self.explicit_input_items.queue[0].append(self.expression.pop())
 
     @staticmethod
     def getAtTElement(interval_str) -> AtTElement:
@@ -492,7 +502,7 @@ class SCypherWalker(s_cypherListener):
             if self.expression.is_empty() is False:
                 value_content = self.expression.pop()
             else:
-                raise TranslateError("Expect expression but there is none in expression stack.")
+                raise ParseError("Expect expression but there is none in expression stack.")
         # 获取值节点的时间
         time_window = None  # 值节点时间
         if ctx.s_AtTElement() is not None:
@@ -519,7 +529,7 @@ class SCypherWalker(s_cypherListener):
             self.at_t_element = AtTElement(TimePointLiteral('"NOW"'))
             self.time_point_literals = []  # 退出清空
         else:
-            raise TranslateError("Invalid time format!")
+            raise ParseError("Invalid time format!")
 
     def exitS_TimePointLiteral(self, ctx: s_cypherParser.S_TimePointLiteralContext):
         if self.map_literal is not None:
@@ -630,7 +640,7 @@ class SCypherWalker(s_cypherListener):
                 variable = ctx.oC_Variable().getText()
                 self.path_function_pattern.variable = variable
             else:
-                raise TranslateError("The path has no variable!")
+                raise ParseError("The path has no variable!")
             pattern = Pattern(self.path_function_pattern)
         elif ctx.oC_AnonymousPatternPart() is not None:
             if ctx.oC_Variable() is not None:
@@ -638,7 +648,7 @@ class SCypherWalker(s_cypherListener):
                 self.pattern_element.variable = variable
             pattern = Pattern(self.pattern_element)
         else:
-            raise TranslateError("The path pattern format is wrong!")
+            raise ParseError("The path pattern format is wrong!")
         self.patterns.append(pattern)
 
     def exitOC_Return(self, ctx: s_cypherParser.OC_ReturnContext):
@@ -671,7 +681,7 @@ class SCypherWalker(s_cypherListener):
         self.return_clause = ReturnClause(projection_items, is_all, is_distinct, order_by_clause, skip_expression,
                                           limit_expression)
 
-    def exitOC_ProjectionItems(self, ctx:s_cypherParser.OC_ProjectionItemsContext):
+    def exitOC_ProjectionItems(self, ctx: s_cypherParser.OC_ProjectionItemsContext):
         if ctx.getText()[0] == '*':
             self.projection_item_is_all = True
 
@@ -682,7 +692,7 @@ class SCypherWalker(s_cypherListener):
         if self.expression.is_empty() is False:
             expression = self.expression.pop()
         else:
-            raise TranslateError("Expect expression but there is none in expression stack.")
+            raise ParseError("Expect expression but there is none in expression stack.")
         if ctx.oC_Variable() is not None:
             variable = ctx.oC_Variable().getText()
         self.projection_items.append(ProjectionItem(expression, variable))
@@ -696,7 +706,7 @@ class SCypherWalker(s_cypherListener):
         if self.expression.is_empty() is False:
             expression = self.expression.pop()
         else:
-            raise TranslateError("Expect expression but there is none in expression stack.")
+            raise ParseError("Expect expression but there is none in expression stack.")
         string = None
         if ctx.ASCENDING() is not None:
             string = 'ASCENDING'
@@ -712,13 +722,13 @@ class SCypherWalker(s_cypherListener):
         if self.expression.is_empty() is False:
             self.skip_expression.push(self.expression.pop())
         else:
-            raise TranslateError("Expect expression but there is none in expression stack.")
+            raise ParseError("Expect expression but there is none in expression stack.")
 
     def exitOC_Limit(self, ctx: s_cypherParser.OC_LimitContext):
         if self.expression.is_empty() is False:
             self.limit_expression.push(self.expression.pop())
         else:
-            raise TranslateError("Expect expression but there is none in expression stack.")
+            raise ParseError("Expect expression but there is none in expression stack.")
 
     def exitOC_PropertyLookup(self, ctx: s_cypherParser.OC_PropertyLookupContext):
         # property_name: str
@@ -758,7 +768,7 @@ class SCypherWalker(s_cypherListener):
 
     def exitOC_MergeAction(self, ctx: s_cypherParser.OC_MergeActionContext):
         merge_flag = 'CREATE'
-        if 'MATCH' in ctx.getText():
+        if ctx.MATCH() is not None:
             merge_flag = 'MATCH'
         self.merge_actions[merge_flag] = self.set_clause
 
@@ -767,7 +777,7 @@ class SCypherWalker(s_cypherListener):
         # is_detach=False,
         # time_window: AtTimeClause | BetweenClause = None
         is_detach = False
-        if 'DETACH' in ctx.getText():
+        if ctx.DETACH() is not None:
             is_detach = True
         time_window = None
         if ctx.s_AtTime() is not None:
@@ -786,7 +796,7 @@ class SCypherWalker(s_cypherListener):
         if self.expression.is_empty() is False:
             expression = self.expression.pop()
         else:
-            raise TranslateError("Expect expression but there is none in expression stack.")
+            raise ParseError("Expect expression but there is none in expression stack.")
         property_name = None
         if ctx.s_PropertyLookupName() is not None:
             property_name = self.property_look_up_name
@@ -884,13 +894,13 @@ class SCypherWalker(s_cypherListener):
             if self.expression.is_empty() is False:
                 expression_right = self.expression.pop()
             else:
-                raise TranslateError("Expect expression but there is none in expression stack.")
+                raise ParseError("Expect expression but there is none in expression stack.")
             is_added = False
             if '+=' in ctx.getText():
                 is_added = True
             self.set_items.append(ExpressionSetting(expression_left, expression_right, is_added))
         else:
-            raise TranslateError("Error SetItem format.")
+            raise ParseError("Error SetItem format.")
 
     def exitOC_PropertyExpression(self, ctx: s_cypherParser.OC_PropertyExpressionContext):
         if self.is_set:
@@ -936,7 +946,7 @@ class SCypherWalker(s_cypherListener):
         elif ctx.oC_PropertyExpression() is not None:
             self.remove_items.append(self.remove_property_expression.pop())
         else:
-            raise TranslateError("RemoveItem format error.")
+            raise ParseError("RemoveItem format error.")
 
     def exitS_Stale(self, ctx: s_cypherParser.S_StaleContext):
         # stale_items: List[StaleItem]
@@ -954,7 +964,7 @@ class SCypherWalker(s_cypherListener):
         if self.expression.is_empty() is False:
             expression = self.expression.pop()
         else:
-            raise TranslateError("Expect expression but there is none in expression stack.")
+            raise ParseError("Expect expression but there is none in expression stack.")
         property_name = None
         if ctx.s_PropertyLookupName() is not None:
             property_name = self.property_look_up_name
@@ -977,14 +987,14 @@ class SCypherWalker(s_cypherListener):
         if self.expression.is_empty() is False:
             self.snapshot_clause = SnapshotClause(self.expression.pop())
         else:
-            raise TranslateError("Expect expression but there is none in expression stack.")
+            raise ParseError("Expect expression but there is none in expression stack.")
 
     def exitS_Scope(self, ctx: s_cypherParser.S_ScopeContext):
         # interval: Expression
         if self.expression.is_empty() is False:
             self.scope_clause = ScopeClause(self.expression.pop())
         else:
-            raise TranslateError("Expect expression but there is none in expression stack.")
+            raise ParseError("Expect expression but there is none in expression stack.")
 
     def exitOC_Atom(self, ctx: s_cypherParser.OC_AtomContext):
         # atom: str | ListLiteral | MapLiteral | CaseExpression | ListComprehension | PatternComprehension | Quantifier
@@ -1018,8 +1028,7 @@ class SCypherWalker(s_cypherListener):
         elif ctx.oC_ParenthesizedExpression() is not None:
             atom = Atom(self.parenthesized_expression.pop())
         elif ctx.oC_FunctionInvocation() is not None:
-            atom = Atom(self.function_invocation)
-            self.function_invocation = None
+            atom = Atom(self.function_invocation.pop())
         elif ctx.oC_ExistentialSubquery() is not None:
             # TODO
             atom = Atom(self.existential_subquery)
@@ -1028,7 +1037,7 @@ class SCypherWalker(s_cypherListener):
             # 处理str类型
             if ctx.oC_Literal().oC_BooleanLiteral() is not None:
                 atom = Atom(ctx.oC_Literal().oC_BooleanLiteral().getText())
-            elif 'NULL' in ctx.oC_Literal().getText():
+            elif ctx.oC_Literal().NULL() is not None:
                 atom = Atom(ctx.oC_Literal().getText())
             elif ctx.oC_Literal().oC_NumberLiteral() is not None:
                 atom = Atom(ctx.oC_Literal().oC_NumberLiteral().getText())
@@ -1036,7 +1045,7 @@ class SCypherWalker(s_cypherListener):
                 atom = Atom(ctx.oC_Literal().StringLiteral().getText())
         elif ctx.oC_Parameter() is not None:
             atom = Atom(ctx.oC_Parameter().getText())
-        elif 'COUNT' in ctx.getText():
+        elif ctx.COUNT() is not None:
             atom = Atom(ctx.getText())
         else:
             atom = Atom(ctx.getText())
@@ -1050,7 +1059,7 @@ class SCypherWalker(s_cypherListener):
         if ctx.oC_FilterExpression().oC_IdInColl().oC_Variable() is not None:
             variable = ctx.oC_FilterExpression().oC_IdInColl().oC_Variable().getText()
         else:
-            raise TranslateError("The variable of oC_IdInColl is None!")
+            raise ParseError("The variable of oC_IdInColl is None!")
         if self.list_expression.is_empty() is False:
             list_expression = self.list_expression.pop()
         else:
@@ -1063,7 +1072,7 @@ class SCypherWalker(s_cypherListener):
             if self.expression.is_empty() is False:
                 back_expression = self.expression.pop()
             else:
-                raise TranslateError("Expect expression but there is none in expression stack.")
+                raise ParseError("Expect expression but there is none in expression stack.")
         else:
             back_expression = None
         self.list_comprehension = ListComprehension(variable, list_expression, where_expression, back_expression)
@@ -1076,20 +1085,20 @@ class SCypherWalker(s_cypherListener):
         if self.expression.is_empty() is False:
             self.list_expression.push(self.expression.pop())
         else:
-            raise TranslateError("Expect expression but there is none in expression stack.")
+            raise ParseError("Expect expression but there is none in expression stack.")
 
     def enterOC_ListLiteral(self, ctx: s_cypherParser.OC_ListLiteralContext):
-        self.list_literal_expressions.push([])
+        self.list_literal_expressions.put([])
 
     def exitOC_ListLiteral(self, ctx: s_cypherParser.OC_ListLiteralContext):
         # expressions: List
-        self.list_literal = ListLiteral(self.list_literal_expressions.pop())
+        self.list_literal = ListLiteral(self.list_literal_expressions.get())
 
     def exitS_ListLiteralExpression(self, ctx: s_cypherParser.S_ListLiteralExpressionContext):
         if self.expression.is_empty() is False:
-            self.list_literal_expressions.peek().append(self.expression.pop())
+            self.list_literal_expressions.queue[0].append(self.expression.pop())
         else:
-            raise TranslateError("Expect expression but there is none in expression stack.")
+            raise ParseError("Expect expression but there is none in expression stack.")
 
     def exitOC_MapLiteral(self, ctx: s_cypherParser.OC_MapLiteralContext):
         # keys_values: dict
@@ -1105,7 +1114,7 @@ class SCypherWalker(s_cypherListener):
         if self.expression.is_empty() is False:
             expression = self.expression.pop()
         else:
-            raise TranslateError("Expect expression but there is none in expression stack.")
+            raise ParseError("Expect expression but there is none in expression stack.")
         if property_key_name is not None:
             self.map_key_values[property_key_name] = expression
 
@@ -1114,10 +1123,10 @@ class SCypherWalker(s_cypherListener):
         if self.expression.is_empty() is False:
             self.parenthesized_expression.push(ParenthesizedExpression(self.expression.pop()))
         else:
-            raise TranslateError("Expect expression but there is none in expression stack.")
+            raise ParseError("Expect expression but there is none in expression stack.")
 
     def enterOC_FunctionInvocation(self, ctx: s_cypherParser.OC_FunctionInvocationContext):
-        self.function_invocation_expressions.push([])
+        self.function_invocation_expressions.put([])
 
     def exitOC_FunctionInvocation(self, ctx: s_cypherParser.OC_FunctionInvocationContext):
         # function_name: str,
@@ -1125,48 +1134,47 @@ class SCypherWalker(s_cypherListener):
         # expressions: List = None
         function_name = ctx.oC_FunctionName().getText()
         is_distinct = False
-        if 'DISTINCT' in ctx.getText():
+        if ctx.DISTINCT() is not None:
             is_distinct = True
-        expressions = self.function_invocation_expressions.pop()
-        self.function_invocation = FunctionInvocation(function_name, is_distinct, expressions)
+        # TODO empty
+        if len(self.function_invocation_expressions.queue[0]) > 0:
+            expressions = self.function_invocation_expressions.get()
+        else:
+            expressions = None
+        self.function_invocation.push(FunctionInvocation(function_name, is_distinct, expressions))
 
     def exitS_FunctionInvocationExpression(self, ctx: s_cypherParser.S_FunctionInvocationExpressionContext):
         if self.expression.is_empty() is False:
-            self.function_invocation_expressions.peek().append(self.expression.pop())
+            self.function_invocation_expressions.queue[0].append(self.expression.pop())
         else:
-            raise TranslateError("Expect expression but there is none in expression stack.")
+            raise ParseError("Expect expression but there is none in expression stack.")
 
-    # expression新方案，使用栈来存储已经遍历过的语法子树信息
+    # expression新方案，使用队列来存储已经遍历过的语法子树信息
     def exitOC_Expression(self, ctx: s_cypherParser.OC_ExpressionContext):
         expression = Expression(self.or_expression.pop())
         self.expression.push(expression)
 
     def enterOC_OrExpression(self, ctx: s_cypherParser.OC_OrExpressionContext):
-        self.xor_expressions.push([])
+        self.xor_expressions.put([])
 
     def exitOC_OrExpression(self, ctx: s_cypherParser.OC_OrExpressionContext):
         # xor_expressions: List[XorExpression]
-        or_expression = OrExpression(self.xor_expressions.pop())
+        or_expression = OrExpression(self.xor_expressions.get())
         self.or_expression.push(or_expression)
 
     def enterOC_XorExpression(self, ctx: s_cypherParser.OC_XorExpressionContext):
-        # self.xor_expressions.push([])
-        self.and_expressions.push([])
+        self.and_expressions.put([])
 
     def exitOC_XorExpression(self, ctx: s_cypherParser.OC_XorExpressionContext):
         # and_expressions: List[AndExpression]
-        self.xor_expressions.peek().append(XorExpression(self.and_expressions.pop()))
+        self.xor_expressions.queue[0].append(XorExpression(self.and_expressions.get()))
 
     def enterOC_AndExpression(self, ctx: s_cypherParser.OC_AndExpressionContext):
-        # self.and_expressions.push([])
-        self.not_expressions.push([])
+        self.not_expressions.put([])
 
     def exitOC_AndExpression(self, ctx: s_cypherParser.OC_AndExpressionContext):
         # not_expressions: List[NotExpression]
-        self.and_expressions.peek().append(AndExpression(self.not_expressions.pop()))
-
-    # def enterOC_NotExpression(self, ctx: s_cypherParser.OC_NotExpressionContext):
-    #     self.subject_expressions.push([])
+        self.and_expressions.queue[0].append(AndExpression(self.not_expressions.get()))
 
     def exitOC_NotExpression(self, ctx: s_cypherParser.OC_NotExpressionContext):
         # comparison_expression: ComparisonExpression,
@@ -1174,10 +1182,10 @@ class SCypherWalker(s_cypherListener):
         is_not = False
         if ctx.NOT():
             is_not = True
-        self.not_expressions.peek().append(NotExpression(self.comparison_expression.pop(), is_not))
+        self.not_expressions.queue[0].append(NotExpression(self.comparison_expression.pop(), is_not))
 
     def enterOC_ComparisonExpression(self, ctx: s_cypherParser.OC_ComparisonExpressionContext):
-        self.subject_expressions.push([])
+        self.subject_expressions.put([])
 
     def exitOC_ComparisonExpression(self, ctx: s_cypherParser.OC_ComparisonExpressionContext):
         # subject_expressions: List[SubjectExpression],
@@ -1190,7 +1198,11 @@ class SCypherWalker(s_cypherListener):
             comparison_operations = self.comparison_operations
             self.comparison_operations = []  # 退出清空
         # 比较运算符的个数=元素个数+1
-        subject_expressions = self.subject_expressions.pop()
+        # TODO empty
+        if len(self.subject_expressions.queue[0]) > 0:
+            subject_expressions = self.subject_expressions.get()
+        else:
+            raise ParseError("At least one SubjectExpression is expected but there is none.")
         self.comparison_expression.push(ComparisonExpression(subject_expressions, comparison_operations))
 
     def exitS_ComparisonOperator(self, ctx: s_cypherParser.S_ComparisonOperatorContext):
@@ -1203,7 +1215,7 @@ class SCypherWalker(s_cypherListener):
         if self.add_subtract_expression.is_empty() is False:
             add_or_subtract_expression = self.add_subtract_expression.pop()
         else:
-            raise TranslateError("The number of AddOrSubtractExpression is wrong.")
+            raise ParseError("At least one AddOrSubtractExpression is expected but there is none.")
         predicate_expression = None
         if ctx.s_TimePredicateExpression() is not None:
             predicate_expression = self.time_predicate_expression.pop()
@@ -1213,54 +1225,61 @@ class SCypherWalker(s_cypherListener):
             predicate_expression = self.list_predicate_expression.pop()
         elif ctx.oC_NullPredicateExpression() is not None:
             predicate_expression = self.null_predicate_expression.pop()
-
-        peek = self.subject_expressions.peek()
-        self.subject_expressions.peek().append(SubjectExpression(add_or_subtract_expression, predicate_expression))
+        self.subject_expressions.queue[0].append(SubjectExpression(add_or_subtract_expression, predicate_expression))
 
     def exitS_TimePredicateExpression(self, ctx: s_cypherParser.S_TimePredicateExpressionContext):
         # time_operation: str,
         # add_or_subtract_expression: AddSubtractExpression
         time_str = ctx.getText()
+        # 检查ctx.
         if 'DURING' in time_str and 'OVERLAPS' not in time_str:
             time_operation = 'DURING'
         elif 'DURING' not in time_str and 'OVERLAPS' in time_str:
             time_operation = 'OVERLAPS'
         else:
-            raise TranslateError("The time predicate expression must have the operation DURING or OVERLAPS.")
+            raise ParseError("The time predicate expression must have the operation DURING or OVERLAPS.")
         if self.add_subtract_expression.is_empty() is False:
             add_or_subtract_expression = self.add_subtract_expression.pop()
         else:
-            raise TranslateError("The number of AddOrSubtractExpression is wrong.")
+            raise ParseError("At least one AddOrSubtractExpression is expected but there is none.")
         self.time_predicate_expression.push(TimePredicateExpression(time_operation, add_or_subtract_expression))
 
     def exitOC_StringPredicateExpression(self, ctx: s_cypherParser.OC_StringPredicateExpressionContext):
         # string_operation: str,
         # add_or_subtract_expression: AddSubtractExpression
         string_str = ctx.getText()
-        if 'STARTS' and 'WITH' in string_str:
+        if ctx.STARTS() is not None and ctx.WITH() is not None:
             string_operation = 'STARTS WITH'
-        elif 'ENDS' and 'WITH' in string_str:
+        elif ctx.ENDS() and ctx.WITH() is not None:
             string_operation = 'ENDS WITH'
-        elif 'CONTAINS' in string_str:
+        elif ctx.CONTAINS() is not None:
             string_operation = 'CONTAINS'
         else:
-            raise TranslateError("There must have an operation among 'STARTS WITH','ENDS WITH' and 'CONTAINS'.")
+            raise ParseError("There must have an operation among 'STARTS WITH','ENDS WITH' and 'CONTAINS'.")
         if self.add_subtract_expression.is_empty() is False:
             add_or_subtract_expression = self.add_subtract_expression.pop()
         else:
-            raise TranslateError("The number of AddOrSubtractExpression is wrong.")
+            raise ParseError("At least one AddOrSubtractExpression is expected but there is none.")
         self.string_predicate_expression.push(StringPredicateExpression(string_operation, add_or_subtract_expression))
 
     def exitOC_ListPredicateExpression(self, ctx: s_cypherParser.OC_ListPredicateExpressionContext):
         # add_or_subtract_expression: AddSubtractExpression
         if self.add_subtract_expression.is_empty() is False:
             add_or_subtract_expression = self.add_subtract_expression.pop()
-            self.list_predicate_expression = ListPredicateExpression(add_or_subtract_expression)
+            self.list_predicate_expression.push(ListPredicateExpression(add_or_subtract_expression))
         else:
-            raise TranslateError("The number of AddOrSubtractExpression is wrong.")
+            raise ParseError("At least one AddOrSubtractExpression is expected but there is none.")
+
+    def exitOC_NullPredicateExpression(self, ctx: s_cypherParser.OC_NullPredicateExpressionContext):
+        # is_null: bool = True
+        if ctx.IS() is not None and ctx.NOT() is not None and ctx.NULL() is not None:
+            is_null = False
+        else:
+            is_null = True
+        self.null_predicate_expression.push(NullPredicateExpression(is_null))
 
     def enterOC_AddOrSubtractExpression(self, ctx: s_cypherParser.OC_AddOrSubtractExpressionContext):
-        self.multiply_divide_modulo_expressions.push([])
+        self.multiply_divide_modulo_expressions.put([])
 
     def exitOC_AddOrSubtractExpression(self, ctx: s_cypherParser.OC_AddOrSubtractExpressionContext):
         # multiply_divide_modulo_expressions: List[MultiplyDivideExpression],
@@ -1271,16 +1290,19 @@ class SCypherWalker(s_cypherListener):
             self.add_subtract_operations = []  # 退出时清空
         else:
             add_subtract_operations = None
-        multiply_divide_modulo_expressions = self.multiply_divide_modulo_expressions.pop()
+        # TODO empty
+        if len(self.multiply_divide_modulo_expressions.queue[0]) > 0:
+            multiply_divide_modulo_expressions = self.multiply_divide_modulo_expressions.get()
+        else:
+            raise ParseError("At least one MultiplyDivideExpression is expected but there is none.")
         self.add_subtract_expression.push(AddSubtractExpression(multiply_divide_modulo_expressions,
-                                                                add_subtract_operations))
+                                                               add_subtract_operations))
 
     def exitS_AddOrSubtractOperator(self, ctx: s_cypherParser.S_AddOrSubtractOperatorContext):
         self.add_subtract_operations.append(ctx.getText())
 
     def enterOC_MultiplyDivideModuloExpression(self, ctx: s_cypherParser.OC_MultiplyDivideModuloExpressionContext):
-        # self.multiply_divide_modulo_expressions.push([])
-        self.power_expressions.push([])
+        self.power_expressions.put([])
 
     def exitOC_MultiplyDivideModuloExpression(self, ctx: s_cypherParser.OC_MultiplyDivideModuloExpressionContext):
         # power_expressions: List[PowerExpression],
@@ -1291,31 +1313,34 @@ class SCypherWalker(s_cypherListener):
             self.multiply_divide_module_operations = []  # 退出时清空
         else:
             multiply_divide_operations = None
-        power_expressions = self.power_expressions.pop()
-        self.multiply_divide_modulo_expressions.peek().append(
+        # TODO empty
+        if len(self.power_expressions.queue[0]) > 0:
+            power_expressions = self.power_expressions.get()
+        else:
+            raise ParseError("At least one PowerExpression is expected but there is none.")
+        self.multiply_divide_modulo_expressions.queue[0].append(
             MultiplyDivideModuloExpression(power_expressions, multiply_divide_operations))
 
     def exitS_MultiplyDivideModuloOperator(self, ctx: s_cypherParser.S_MultiplyDivideModuloOperatorContext):
         self.multiply_divide_module_operations.append(ctx.getText())
 
     def enterOC_PowerOfExpression(self, ctx: s_cypherParser.OC_PowerOfExpressionContext):
-        # self.power_expressions.push([])
-        self.list_index_expressions.push([])
+        self.list_index_expressions.put([])
 
     def exitOC_PowerOfExpression(self, ctx: s_cypherParser.OC_PowerOfExpressionContext):
         # list_index_expressions: List[ListIndexExpression]
-        self.power_expressions.peek().append(PowerExpression(self.list_index_expressions.pop()))
+        self.power_expressions.queue[0].append(PowerExpression(self.list_index_expressions.get()))
 
     def exitOC_ListOperatorExpression(self, ctx: s_cypherParser.OC_ListOperatorExpressionContext):
         if ctx.oC_PropertyOrLabelsExpression() is not None:
             self.principal_expression.push(self.properties_labels_expression.pop())
         elif ctx.s_AtTExpression() is not None:
             self.principal_expression.push(self.AtT_expression.pop())
-        # else:
-        #     self.principal_expression.push(None)
+        else:
+            raise ParseError("At least one PropertyOrLabelsExpression or AtTExpression is expected but there is none.")
 
     def enterOC_UnaryAddOrSubtractExpression(self, ctx: s_cypherParser.OC_UnaryAddOrSubtractExpressionContext):
-        self.index_expressions.push([])
+        self.index_expressions.put([])
 
     def exitOC_UnaryAddOrSubtractExpression(self, ctx: s_cypherParser.OC_UnaryAddOrSubtractExpressionContext):
         # 最后要返回的ListIndexExpression的参数如下
@@ -1326,12 +1351,13 @@ class SCypherWalker(s_cypherListener):
         if ctx.getText()[0] == '-':
             is_positive = False
         principal_expression = self.principal_expression.pop()
-        if self.index_expressions.is_empty() is False:
-            index_expressions = self.index_expressions.pop()
+        # TODO empty
+        if len(self.index_expressions.queue[0]) > 0:
+            index_expressions = self.index_expressions.get()
         else:
             index_expressions = None
-        self.list_index_expressions.peek().append(ListIndexExpression(principal_expression,
-                                                                      is_positive, index_expressions))
+        self.list_index_expressions.queue[0].append(ListIndexExpression(principal_expression, is_positive,
+                                                                        index_expressions))
 
     # 获取单个的IndexExpression
     def exitS_SingleIndexExpression(self, ctx: s_cypherParser.S_SingleIndexExpressionContext):
@@ -1339,7 +1365,7 @@ class SCypherWalker(s_cypherListener):
         # right_expression=None
         left_expression = self.left_expression.pop()
         index_expression = IndexExpression(left_expression, None)
-        self.index_expressions.peek().append(index_expression)
+        self.index_expressions.queue[0].append(index_expression)
 
     # 获取成对的IndexExpression
     def exitS_DoubleIndexExpression(self, ctx: s_cypherParser.S_DoubleIndexExpressionContext):
@@ -1348,19 +1374,19 @@ class SCypherWalker(s_cypherListener):
         left_expression = self.left_expression.pop()
         right_expression = self.right_expression.pop()
         index_expression = IndexExpression(left_expression, right_expression)
-        self.index_expressions.peek().append(index_expression)
+        self.index_expressions.queue[0].append(index_expression)
 
     def exitS_LeftExpression(self, ctx: s_cypherParser.S_LeftExpressionContext):
         if self.expression.is_empty() is False:
             self.left_expression.push(self.expression.pop())
         else:
-            raise TranslateError("Expect expression but there is none in expression stack.")
+            raise ParseError("Expect expression but there is none in expression stack.")
 
     def exitS_RightExpression(self, ctx: s_cypherParser.S_RightExpressionContext):
         if self.expression.is_empty() is False:
             self.right_expression.push(self.expression.pop())
         else:
-            raise TranslateError("Expect expression but there is none in expression stack.")
+            raise ParseError("Expect expression but there is none in expression stack.")
 
     def exitOC_PropertyOrLabelsExpression(self, ctx: s_cypherParser.OC_PropertyOrLabelsExpressionContext):
         # atom: Atom,
@@ -1423,7 +1449,16 @@ class SCypherWalker(s_cypherListener):
         if self.expression.is_empty() is False:
             self.where_expression.push(self.expression.pop())
         else:
-            raise TranslateError("Expect expression but there is none in expression stack.")
+            raise ParseError("Expect expression but there is none in expression stack.")
+
+    # # 打印遍历语法树过程
+    # def enterEveryRule(self, ctx):
+    #     print("Enter rule:", type(ctx).__name__)
+    #     print("  Text:", ctx.getText())
+    #
+    # def exitEveryRule(self, ctx):
+    #     print("Exit rule:", type(ctx).__name__)
+    #     print("  Text:", ctx.getText())
 
 
 class Stack(object):
@@ -1438,6 +1473,12 @@ class Stack(object):
             return self.items[len(self.items) - 1]
         else:
             raise IndexError("从空栈执行弹出栈顶元素操作")
+
+    def peek_is_empty(self):
+        if self.items:
+            return self.peek() == []
+        else:
+            return self.items == []
 
     def size(self):  # 返回栈的大小
         return len(self.items)

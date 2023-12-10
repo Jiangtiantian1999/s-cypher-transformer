@@ -37,6 +37,12 @@ class SCypherErrorStrategy(BailErrorStrategy):
         super().recover(recognizer, e)
 
 
+# 语法解析问题
+class ParseError(Exception):
+    def __int__(self, message):
+        super().__init__(message)
+
+
 # 中间实体转换问题
 class TranslateError(Exception):
     def __int__(self, message):
