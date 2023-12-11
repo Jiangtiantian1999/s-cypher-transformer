@@ -831,8 +831,8 @@ class SCypherWalker(s_cypherListener):
 
         # ===item: EffectiveTimeSetting
         # 只有对象节点
-        if ctx.s_AtTElement() is not None and all(item is None for item in [ctx.s_SetPropertyItemOne(),
-                                                                            ctx.s_SetPropertyItemTwo()]):
+        if (ctx.s_AtTElement() is not None and ctx.oC_Variable() is not None
+                and (item is None for item in [ctx.s_SetPropertyItemOne(), ctx.s_SetPropertyItemTwo()])):
             variable = ctx.oC_Variable().getText()
             effective_time = self.at_t_element
             self.at_t_element = None
