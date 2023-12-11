@@ -136,10 +136,10 @@ class SCypherWalker(s_cypherListener):
         self.property_look_up_time_list = []
         self.property_look_up_name = None
         self.procedure_name = None
-        self.add_subtract_operations = []
-        self.multiply_divide_module_operations = []
-        self.power_operations = []
-        self.comparison_operations = []
+        self.add_subtract_operations = Stack()
+        self.multiply_divide_module_operations = Stack()
+        self.power_operations = Stack()
+        self.comparison_operations = Stack()
         self.map_key_values = dict()
         self.integer_literals = []
         self.rel_properties = None
@@ -1191,17 +1191,18 @@ class SCypherWalker(s_cypherListener):
 
     def enterOC_ComparisonExpression(self, ctx: s_cypherParser.OC_ComparisonExpressionContext):
         self.subject_expressions.push([])
+        self.comparison_operations.push([])
 
     def exitOC_ComparisonExpression(self, ctx: s_cypherParser.OC_ComparisonExpressionContext):
         # subject_expressions: List[SubjectExpression],
         # comparison_operations: List[str] = None
         # 第一个SubjectExpression不可少，后面每一个符号和一个SubjectExpression为一组合
         # 获取比较运算符
-        if len(self.comparison_operations) == 0:
+        if len(self.comparison_operations.peek()) == 0:
+            cmp_op = self.comparison_operations.pop()
             comparison_operations = None
         else:
-            comparison_operations = self.comparison_operations
-            self.comparison_operations = []  # 退出清空
+            comparison_operations = self.comparison_operations.pop()
         # 比较运算符的个数=元素个数+1
         # TODO empty
         if len(self.subject_expressions.peek()) > 0:
@@ -1211,7 +1212,7 @@ class SCypherWalker(s_cypherListener):
         self.comparison_expression.push(ComparisonExpression(subject_expressions, comparison_operations))
 
     def exitS_ComparisonOperator(self, ctx: s_cypherParser.S_ComparisonOperatorContext):
-        self.comparison_operations.append(ctx.getText())
+        self.comparison_operations.peek().append(ctx.getText())
 
     def exitOC_StringListNullPredicateExpression(self, ctx: s_cypherParser.OC_StringListNullPredicateExpressionContext):
         # add_or_subtract_expression: AddSubtractExpression,
@@ -1285,15 +1286,16 @@ class SCypherWalker(s_cypherListener):
 
     def enterOC_AddOrSubtractExpression(self, ctx: s_cypherParser.OC_AddOrSubtractExpressionContext):
         self.multiply_divide_modulo_expressions.push([])
+        self.add_subtract_operations.push([])
 
     def exitOC_AddOrSubtractExpression(self, ctx: s_cypherParser.OC_AddOrSubtractExpressionContext):
         # multiply_divide_modulo_expressions: List[MultiplyDivideExpression],
         # add_subtract_operations: List[str] = None
         # 获取加减运算符
-        if len(self.add_subtract_operations) > 0:
-            add_subtract_operations = self.add_subtract_operations
-            self.add_subtract_operations = []  # 退出时清空
+        if len(self.add_subtract_operations.peek()) > 0:
+            add_subtract_operations = self.add_subtract_operations.pop()
         else:
+            as_op = self.add_subtract_operations.pop()
             add_subtract_operations = None
         # TODO empty
         if ctx.oC_MultiplyDivideModuloExpression() is not None and len(self.multiply_divide_modulo_expressions.peek()) > 0:
@@ -1304,21 +1306,21 @@ class SCypherWalker(s_cypherListener):
                                                                add_subtract_operations))
 
     def exitS_AddOrSubtractOperator(self, ctx: s_cypherParser.S_AddOrSubtractOperatorContext):
-        self.add_subtract_operations.append(ctx.getText())
+        self.add_subtract_operations.peek().append(ctx.getText())
 
     def enterOC_MultiplyDivideModuloExpression(self, ctx: s_cypherParser.OC_MultiplyDivideModuloExpressionContext):
         self.power_expressions.push([])
+        self.multiply_divide_module_operations.push([])
 
     def exitOC_MultiplyDivideModuloExpression(self, ctx: s_cypherParser.OC_MultiplyDivideModuloExpressionContext):
         # power_expressions: List[PowerExpression],
         # multiply_divide_operations: List[str] = None
         # 获取乘除模运算符
-        if len(self.multiply_divide_module_operations) > 0:
-            multiply_divide_operations = self.multiply_divide_module_operations
-            self.multiply_divide_module_operations = []  # 退出时清空
+        if len(self.multiply_divide_module_operations.peek()) > 0:
+            multiply_divide_operations = self.multiply_divide_module_operations.pop()
         else:
+            md_op = self.multiply_divide_module_operations.pop()
             multiply_divide_operations = None
-        # TODO empty
         if ctx.oC_PowerOfExpression() is not None and len(self.power_expressions.peek()) > 0:
             power_expressions = self.power_expressions.pop()
         else:
@@ -1327,7 +1329,7 @@ class SCypherWalker(s_cypherListener):
             MultiplyDivideModuloExpression(power_expressions, multiply_divide_operations))
 
     def exitS_MultiplyDivideModuloOperator(self, ctx: s_cypherParser.S_MultiplyDivideModuloOperatorContext):
-        self.multiply_divide_module_operations.append(ctx.getText())
+        self.multiply_divide_module_operations.peek().append(ctx.getText())
 
     def enterOC_PowerOfExpression(self, ctx: s_cypherParser.OC_PowerOfExpressionContext):
         self.list_index_expressions.push([])
