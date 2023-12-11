@@ -153,7 +153,7 @@ class ClauseConverter:
         elif reading_clause.reading_clause.__class__ == UnwindClause:
             unwind_expression_string = self.expression_converter.convert_expression(
                 reading_clause.reading_clause.expression)
-            return "UNWIND" + unwind_expression_string + "\nAS " + reading_clause.reading_clause.variable
+            return "UNWIND " + unwind_expression_string + "\nAS " + reading_clause.reading_clause.variable
         elif reading_clause.reading_clause.__class__ == CallClause:
             return self.convert_call_clause(reading_clause.reading_clause)
 
