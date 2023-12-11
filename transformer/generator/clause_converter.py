@@ -252,7 +252,7 @@ class ClauseConverter:
         if where_expression:
             where_clause_string = where_clause_string + self.expression_converter.convert_expression(where_expression)
         if len(pattern_time_window_info) > 0 or time_window:
-            if where_clause_string != "WHERE ":
+            if where_expression:
                 where_clause_string = '(' + where_clause_string + ") and "
             if time_window.__class__ == AtTimeClause:
                 time_window_string = self.expression_converter.convert_expression(time_window.time_point)
