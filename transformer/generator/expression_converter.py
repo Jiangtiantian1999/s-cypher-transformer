@@ -177,7 +177,7 @@ class ExpressionConverter:
             at_t_expression_string = "scypher.getPropertyEffectiveTime(" + at_t_expression_string + ", \"" + at_t_expression.property_name + "\")"
         else:
             # 返回值节点的有效时间
-            if at_t_expression.time_window.__class__ == AtTExpression:
+            if at_t_expression.time_window.__class__ == AtTElement:
                 interval_string = self.convert_at_t_element(at_t_expression.time_window)
             else:
                 interval_string = "NULL"

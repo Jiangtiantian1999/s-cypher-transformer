@@ -242,19 +242,18 @@ class ClauseConverter:
 
         return match_clause_string + call_string
 
-    def convert_where_clause(self, where_expression: Expression = None,
-                             pattern_time_window_info: list = None,
+    def convert_where_clause(self, where_expression: Expression = None, pattern_time_window_info: list = None,
                              time_window: AtTimeClause | BetweenClause = None) -> str:
         if pattern_time_window_info is None:
             pattern_time_window_info = []
         if where_expression is None and len(pattern_time_window_info) == 0 and time_window is None:
             raise TranslateError("The where expression and the time window conditions can't be None at the same time")
-        where_clause_string = "WHERE "
+        where_clause_string = ""
         if where_expression:
             where_clause_string = where_clause_string + self.expression_converter.convert_expression(where_expression)
         if len(pattern_time_window_info) > 0 or time_window:
             if where_clause_string != "WHERE ":
-                where_clause_string = where_clause_string + " and "
+                where_clause_string = '(' + where_clause_string + ") and "
             if time_window.__class__ == AtTimeClause:
                 time_window_string = self.expression_converter.convert_expression(time_window.time_point)
             elif time_window.__class__ == BetweenClause:
@@ -264,7 +263,7 @@ class ClauseConverter:
             where_clause_string = where_clause_string + "scypher.limitEffectiveTime(" + convert_list_to_str(
                 pattern_time_window_info) + ", " + time_window_string + ')'
 
-        return where_clause_string
+        return "WHERE " + where_clause_string
 
     def convert_updating_clause(self, updating_clause: UpdatingClause) -> str:
         self.variables_manager.update_updating_clause_variables(updating_clause)
@@ -585,10 +584,10 @@ class ClauseConverter:
 
     def convert_order_by_clause(self, order_by_clause: OrderByClause) -> str:
         order_by_clause_string = "ORDER BY "
-        for index, (expression, sort_method) in enumerate(order_by_clause.sort_items.items()):
-            if index != 0:
-                order_by_clause_string = order_by_clause_string + '\n'
-            order_by_clause_string = order_by_clause_string + self.expression_converter.convert_expression(expression)
+        for (expression, sort_method) in order_by_clause.sort_items.items():
+            order_by_clause_string = order_by_clause_string + self.expression_converter.convert_expression(
+                expression)
             if sort_method:
                 order_by_clause_string = order_by_clause_string + ' ' + sort_method
-        return order_by_clause_string
+            order_by_clause_string = order_by_clause_string + ", "
+        return order_by_clause_string.rstrip(", ")
