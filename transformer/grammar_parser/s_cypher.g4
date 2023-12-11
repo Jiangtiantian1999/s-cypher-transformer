@@ -147,7 +147,7 @@ s_TimePropertyItem
 
 s_TimePredicateExpression : SP ( DURING | OVERLAPS ) SP oC_AddOrSubtractExpression ;
 
-s_AtTElement : AtT SP? '(' ( SP? s_TimePointLiteral SP? ',' )? SP? ( s_TimePointLiteral | NOW ) SP? ')';
+s_AtTElement : AtT SP? '(' ( SP? s_TimePointLiteral SP? ',' )? SP? ( NOW | s_TimePointLiteral ) SP? ')';
 
 s_TimePointLiteral : StringLiteral
                    | oC_MapLiteral

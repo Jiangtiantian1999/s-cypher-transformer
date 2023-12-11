@@ -1,4 +1,4 @@
-# Generated from .\transformer\grammar_parser\s_cypher.g4 by ANTLR 4.13.0
+# Generated from s_cypher.g4 by ANTLR 4.13.0
 # encoding: utf-8
 from antlr4 import *
 from io import StringIO
@@ -543,7 +543,7 @@ def serializedATN():
         1141,1,0,0,0,1142,1143,1,0,0,0,1143,1144,1,0,0,0,1144,1145,5,1,0,
         0,1145,1147,1,0,0,0,1146,1138,1,0,0,0,1146,1147,1,0,0,0,1147,1149,
         1,0,0,0,1148,1150,5,135,0,0,1149,1148,1,0,0,0,1149,1150,1,0,0,0,
-        1150,1153,1,0,0,0,1151,1154,3,122,61,0,1152,1154,5,48,0,0,1153,1151,
+        1150,1153,1,0,0,0,1151,1154,5,48,0,0,1152,1154,3,122,61,0,1153,1151,
         1,0,0,0,1153,1152,1,0,0,0,1154,1156,1,0,0,0,1155,1157,5,135,0,0,
         1156,1155,1,0,0,0,1156,1157,1,0,0,0,1157,1158,1,0,0,0,1158,1159,
         5,7,0,0,1159,121,1,0,0,0,1160,1163,5,117,0,0,1161,1163,3,132,66,
@@ -6560,15 +6560,15 @@ class s_cypherParser ( Parser ):
         def AtT(self):
             return self.getToken(s_cypherParser.AtT, 0)
 
+        def NOW(self):
+            return self.getToken(s_cypherParser.NOW, 0)
+
         def s_TimePointLiteral(self, i:int=None):
             if i is None:
                 return self.getTypedRuleContexts(s_cypherParser.S_TimePointLiteralContext)
             else:
                 return self.getTypedRuleContext(s_cypherParser.S_TimePointLiteralContext,i)
 
-
-        def NOW(self):
-            return self.getToken(s_cypherParser.NOW, 0)
 
         def SP(self, i:int=None):
             if i is None:
@@ -6646,13 +6646,13 @@ class s_cypherParser ( Parser ):
             self.state = 1153
             self._errHandler.sync(self)
             token = self._input.LA(1)
-            if token in [8, 117]:
+            if token in [48]:
                 self.state = 1151
-                self.s_TimePointLiteral()
-                pass
-            elif token in [48]:
-                self.state = 1152
                 self.match(s_cypherParser.NOW)
+                pass
+            elif token in [8, 117]:
+                self.state = 1152
+                self.s_TimePointLiteral()
                 pass
             else:
                 raise NoViableAltException(self)
