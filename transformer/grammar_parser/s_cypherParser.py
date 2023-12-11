@@ -1,4 +1,4 @@
-# Generated from s_cypher.g4 by ANTLR 4.13.0
+# Generated from .\s_cypher.g4 by ANTLR 4.13.0
 # encoding: utf-8
 from antlr4 import *
 from io import StringIO
@@ -944,7 +944,7 @@ class s_cypherParser ( Parser ):
                      "'\\uFE65'", "'\\uFF1E'", "'\\u00AD'", "'\\u2010'", 
                      "'\\u2011'", "'\\u2012'", "'\\u2013'", "'\\u2014'", 
                      "'\\u2015'", "'\\u2212'", "'\\uFE58'", "'\\uFE63'", 
-                     "'\\uFF0D'", "<INVALID>", "<INVALID>", "'NOW'", "<INVALID>", 
+                     "'\\uFF0D'", "<INVALID>", "<INVALID>", "<INVALID>", 
                      "<INVALID>", "<INVALID>", "<INVALID>", "<INVALID>", 
                      "<INVALID>", "<INVALID>", "<INVALID>", "<INVALID>", 
                      "<INVALID>", "<INVALID>", "<INVALID>", "<INVALID>", 
@@ -961,7 +961,7 @@ class s_cypherParser ( Parser ):
                      "<INVALID>", "<INVALID>", "<INVALID>", "<INVALID>", 
                      "<INVALID>", "<INVALID>", "<INVALID>", "<INVALID>", 
                      "<INVALID>", "<INVALID>", "<INVALID>", "<INVALID>", 
-                     "'0'" ]
+                     "<INVALID>", "'0'" ]
 
     symbolicNames = [ "<INVALID>", "<INVALID>", "<INVALID>", "<INVALID>", 
                       "<INVALID>", "<INVALID>", "<INVALID>", "<INVALID>", 

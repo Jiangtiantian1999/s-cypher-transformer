@@ -408,7 +408,7 @@ class SCypherWalker(s_cypherListener):
     @staticmethod
     def getAtTElement(interval_str) -> AtTElement:
         index = 0
-        interval_from = interval_to = ""
+        interval_from = interval_to = None
         find_from = find_to = False
         while index < len(interval_str):
             if interval_str[index] == " ":
@@ -416,9 +416,11 @@ class SCypherWalker(s_cypherListener):
                 continue
             elif interval_str[index] == '(':
                 find_from = True
+                interval_from = ""
             elif interval_str[index] == ',':
                 find_to = True
                 find_from = False
+                interval_to = ""
             elif interval_str[index] == ')':
                 break
             elif find_from:
@@ -518,15 +520,15 @@ class SCypherWalker(s_cypherListener):
         if len(self.time_point_literals) == 2:
             self.at_t_element = AtTElement(self.time_point_literals[0], self.time_point_literals[1])
             self.time_point_literals = []  # 退出清空
-        elif len(self.time_point_literals) == 1 and 'NOW' in ctx.getText():
+        elif len(self.time_point_literals) == 1 and ctx.NOW() is not None:
             self.at_t_element = AtTElement(self.time_point_literals[0],
                                            TimePointLiteral('"NOW"'))
             self.time_point_literals = []  # 退出清空
         elif len(self.time_point_literals) == 1 and 'NOW' not in ctx.getText():
             self.at_t_element = AtTElement(self.time_point_literals[0], None)
             self.time_point_literals = []  # 退出清空
-        elif len(self.time_point_literals) == 0 and 'NOW' in ctx.getText():
-            self.at_t_element = AtTElement(TimePointLiteral('"NOW"'))
+        elif len(self.time_point_literals) == 0 and ctx.NOW() is not None:
+            self.at_t_element = AtTElement(TimePointLiteral('"NOW"'), None)
             self.time_point_literals = []  # 退出清空
         else:
             raise ParseError("Invalid time format!")
