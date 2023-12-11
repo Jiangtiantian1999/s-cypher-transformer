@@ -93,7 +93,7 @@ class TestReturn(TestCase):
         # 返回指定有效时间下的值节点有效时间
         s_cypher = """
         MATCH (n:Person {name: "Mary Smith Taylor"})
-        RETURN n.name@T("NOW")@T as effective_time
+        RETURN n.name@T(NOW)@T as effective_time
         """
         cypher_query = STransformer.transform(s_cypher)
         records, summery, keys = self.graphdb_connector.driver.execute_query(cypher_query)
@@ -111,8 +111,7 @@ class TestReturn(TestCase):
         with self.assertRaises(ClientError):
             self.graphdb_connector.driver.execute_query(cypher_query)
 
-            # 测试ORDER BY和LIMIT
-
+    # 测试ORDER BY和LIMIT
     def test_order_by(self):
         # 根据有效时间返回结果，未作设置，默认使用map的比较方法（先比较to，再比较from）
         s_cypher = """
@@ -141,8 +140,8 @@ class TestReturn(TestCase):
         """
         cypher_query = STransformer.transform(s_cypher)
         records, summery, keys = self.graphdb_connector.driver.execute_query(cypher_query)
-        assert records == [{"name": "Cathy Van", "birth_year": 1960}, {"name": "Peter Burton", "birth_year": 1960},
-                           {"name": "Mary Smith Taylor", "birth_year": 1960}]
+        assert records == [{"name": "Mary Smith Taylor", "birth_year": 1937}, {"name": "Cathy Van", "birth_year": 1960},
+                           {"name": "Peter Burton", "birth_year": 1960}]
 
     # 测试聚合函数
     def test_aggregate_function(self):
@@ -150,7 +149,7 @@ class TestReturn(TestCase):
         s_cypher = """
         MATCH (a:Person)-[:FRIEND]->(b:Person)
         WITH *
-        ORDER BY b.name
+        ORDER BY a.name
         RETURN a.name as person, collect(b.name@T(NOW)) as friends
         """
         cypher_query = STransformer.transform(s_cypher)
@@ -166,7 +165,6 @@ class TestReturn(TestCase):
         WITH 2023 - p@T.from.year as age
         RETURN round(avg(age), 2) AS AverageAge, max(age) AS Oldest, min(age) AS Youngest;
         """
-
         cypher_query = STransformer.transform(s_cypher)
         records, summery, keys = self.graphdb_connector.driver.execute_query(cypher_query)
         assert records == [{"AverageAge": 56.83, "Oldest": 86, "Youngest": 28}]
