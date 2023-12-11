@@ -35,7 +35,7 @@ class ClauseConverter:
         return union_query_clause_string
 
     def convert_call_clause(self, call_clause: CallClause) -> str:
-        if call_clause.procedure_name in ConfigReader.config["SCYPHER"]["PROCEDURE_NAME"]:
+        if call_clause.procedure_name in ConfigReader.config["scypher"]["procedure_name"]:
             call_clause_string = "CALL scypher." + call_clause.procedure_name
         else:
             call_clause_string = "CALL " + call_clause.procedure_name
