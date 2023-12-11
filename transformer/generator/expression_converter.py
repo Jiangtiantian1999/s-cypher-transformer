@@ -244,8 +244,7 @@ class ExpressionConverter:
         for expression in function_invocation.expressions:
             function_invocation_string = function_invocation_string + self.convert_expression(expression) + ", "
         function_invocation_string = function_invocation_string.rstrip(", ")
-
-        if function_invocation.function_name in ConfigReader.config["SCYPHER"]["FUNCTION_NAME"]:
+        if function_invocation.function_name in ConfigReader.config["scypher"]["function_name"]:
             function_invocation_string = "scypher." + function_invocation.function_name + '(' + function_invocation_string + ')'
         else:
             function_invocation_string = function_invocation.function_name + '(' + function_invocation_string + ')'
