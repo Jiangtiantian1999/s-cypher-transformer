@@ -524,7 +524,7 @@ class SCypherWalker(s_cypherListener):
             self.at_t_element = AtTElement(self.time_point_literals[0],
                                            TimePointLiteral('"NOW"'))
             self.time_point_literals = []  # 退出清空
-        elif len(self.time_point_literals) == 1 and 'NOW' not in ctx.getText():
+        elif len(self.time_point_literals) == 1 and ctx.NOW() is None:
             self.at_t_element = AtTElement(self.time_point_literals[0], None)
             self.time_point_literals = []  # 退出清空
         elif len(self.time_point_literals) == 0 and ctx.NOW() is not None:

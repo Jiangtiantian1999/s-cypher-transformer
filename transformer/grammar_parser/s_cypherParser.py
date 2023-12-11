@@ -944,7 +944,7 @@ class s_cypherParser ( Parser ):
                      "'\\uFE65'", "'\\uFF1E'", "'\\u00AD'", "'\\u2010'", 
                      "'\\u2011'", "'\\u2012'", "'\\u2013'", "'\\u2014'", 
                      "'\\u2015'", "'\\u2212'", "'\\uFE58'", "'\\uFE63'", 
-                     "'\\uFF0D'", "<INVALID>", "<INVALID>", "<INVALID>", 
+                     "'\\uFF0D'", "<INVALID>", "<INVALID>", "'NOW'", "<INVALID>", 
                      "<INVALID>", "<INVALID>", "<INVALID>", "<INVALID>", 
                      "<INVALID>", "<INVALID>", "<INVALID>", "<INVALID>", 
                      "<INVALID>", "<INVALID>", "<INVALID>", "<INVALID>", 
@@ -961,7 +961,7 @@ class s_cypherParser ( Parser ):
                      "<INVALID>", "<INVALID>", "<INVALID>", "<INVALID>", 
                      "<INVALID>", "<INVALID>", "<INVALID>", "<INVALID>", 
                      "<INVALID>", "<INVALID>", "<INVALID>", "<INVALID>", 
-                     "<INVALID>", "'0'" ]
+                     "'0'" ]
 
     symbolicNames = [ "<INVALID>", "<INVALID>", "<INVALID>", "<INVALID>", 
                       "<INVALID>", "<INVALID>", "<INVALID>", "<INVALID>", 

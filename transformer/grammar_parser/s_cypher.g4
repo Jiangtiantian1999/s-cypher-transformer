@@ -249,7 +249,7 @@ oC_ReservedWord : ALL
                 | OVERLAPS
                 ;
 
-NOW : ( '"' )? 'NOW' ( '"' )?;
+NOW : 'NOW';
 
 AT_TIME : ( 'A' | 'a' ) ( 'T' | 't' ) SP ( 'T' | 't' ) ( 'I' | 'i' ) ( 'M' | 'm' ) ( 'E' | 'e' ) ;
 
