@@ -29,10 +29,7 @@ class TestWhere(TestCase):
         cypher_query = STransformer.transform(s_cypher)
         records, summary, keys = self.graphdb_connector.driver.execute_query(cypher_query)
         assert records == [{"person": ["Mary Smith", "Mary Smith Taylor"], "city": "Antwerp"},
-                           {"person": "Cathy Van", "city": "Brussels"},
                            {"person": "Daniel Yang", "city": "Antwerp"},
-                           {"person": "Pauline Boutler", "city": "Brussels"},
-                           {"person": "Pauline Boutler", "city": "London"},
                            {"person": "Peter Burton", "city": "New York"},
                            {"person": "Sandra Carter", "city": "New York"}]
 
@@ -40,7 +37,7 @@ class TestWhere(TestCase):
     def test_compare_operation(self):
         s_cypher = """
         MATCH (n:Person)-[r:LIVE]->(m:City {name: "Antwerp"})
-        WHERE r@T.from > timePoint('1990')
+        WHERE r@T.from < timePoint('1990')
         RETURN n
         """
         cypher_query = STransformer.transform(s_cypher)
@@ -49,7 +46,7 @@ class TestWhere(TestCase):
 
         s_cypher = """
         MATCH (n:Person)-[r:LIVE]->(m:City {name: "Antwerp"})
-        WHERE r@T.from >= timePoint('1990')
+        WHERE r@T.from <= timePoint('1990')
         RETURN n.name@T(NOW) as person
         """
         cypher_query = STransformer.transform(s_cypher)
@@ -58,33 +55,33 @@ class TestWhere(TestCase):
 
         s_cypher = """
         MATCH (a:Person)-[r:FRIEND]->(b:Person)
-        WHERE r@T.from < timePoint('2002')
+        WHERE r@T.from > timePoint('2002')
         RETURN a.name@T(NOW) as person1, b.name@T(NOW) as person2
         ORDER BY person1, person2
         """
         cypher_query = STransformer.transform(s_cypher)
         records, summary, keys = self.graphdb_connector.driver.execute_query(cypher_query)
-        assert records == [{"person1": "Peter Burton", "person2": "Cathy Van"},
-                           {"person1": "Mary Smith Taylor", "person2": "Peter Burton"}]
+        assert records == [{"person1": "Mary Smith Taylor", "person2": "Pauline Boutler"},
+                           {"person1": "Peter Burton", "person2": "Daniel Yang"}]
 
         s_cypher = """
         MATCH (a:Person)-[r:FRIEND]->(b:Person)
-        WHERE r@T.from <= timePoint('2002')
+        WHERE r@T.from >= timePoint('2002')
         RETURN a.name@T(NOW) as person1, b.name@T(NOW) as person2
         ORDER BY person1, person2
         """
         cypher_query = STransformer.transform(s_cypher)
         records, summary, keys = self.graphdb_connector.driver.execute_query(cypher_query)
-        assert records == [{"person1": "Pauline Boutler", "person2": "Cathy Van"},
-                           {"person1": "Peter Burton", "person2": "Cathy Van"},
-                           {"person1": "Mary Smith Taylor", "person2": "Peter Burton"}]
+        assert records == [{"person1": "Mary Smith Taylor", "person2": "Pauline Boutler"},
+                           {"person1": "Pauline Boutler", "person2": "Cathy Van"},
+                           {"person1": "Peter Burton", "person2": "Daniel Yang"}]
 
     # 测试算术运算
     def test_arithmetic_operation(self):
         # 加减
         s_cypher = """
         MATCH (n:Person)-[e:LIVE]->(m:City)
-        WHERE ( e@T.from + Duration({year: 20}) <= e@T.to and e@T.to <> timePoint(NOW) ) or ( e@T.from <= timePoint("2023") - Duration({year: 20}) and e@T.to = timePoint(NOW) )
+        WHERE ( e@T.from + Duration({years: 20}) >= e@T.to and e@T.to <> timePoint(NOW) ) or ( e@T.from >= timePoint("2023") - Duration({years: 20}) and e@T.to = timePoint(NOW) )
         RETURN n.name as person, m.name as city
         ORDER BY person, city
         """
@@ -97,7 +94,7 @@ class TestWhere(TestCase):
         # 乘除余
         s_cypher = """
         MATCH (n:Person)-[e:LIVE]->(m:City)
-        WHERE (duration.between(timePoint('2023'), n@T.from) * 10).months < (duration.between(timePoint('2023'), m@.from) / 10).months and 10 % 3 = 1
+        WHERE (duration.between(n@T.from, timePoint('2023')) * 5).months < (duration.between(m@T.from, timePoint('2023')) / 2).months and 10 % 3 = 1
         RETURN n.name as person, m.name as city
         ORDER BY person, city
         """
@@ -158,13 +155,13 @@ class TestWhere(TestCase):
         s_cypher = """
         MATCH (n:Person)-[:LIVE]->(m:City)
         WHERE m.name IN ["London", "Brussels"]
-        RETURN n.name as person
+        RETURN DISTINCT n.name as person
         ORDER BY person
         """
         cypher_query = STransformer.transform(s_cypher)
         records, summery, keys = self.graphdb_connector.driver.execute_query(cypher_query)
-        assert records == [{"person": ["Mary Smith", "Mary Smith Taylor"]}, {"name": "Cathy Van"},
-                           {"name": "Pauline Boutler"}]
+        assert records == [{"person": ["Mary Smith", "Mary Smith Taylor"]}, {"person": "Cathy Van"},
+                           {"person": "Pauline Boutler"}]
 
     # 测试NULL操作
     def test_null_operation(self):
@@ -172,21 +169,21 @@ class TestWhere(TestCase):
         UNWIND [{k:1,v:NULL},{k:2,v:"v"}] as t
         WITH t
         WHERE t.v is null
-        RETURN t.k
+        RETURN t.k as result
         """
         cypher_query = STransformer.transform(s_cypher)
         records, summery, keys = self.graphdb_connector.driver.execute_query(cypher_query)
-        assert records == [{"t.k": 1}]
+        assert records == [{"result": 1}]
 
         s_cypher = """
         UNWIND [{k:1,v:NULL},{k:2,v:"v"}] as t
         WITH t
         WHERE t.v is not null
-        RETURN t.k
+        RETURN t.k as result
         """
         cypher_query = STransformer.transform(s_cypher)
         records, summery, keys = self.graphdb_connector.driver.execute_query(cypher_query)
-        assert records == [{"t.k": 2}]
+        assert records == [{"result": 2}]
 
     # 测试标签
     def test_label_operation(self):

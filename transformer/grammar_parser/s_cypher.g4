@@ -180,6 +180,7 @@ oC_SymbolicName : UnescapedSymbolicName
                 | SINGLE
                 | NOW
                 | WHEN
+                | BETWEEN
                 ;
 
 AtT : '@T' | '@t' ;
