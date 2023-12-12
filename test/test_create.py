@@ -36,8 +36,8 @@ class TestCreate(TestCase):
         cypher_query = STransformer.transform(s_cypher)
         print(cypher_query, '\n')
         records, summary, keys = self.graphdb_connector.driver.execute_query(cypher_query)
-        assert records == [{"effective_time": DateTime(1938, 1, 1, 0, 0, 0, 0, tzinfo=timezone.utc)}]
         self.dataset1.rebuild()
+        assert records == [{"effective_time": DateTime(1938, 1, 1, 0, 0, 0, 0, tzinfo=timezone.utc)}]
 
         s_cypher = """
                 CREATE (n:City)
@@ -48,8 +48,8 @@ class TestCreate(TestCase):
         print(cypher_query, '\n')
         records, summary, keys = self.graphdb_connector.driver.execute_query(cypher_query)
         print(records)
-        assert records == [{"effective_time": DateTime(1688, 1, 1, 0, 0, 0, 0, tzinfo=timezone.utc)}]
         self.dataset1.rebuild()
+        assert records == [{"effective_time": DateTime(1688, 1, 1, 0, 0, 0, 0, tzinfo=timezone.utc)}]
 
         # 属性节点创建: 单属性创建
         s_cypher = """
@@ -70,8 +70,8 @@ class TestCreate(TestCase):
         cypher_query = STransformer.transform(s_cypher)
         print(cypher_query, '\n')
         records, summary, keys = self.graphdb_connector.driver.execute_query(cypher_query)
-        assert records == [{"name": "London"}, {"spot": "BigBen"}]
         self.dataset1.rebuild()
+        assert records == [{"name": "London"}, {"spot": "BigBen"}]
 
         # 值节点创建: 不同时间区间
         s_cypher = """
@@ -80,8 +80,8 @@ class TestCreate(TestCase):
                 """
         cypher_query = STransformer.transform(s_cypher)
         records, summary, keys = self.graphdb_connector.driver.execute_query(cypher_query)
-        assert records == [{"effective_time": DateTime(1950, 1, 1, 0, 0, 0, 0, tzinfo=timezone.utc)}]
         self.dataset1.rebuild()
+        assert records == [{"effective_time": DateTime(1950, 1, 1, 0, 0, 0, 0, tzinfo=timezone.utc)}]
 
         s_cypher = """
                 CREATE (n:Person {name@T("1960", NOW): "Mary Smith"})
@@ -89,8 +89,8 @@ class TestCreate(TestCase):
                 """
         cypher_query = STransformer.transform(s_cypher)
         records, summary, keys = self.graphdb_connector.driver.execute_query(cypher_query)
-        assert records == [{"effective_time": DateTime(1960, 1, 1, 0, 0, 0, 0, tzinfo=timezone.utc)}]
         self.dataset1.rebuild()
+        assert records == [{"effective_time": DateTime(1960, 1, 1, 0, 0, 0, 0, tzinfo=timezone.utc)}]
 
         s_cypher = """
                 CREATE (n:Person {name: "Mary Smith" @T("1950")})
@@ -98,8 +98,8 @@ class TestCreate(TestCase):
                 """
         cypher_query = STransformer.transform(s_cypher)
         records, summary, keys = self.graphdb_connector.driver.execute_query(cypher_query)
-        assert records == [{"effective_time": DateTime(1950, 1, 1, 0, 0, 0, 0, tzinfo=timezone.utc)}]
         self.dataset1.rebuild()
+        assert records == [{"effective_time": DateTime(1950, 1, 1, 0, 0, 0, 0, tzinfo=timezone.utc)}]
 
         s_cypher = """
                 CREATE (n:Person {name: "Mary Smith" @T("1960", NOW)})
@@ -107,8 +107,8 @@ class TestCreate(TestCase):
                 """
         cypher_query = STransformer.transform(s_cypher)
         records, summary, keys = self.graphdb_connector.driver.execute_query(cypher_query)
-        assert records == [{"name": "Mary Smith"}]
         self.dataset1.rebuild()
+        assert records == [{"name": "Mary Smith"}]
 
         s_cypher = """
                 CREATE (n:City@T("1688", NOW) {name@T("1690", NOW): "London"})
@@ -116,9 +116,9 @@ class TestCreate(TestCase):
                 """
         cypher_query = STransformer.transform(s_cypher)
         tx = self.graphdb_connector.driver.session().begin_transaction()
+        self.dataset1.rebuild()
         assert records == [{"object_time": DateTime(1688, 1, 1, 0, 0, 0, 0, tzinfo=timezone.utc)},
                            {"property_time": DateTime(1690, 1, 1, 0, 0, 0, 0, tzinfo=timezone.utc)}]
-        self.dataset1.rebuild()
 
         s_cypher = """
                 CREATE (n:City@T("1688", NOW) {name@T("1690", NOW): "London"@T("1690", NOW)})
@@ -126,10 +126,10 @@ class TestCreate(TestCase):
                 """
         cypher_query = STransformer.transform(s_cypher)
         records, summary, keys = self.graphdb_connector.driver.execute_query(cypher_query)
+        self.dataset1.rebuild()
         assert records == [{"object_time": DateTime(1688, 1, 1, 0, 0, 0, 0, tzinfo=timezone.utc)},
                            {"property_time": DateTime(1690, 1, 1, 0, 0, 0, 0, tzinfo=timezone.utc)},
                            {"value_time": DateTime(1690, 1, 1, 0, 0, 0, 0, tzinfo=timezone.utc)}]
-        self.dataset1.rebuild()
 
         # 对象节点时间使用AT_TIME
         s_cypher = """
@@ -139,8 +139,8 @@ class TestCreate(TestCase):
                 """
         cypher_query = STransformer.transform(s_cypher)
         records, summary, keys = self.graphdb_connector.driver.execute_query(cypher_query)
-        assert records == [{"effective_time": DateTime(1688, 1, 1, 0, 0, 0, 0, tzinfo=timezone.utc)}]
         self.dataset1.rebuild()
+        assert records == [{"effective_time": DateTime(1688, 1, 1, 0, 0, 0, 0, tzinfo=timezone.utc)}]
 
         s_cypher = """
                 CREATE (n:City {name@T("1688", NOW): "London"@T("1690", NOW)})
@@ -149,8 +149,8 @@ class TestCreate(TestCase):
                 """
         cypher_query = STransformer.transform(s_cypher)
         records, summary, keys = self.graphdb_connector.driver.execute_query(cypher_query)
-        assert records == [{"effective_time": DateTime(1688, 1, 1, 0, 0, 0, 0, tzinfo=timezone.utc)}]
         self.dataset1.rebuild()
+        assert records == [{"effective_time": DateTime(1688, 1, 1, 0, 0, 0, 0, tzinfo=timezone.utc)}]
 
     # 创建不同时间格式的节点
     def test_create_time(self):
@@ -161,8 +161,8 @@ class TestCreate(TestCase):
                 """
         cypher_query = STransformer.transform(s_cypher)
         records, summary, keys = self.graphdb_connector.driver.execute_query(cypher_query)
-        assert records == [{"effective_time": DateTime(1600, 7, 21, 21, 40, 32, 142000000, tzinfo=pytz.FixedOffset(60))}]
         self.dataset1.rebuild()
+        assert records == [{"effective_time": DateTime(1600, 7, 21, 21, 40, 32, 142000000, tzinfo=pytz.FixedOffset(60))}]
 
     def test_create_relationship(self):
         s_cypher = """
@@ -174,8 +174,8 @@ class TestCreate(TestCase):
                         """
         cypher_query = STransformer.transform(s_cypher)
         records, summary, keys = self.graphdb_connector.driver.execute_query(cypher_query)
-        assert records == [{"effective_time": DateTime(2004, 1, 1, 0, 0, 0, 0, tzinfo=timezone.utc)}]
         self.dataset1.rebuild()
+        assert records == [{"effective_time": DateTime(2004, 1, 1, 0, 0, 0, 0, tzinfo=timezone.utc)}]
 
         # s_cypher = """
         #         MATCH (n1:Person), (n2:City)
@@ -185,9 +185,9 @@ class TestCreate(TestCase):
         #         """
         # cypher_query = STransformer.transform(s_cypher)
         # records, summary, keys = self.graphdb_connector.driver.execute_query(cypher_query)
+        # self.dataset1.rebuild()
         # # TODO assert
         # assert len(records) == 0
-        # self.dataset1.rebuild()
         #
         # s_cypher = """
         #         MATCH (n1:Person), (n2:City)
@@ -197,9 +197,9 @@ class TestCreate(TestCase):
         #         """
         # cypher_query = STransformer.transform(s_cypher)
         # records, summary, keys = self.graphdb_connector.driver.execute_query(cypher_query)
+        # self.dataset1.rebuild()
         # # TODO assert
         # assert len(records) == 0
-        # self.dataset1.rebuild()
 
         # s_cypher = """
         # MATCH (n1:Person), (n2:City)
@@ -210,9 +210,9 @@ class TestCreate(TestCase):
         # """
         # cypher_query = STransformer.transform(s_cypher)
         # records, summary, keys = self.graphdb_connector.driver.execute_query(cypher_query)
+        # self.dataset1.rebuild()
         # # TODO assert
         # assert len(records) == 0
-        # self.dataset1.rebuild()
 
     # 非法有效时间
     def test_create_illegal_interval(self):
@@ -224,9 +224,9 @@ class TestCreate(TestCase):
                 """
         cypher_query = STransformer.transform(s_cypher)
         print(cypher_query, '\n')
+        self.dataset1.rebuild()
         with self.assertRaises(ClientError):
             self.graphdb_connector.driver.execute_query(cypher_query)
-        self.dataset1.rebuild()
 
         # 属性节点时间不在对象节点时间内
         s_cypher = """
@@ -236,9 +236,9 @@ class TestCreate(TestCase):
                 """
         cypher_query = STransformer.transform(s_cypher)
         print(cypher_query, '\n')
+        self.dataset1.rebuild()
         with self.assertRaises(ClientError):
             self.graphdb_connector.driver.execute_query(cypher_query)
-        self.dataset1.rebuild()
 
         # 值节点不在对象节点有效时间区间内
         s_cypher = """
@@ -247,9 +247,9 @@ class TestCreate(TestCase):
                 """
         cypher_query = STransformer.transform(s_cypher)
         print(cypher_query, '\n')
+        self.dataset1.rebuild()
         with self.assertRaises(ClientError):
             self.graphdb_connector.driver.execute_query(cypher_query)
-        self.dataset1.rebuild()
 
         # 值节点、属性节点、对象节点的时间均不满足有效时间区间内
         s_cypher = """
@@ -259,9 +259,9 @@ class TestCreate(TestCase):
                 """
         cypher_query = STransformer.transform(s_cypher)
         print(cypher_query, '\n')
+        self.dataset1.rebuild()
         with self.assertRaises(ClientError):
             self.graphdb_connector.driver.execute_query(cypher_query)
-        self.dataset1.rebuild()
 
         # 时间区间的intervalFrom晚于intervalTo
         s_cypher = """
@@ -271,9 +271,9 @@ class TestCreate(TestCase):
                 """
         cypher_query = STransformer.transform(s_cypher)
         print(cypher_query, '\n')
+        self.dataset1.rebuild()
         with self.assertRaises(ClientError):
             self.graphdb_connector.driver.execute_query(cypher_query)
-        self.dataset1.rebuild()
 
         # 时间格式非法
         s_cypher = """
@@ -282,6 +282,6 @@ class TestCreate(TestCase):
                 """
         cypher_query = STransformer.transform(s_cypher)
         print(cypher_query, '\n')
+        self.dataset1.rebuild()
         with self.assertRaises(ClientError):
             self.graphdb_connector.driver.execute_query(cypher_query)
-        self.dataset1.rebuild()
