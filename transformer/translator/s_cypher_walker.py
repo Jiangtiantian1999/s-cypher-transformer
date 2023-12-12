@@ -195,18 +195,23 @@ class SCypherWalker(s_cypherListener):
         update_clause = None
         if ctx.s_Create() is not None:
             update_clause = self.create_clause
+            self.create_clause = None
         elif ctx.s_Merge() is not None:
             update_clause = self.merge_clause
+            self.merge_clause = None
         elif ctx.s_Delete() is not None:
             update_clause = self.delete_clause
+            self.delete_clause = None
         elif ctx.s_Set() is not None:
             update_clause = self.set_clause
+            self.set_clause = None
         elif ctx.oC_Remove() is not None:
             update_clause = self.remove_clause
+            self.remove_clause = None
         elif ctx.s_Stale() is not None:
             update_clause = self.stale_clause
+            self.stale_clause = None
         self.updating_clauses.append(UpdatingClause(update_clause))
-        self.at_time_clause = None  # 退出清空
 
     def exitOC_MultiPartQuery(self, ctx: s_cypherParser.OC_MultiPartQueryContext):
         # single_query_clause: SingleQueryClause = None,
@@ -340,7 +345,12 @@ class SCypherWalker(s_cypherListener):
         # procedure_name: str,
         # input_items: List[Expression] = None,
         # yield_clause: YieldClause = None
-        self.in_query_call_clause = CallClause(self.procedure_name, self.explicit_input_items.pop(), self.yield_clause)
+        if ctx.oC_ExplicitProcedureInvocation() is not None:
+            input_items = self.explicit_input_items.pop()
+        else:
+            tmp = self.explicit_input_items.pop()
+            input_items = None
+        self.in_query_call_clause = CallClause(self.procedure_name, input_items, self.yield_clause)
         self.yield_clause = None
         self.procedure_name = None
 
@@ -372,17 +382,15 @@ class SCypherWalker(s_cypherListener):
         self.yield_items.append(YieldItem(procedure_result, variable))
 
     # CALL查询
-    # def enterOC_StandaloneCall(self, ctx: s_cypherParser.OC_StandaloneCallContext):
-    #     if ctx.oC_ExplicitProcedureInvocation() is not None:
-    #         self.explicit_input_items.push([])
-
     def exitOC_StandaloneCall(self, ctx: s_cypherParser.OC_StandaloneCallContext):
         # procedure_name: str,
         # input_items: List[Expression] = None,
         # yield_clause: YieldClause = None
-        input_items = None
         if ctx.oC_ExplicitProcedureInvocation() is not None:
             input_items = self.explicit_input_items.pop()
+        else:
+            tmp = self.explicit_input_items.pop()
+            input_items = None
         # 检查*
         if '*' in ctx.getText():
             yield_clause = YieldClause(None, True, None)
@@ -534,7 +542,7 @@ class SCypherWalker(s_cypherListener):
             raise ParseError("Invalid time format!")
 
     def exitS_TimePointLiteral(self, ctx: s_cypherParser.S_TimePointLiteralContext):
-        if self.map_literal is not None:
+        if ctx.oC_MapLiteral() is not None:
             self.time_point_literals.append(TimePointLiteral(self.map_literal))
             self.map_literal = None
         else:
@@ -915,6 +923,7 @@ class SCypherWalker(s_cypherListener):
             property_chains = self.property_look_up_list
             self.property_look_up_list = []  # 退出清空
             time_window = self.at_t_element
+            self.at_t_element = None
             self.set_property_expression.push(SetPropertyExpression(atom, property_chains, time_window))
         elif self.is_remove:
             # atom: Atom,
@@ -1138,10 +1147,10 @@ class SCypherWalker(s_cypherListener):
         is_distinct = False
         if ctx.DISTINCT() is not None:
             is_distinct = True
-        # TODO empty
         if ctx.s_FunctionInvocationExpression() is not None and len(self.function_invocation_expressions.peek()) > 0:
             expressions = self.function_invocation_expressions.pop()
         else:
+            tmp = self.function_invocation_expressions.pop()
             expressions = None
         self.function_invocation.push(FunctionInvocation(function_name, is_distinct, expressions))
 
@@ -1362,6 +1371,7 @@ class SCypherWalker(s_cypherListener):
         if len(self.index_expressions.peek()) > 0:
             index_expressions = self.index_expressions.pop()
         else:
+            tmp = self.index_expressions.pop()
             index_expressions = None
         self.list_index_expressions.peek().append(ListIndexExpression(principal_expression, is_positive,
                                                                         index_expressions))
