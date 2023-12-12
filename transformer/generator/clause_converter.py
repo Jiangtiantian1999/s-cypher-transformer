@@ -394,7 +394,7 @@ class ClauseConverter:
                                    set_item.object_setting.effective_time)}
                 set_clause_string = set_clause_string + convert_dict_to_str(object_info) + ", "
                 if set_item.property_setting:
-                    property_info = {"propertyName": set_item.property_setting.variable,
+                    property_info = {"propertyName": "\"" + set_item.property_setting.variable + "\"",
                                      "effectiveTime": self.expression_converter.convert_at_t_element(
                                          set_item.property_setting.effective_time)}
                     set_clause_string = set_clause_string + convert_dict_to_str(property_info) + ", "
@@ -425,7 +425,7 @@ class ClauseConverter:
                             set_item.expression_left.time_window) + ") | "
                         # 存在符合要求的值节点时，直接修改这些值节点的内容
                         # valueNodesToAlter返回符合要求的值节点
-                        set_clause_string = set_clause_string + "\n FOREACH ( " + set_sub_item_variable + " IN " + set_item_variable + ".valueNodesToAlter | SET " + set_sub_item_variable + ".content = " + property_value + ')'
+                        set_clause_string = set_clause_string + "\nFOREACH ( " + set_sub_item_variable + " IN " + set_item_variable + ".valueNodesToAlter | SET " + set_sub_item_variable + ".content = " + property_value + ')'
                         # 不存在符合要求的值节点时，创建值节点（和属性节点）
                         start_time = self.expression_converter.convert_time_point_literal(
                             set_item.expression_left.time_window.interval_from)
