@@ -149,7 +149,7 @@ class TestReturn(TestCase):
         s_cypher = """
         MATCH (a:Person)-[:FRIEND]->(b:Person)
         WITH *
-        ORDER BY a.name
+        ORDER BY a.name, b.name
         RETURN a.name as person, collect(b.name@T(NOW)) as friends
         """
         cypher_query = STransformer.transform(s_cypher)
@@ -182,33 +182,31 @@ class TestReturn(TestCase):
     def test_time_operate(self):
         # 时间点DURING时间区间
         s_cypher = """
-        WITH timePoint("2015-W30") as time_point, interval("2015Q20",NOW) as interval
+        WITH timePoint("2015-W30") as time_point, interval("2015Q2",NOW) as interval
         RETURN time_point, interval, time_point DURING interval as result
         """
         cypher_query = STransformer.transform(s_cypher)
         records, summery, keys = self.graphdb_connector.driver.execute_query(cypher_query)
-        assert records == [{"time_point": DateTime(2015, 6, 20, tzinfo=timezone.utc),
+        assert records == [{"time_point": DateTime(2015, 7, 20, tzinfo=timezone.utc),
                             "interval": {"from": DateTime(2015, 4, 1, tzinfo=timezone.utc),
                                          "to": DateTime(9999, 12, 31, 23, 59, 59, 999999999, tzinfo=timezone.utc)},
                             "result": True}]
 
         # 时间区间DURING时间点
         s_cypher = """
-        WITH interval("2015202",timePoint({year:2016, month:10, day:1})) as interval1, interval("2015Q20",now()) as interval2
-        RETURN interval1, interval2, interval1 DURING interval2 as result
+        WITH interval("2015202",timePoint({year:2016, month:10, day:1})) as interval1, interval("2015Q2",now()) as interval2
+        RETURN interval1, interval1 DURING interval2 as result
         """
         cypher_query = STransformer.transform(s_cypher)
         records, summery, keys = self.graphdb_connector.driver.execute_query(cypher_query)
         assert records == [{"interval1": {"from": DateTime(2015, 7, 21, tzinfo=timezone.utc),
                                           "to": DateTime(2016, 10, 1, tzinfo=timezone.utc)},
-                            "interval2": {"from": DateTime(2015, 4, 1, tzinfo=timezone.utc),
-                                          "to": DateTime(9999, 12, 31, 23, 59, 59, 999999999, tzinfo=timezone.utc)},
                             "result": True}]
 
         # OVERLAPS
         s_cypher = """
         WITH interval("2015-Q2","2015-06-30") as interval1, interval("2015Q260","2015-W30-2") as interval2
-        RETURN interval1, interval2, interval1 OVERLAP interval2 as result
+        RETURN interval1, interval2, interval1 OVERLAPS interval2 as result
         """
         cypher_query = STransformer.transform(s_cypher)
         records, summery, keys = self.graphdb_connector.driver.execute_query(cypher_query)
