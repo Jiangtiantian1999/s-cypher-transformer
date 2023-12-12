@@ -899,6 +899,9 @@ class SCypherWalker(s_cypherListener):
             # is_added: False
             if ctx.oC_PropertyExpression() is not None:
                 expression_left = self.set_property_expression.pop()
+                if ctx.s_AtTElement() is not None:
+                    expression_left.time_window = self.at_t_element
+                    self.at_t_element = None
             else:
                 expression_left = ctx.oC_Variable().getText()
             if self.expression.is_empty() is False:
@@ -922,9 +925,7 @@ class SCypherWalker(s_cypherListener):
             self.atom = None  # 退出清空
             property_chains = self.property_look_up_list
             self.property_look_up_list = []  # 退出清空
-            time_window = self.at_t_element
-            self.at_t_element = None
-            self.set_property_expression.push(SetPropertyExpression(atom, property_chains, time_window))
+            self.set_property_expression.push(SetPropertyExpression(atom, property_chains))
         elif self.is_remove:
             # atom: Atom,
             # property_chains: List[str]
