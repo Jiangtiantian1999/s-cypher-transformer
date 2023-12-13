@@ -2,7 +2,6 @@ from unittest import TestCase
 
 from neo4j.exceptions import ClientError
 from neo4j.time import DateTime
-from py2neo import Node
 
 from test.dataset_initialization import DataSet1
 from test.graphdb_connector import GraphDBConnector
