@@ -4,7 +4,6 @@ from transformer.ir.s_cypher_clause import *
 from transformer.ir.s_graph import *
 from transformer.ir.s_expression import *
 from transformer.exceptions.s_exception import *
-from queue import Queue
 
 
 # This class records important information about the query
@@ -26,6 +25,8 @@ class SCypherWalker(s_cypherListener):
         # time
         self.at_time_clause = None
         self.at_t_element = None
+        self.pound_t_element = None
+        self.s_t_element = None
         self.time_point_literals = []
 
         # pattern
@@ -523,6 +524,14 @@ class SCypherWalker(s_cypherListener):
 
     # 获取时间
     def exitS_AtTElement(self, ctx: s_cypherParser.S_AtTElementContext):
+        self.at_t_element = self.s_t_element
+        self.s_t_element = None
+
+    def exitS_PoundTElement(self, ctx: s_cypherParser.S_PoundTElementContext):
+        self.pound_t_element = self.s_t_element
+        self.s_t_element = None
+
+    def exitS_TElement(self, ctx: s_cypherParser.S_TElementContext):
         # interval_from: TimePointLiteral,
         # interval_to: TimePointLiteral = None
         if len(self.time_point_literals) == 2:
@@ -1262,7 +1271,6 @@ class SCypherWalker(s_cypherListener):
     def exitOC_StringPredicateExpression(self, ctx: s_cypherParser.OC_StringPredicateExpressionContext):
         # string_operation: str,
         # add_or_subtract_expression: AddSubtractExpression
-        string_str = ctx.getText()
         if ctx.STARTS() is not None and ctx.WITH() is not None:
             string_operation = 'STARTS WITH'
         elif ctx.ENDS() and ctx.WITH() is not None:
@@ -1307,12 +1315,13 @@ class SCypherWalker(s_cypherListener):
             as_op = self.add_subtract_operations.pop()
             add_subtract_operations = None
         # TODO empty
-        if ctx.oC_MultiplyDivideModuloExpression() is not None and len(self.multiply_divide_modulo_expressions.peek()) > 0:
+        if ctx.oC_MultiplyDivideModuloExpression() is not None \
+                and len(self.multiply_divide_modulo_expressions.peek()) > 0:
             multiply_divide_modulo_expressions = self.multiply_divide_modulo_expressions.pop()
         else:
             raise ParseError("At least one MultiplyDivideExpression is expected but there is none.")
         self.add_subtract_expression.push(AddSubtractExpression(multiply_divide_modulo_expressions,
-                                                               add_subtract_operations))
+                                                                add_subtract_operations))
 
     def exitS_AddOrSubtractOperator(self, ctx: s_cypherParser.S_AddOrSubtractOperatorContext):
         self.add_subtract_operations.peek().append(ctx.getText())
@@ -1373,7 +1382,7 @@ class SCypherWalker(s_cypherListener):
             tmp = self.index_expressions.pop()
             index_expressions = None
         self.list_index_expressions.peek().append(ListIndexExpression(principal_expression, is_positive,
-                                                                        index_expressions))
+                                                                      index_expressions))
 
     # 获取单个的IndexExpression
     def exitS_SingleIndexExpression(self, ctx: s_cypherParser.S_SingleIndexExpressionContext):
@@ -1418,9 +1427,9 @@ class SCypherWalker(s_cypherListener):
         if ctx.oC_NodeLabels() is not None:
             labels_or_at_t = self.node_labels
             self.node_labels = []  # 退出清空
-        elif ctx.s_AtTElement() is not None:
-            labels_or_at_t = self.at_t_element
-            self.at_t_element = None
+        elif ctx.s_PoundTElement() is not None:
+            labels_or_at_t = self.pound_t_element
+            self.pound_t_element = None
         else:
             labels_or_at_t = None
         self.properties_labels_expression.push(PropertiesLabelsExpression(atom, property_chains, labels_or_at_t))
@@ -1443,9 +1452,9 @@ class SCypherWalker(s_cypherListener):
         property_name = self.property_look_up_name
         self.property_look_up_name = None
         # 获取时间窗口
-        if ctx.s_AtTElement() is not None:
-            time_window = self.at_t_element
-            self.at_t_element = None
+        if ctx.s_PoundTElement() is not None:
+            time_window = self.pound_t_element
+            self.pound_t_element = None
         elif ctx.PoundValue() is not None:
             time_window = True
         else:
