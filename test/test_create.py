@@ -10,7 +10,6 @@ from test.graphdb_connector import GraphDBConnector
 from transformer.s_transformer import STransformer
 
 
-# TODO：更改assert
 class TestCreate(TestCase):
     graphdb_connector = None
     dataset1 = None
@@ -115,6 +114,7 @@ class TestCreate(TestCase):
                 RETURN n@T.from as object_time, n.name@T.from as property_time
                 """
         cypher_query = STransformer.transform(s_cypher)
+        print(cypher_query)
         tx = self.graphdb_connector.driver.session().begin_transaction()
         self.dataset1.rebuild()
         assert records == [{"object_time": DateTime(1688, 1, 1, 0, 0, 0, 0, tzinfo=timezone.utc)},
@@ -285,3 +285,21 @@ class TestCreate(TestCase):
         self.dataset1.rebuild()
         with self.assertRaises(ClientError):
             self.graphdb_connector.driver.execute_query(cypher_query)
+
+    def test_create_nodes_with_operator(self):
+        # 多节点创建
+        s_cypher = """
+                CREATE
+                  (a:City {name: 'Washington', country: 'America'}),
+                  (b:City {name: 'New York', country: 'America'}),
+                  (c:City {name: 'Beijing', country: 'China'})
+                WITH [a, b, c] AS ps
+                UNWIND ps AS p
+                RETURN DISTINCT p.country as country
+                """
+        cypher_query = STransformer.transform(s_cypher)
+        print(cypher_query)
+        records, summary, keys = self.graphdb_connector.driver.execute_query(cypher_query)
+        self.dataset1.rebuild()
+        assert records == [{"country": "America"}, {"country": "China"}]
+
