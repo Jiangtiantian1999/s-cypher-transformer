@@ -92,7 +92,7 @@ class SCypherWalker(s_cypherListener):
         self.power_expressions = Stack()
         self.list_index_expressions = Stack()
         self.index_expressions = Stack()
-        self.AtT_expression = Stack()
+        self.PoundT_expression = Stack()
         self.properties_labels_expression = Stack()
         self.remove_property_expression = Stack()
         self.set_property_expression = Stack()
@@ -1359,17 +1359,17 @@ class SCypherWalker(s_cypherListener):
     def exitOC_ListOperatorExpression(self, ctx: s_cypherParser.OC_ListOperatorExpressionContext):
         if ctx.oC_PropertyOrLabelsExpression() is not None:
             self.principal_expression.push(self.properties_labels_expression.pop())
-        elif ctx.s_AtTExpression() is not None:
-            self.principal_expression.push(self.AtT_expression.pop())
+        elif ctx.s_PoundTExpression() is not None:
+            self.principal_expression.push(self.PoundT_expression.pop())
         else:
-            raise ParseError("At least one PropertyOrLabelsExpression or AtTExpression is expected but there is none.")
+            raise ParseError("At least one PropertyOrLabelsExpression or PoundTExpression is expected but there is none.")
 
     def enterOC_UnaryAddOrSubtractExpression(self, ctx: s_cypherParser.OC_UnaryAddOrSubtractExpressionContext):
         self.index_expressions.push([])
 
     def exitOC_UnaryAddOrSubtractExpression(self, ctx: s_cypherParser.OC_UnaryAddOrSubtractExpressionContext):
         # 最后要返回的ListIndexExpression的参数如下
-        # principal_expression: PropertiesLabelsExpression | AtTExpression,
+        # principal_expression: PropertiesLabelsExpression | PoundTExpression,
         # is_positive=True,
         # index_expressions: List[IndexExpression] = None
         is_positive = True
@@ -1416,7 +1416,7 @@ class SCypherWalker(s_cypherListener):
     def exitOC_PropertyOrLabelsExpression(self, ctx: s_cypherParser.OC_PropertyOrLabelsExpressionContext):
         # atom: Atom,
         # property_chains: List[str] = None,
-        # labels_or_at_t: List[str] | AtTElement = None
+        # labels_or_pound_t: List[str] | AtTElement = None
         atom = self.atom
         self.atom = None
         if ctx.oC_PropertyLookup() is not None:
@@ -1425,16 +1425,16 @@ class SCypherWalker(s_cypherListener):
         else:
             property_chains = None
         if ctx.oC_NodeLabels() is not None:
-            labels_or_at_t = self.node_labels
+            labels_or_pound_t = self.node_labels
             self.node_labels = []  # 退出清空
         elif ctx.s_PoundTElement() is not None:
-            labels_or_at_t = self.pound_t_element
+            labels_or_pound_t = self.pound_t_element
             self.pound_t_element = None
         else:
-            labels_or_at_t = None
-        self.properties_labels_expression.push(PropertiesLabelsExpression(atom, property_chains, labels_or_at_t))
+            labels_or_pound_t = None
+        self.properties_labels_expression.push(PropertiesLabelsExpression(atom, property_chains, labels_or_pound_t))
 
-    def exitS_AtTExpression(self, ctx: s_cypherParser.S_AtTExpressionContext):
+    def exitS_PoundTExpression(self, ctx: s_cypherParser.S_PoundTExpressionContext):
         # atom: Atom,
         # property_chains: List[str] = None,
         # property_name: str = None,
@@ -1465,7 +1465,7 @@ class SCypherWalker(s_cypherListener):
             self.property_look_up_time_list = []  # 退出清空
         else:
             time_property_chains = None
-        self.AtT_expression.push(AtTExpression(atom, property_chains, property_name, time_window, time_property_chains))
+        self.PoundT_expression.push(PoundTExpression(atom, property_chains, property_name, time_window, time_property_chains))
 
     def exitS_PropertyLookupName(self, ctx: s_cypherParser.S_PropertyLookupNameContext):
         self.property_look_up_name = ctx.oC_PropertyKeyName().getText()

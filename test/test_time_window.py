@@ -1,17 +1,24 @@
+from datetime import timezone
 from unittest import TestCase
 
+from neo4j.exceptions import ClientError
+from neo4j.time import DateTime
+
+from test.dataset_initialization import DataSet1
 from test.graphdb_connector import GraphDBConnector
 from transformer.s_transformer import STransformer
 
 
 class TestTimeWindow(TestCase):
     graphdb_connector = None
+    dataset1 = None
 
     @classmethod
     def setUpClass(cls) -> None:
         super().setUpClass()
         cls.graphdb_connector = GraphDBConnector()
         cls.graphdb_connector.out_net_connect()
+        cls.dataset1 = DataSet1(cls.graphdb_connector.driver)
 
     @classmethod
     def tearDownClass(cls) -> None:
@@ -73,27 +80,51 @@ class TestTimeWindow(TestCase):
         assert records == [{"person_name": "Cathy Van"}]
 
     # 测试SNAPSHOT
-    def test_snapshot_1(self):
+    def test_snapshot(self):
+        # 全局声明时间,限制当前操作时间点
         s_cypher = """
-            SNAPSHOT date('1999')
-            MATCH (n:City)
-            AT_TIME date("2000")
-            WHERE n.spot STARTS WITH "West"
-            RETURN n.name;
-            """
+                SNAPSHOT datetime('2023')
+                """
         cypher_query = STransformer.transform(s_cypher)
         print(cypher_query)
         records, summary, keys = self.graphdb_connector.driver.execute_query(cypher_query)
-        assert records == [{"person_name": "Cathy Van"}]
+        assert len(records) == 0
 
         s_cypher = """
-                SNAPSHOT date('2023')
-                MATCH path = (a:Person)-[*1..5]->(b:Brand)
-                WHERE a.name ENDS WITH 'Van'
-                RETURN path;
+                MATCH (n:Person)
+                WHERE n.name STARTS WITH "Mary"
+                RETURN n.name as person_name
                 """
         cypher_query = STransformer.transform(s_cypher)
-        tx = self.graphdb_connector.driver.session().begin_transaction()
-        results = tx.run(cypher_query).data()
+        print(cypher_query)
+        records, summary, keys = self.graphdb_connector.driver.execute_query(cypher_query)
+        assert records == [{"person_name": "Mary Smith Taylor"}]
 
-    # TODO: SCOPE
+        self.dataset1.rebuild()
+
+    # 测试SCOPE
+    def test_scope(self):
+        # 全局声明时间，限制后续所有查询的时间区间
+        s_cypher = """
+                SCOPE interval("1960", "1990")
+                """
+        cypher_query = STransformer.transform(s_cypher)
+        print(cypher_query)
+        records, summary, keys = self.graphdb_connector.driver.execute_query(cypher_query)
+        assert len(records) == 0
+
+        s_cypher = """
+                MATCH (n1:Person)-[:LIVE@T("1995",NOW)]->(n2:City {name: "Antwerp"})
+                RETURN n1.name as person_name
+                """
+        cypher_query = STransformer.transform(s_cypher)
+        print(cypher_query)
+        records, summary, keys = self.graphdb_connector.driver.execute_query(cypher_query)
+        assert len(records) == 0
+
+        self.dataset1.rebuild()
+
+    # 测试同时声明的优先级
+    def test_priority(self):
+        # TODO
+        pass

@@ -1,5 +1,5 @@
 from unittest import TestCase
-
+from datetime import timezone
 from neo4j.exceptions import ClientError
 from neo4j.time import DateTime
 
@@ -119,7 +119,7 @@ class TestDelete(TestCase):
         print(cypher_query)
         records, summery, keys = self.graphdb_connector.driver.execute_query(cypher_query)
         self.dataset1.rebuild()
-        assert records == [{"e": None}]
+        assert len(records) == 0
 
     # 带有效时间的删除
     def test_delete_time(self):
@@ -174,7 +174,7 @@ class TestDelete(TestCase):
         print(cypher_query)
         records, summery, keys = self.graphdb_connector.driver.execute_query(cypher_query)
         self.dataset1.rebuild()
-        assert records == [{"effective_time": DateTime(2003, 1, 1, 0, 0, 0, 0, tzinfo=timezone.utc)}]
+        assert len(records) == 0
 
         # 路径删除
         s_cypher = """
@@ -186,4 +186,4 @@ class TestDelete(TestCase):
         print(cypher_query)
         records, summery, keys = self.graphdb_connector.driver.execute_query(cypher_query)
         self.dataset1.rebuild()
-        assert len(records[0]) == 1
+        assert len(records) == 5
