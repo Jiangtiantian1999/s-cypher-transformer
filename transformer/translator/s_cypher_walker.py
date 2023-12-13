@@ -348,7 +348,7 @@ class SCypherWalker(s_cypherListener):
         if ctx.oC_ExplicitProcedureInvocation() is not None:
             input_items = self.explicit_input_items.pop()
         else:
-            tmp = self.explicit_input_items.pop()
+            # tmp = self.explicit_input_items.pop()
             input_items = None
         self.in_query_call_clause = CallClause(self.procedure_name, input_items, self.yield_clause)
         self.yield_clause = None
@@ -389,7 +389,7 @@ class SCypherWalker(s_cypherListener):
         if ctx.oC_ExplicitProcedureInvocation() is not None:
             input_items = self.explicit_input_items.pop()
         else:
-            tmp = self.explicit_input_items.pop()
+            # tmp = self.explicit_input_items.pop()
             input_items = None
         # 检查*
         if '*' in ctx.getText():
@@ -1214,8 +1214,7 @@ class SCypherWalker(s_cypherListener):
         else:
             comparison_operations = self.comparison_operations.pop()
         # 比较运算符的个数=元素个数+1
-        # TODO empty
-        if len(self.subject_expressions.peek()) > 0:
+        if self.subject_expressions.is_empty() is False and len(self.subject_expressions.peek()) > 0:
             subject_expressions = self.subject_expressions.pop()
         else:
             raise ParseError("At least one SubjectExpression is expected but there is none.")
@@ -1368,8 +1367,7 @@ class SCypherWalker(s_cypherListener):
         if ctx.getText()[0] == '-':
             is_positive = False
         principal_expression = self.principal_expression.pop()
-        # TODO empty
-        if len(self.index_expressions.peek()) > 0:
+        if self.index_expressions.is_empty() is False and len(self.index_expressions.peek()) > 0:
             index_expressions = self.index_expressions.pop()
         else:
             tmp = self.index_expressions.pop()
