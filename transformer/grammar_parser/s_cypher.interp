@@ -336,7 +336,7 @@ s_DoubleIndexExpression
 s_LeftExpression
 s_RightExpression
 oC_PropertyOrLabelsExpression
-s_AtTExpression
+s_PoundTExpression
 s_PropertyLookupName
 s_PropertyLookupTime
 s_TimePropertyItem

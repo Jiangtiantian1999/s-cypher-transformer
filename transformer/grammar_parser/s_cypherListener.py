@@ -503,12 +503,12 @@ class s_cypherListener(ParseTreeListener):
         pass
 
 
-    # Enter a parse tree produced by s_cypherParser#s_AtTExpression.
-    def enterS_AtTExpression(self, ctx:s_cypherParser.S_AtTExpressionContext):
+    # Enter a parse tree produced by s_cypherParser#s_PoundTExpression.
+    def enterS_PoundTExpression(self, ctx:s_cypherParser.S_PoundTExpressionContext):
         pass
 
-    # Exit a parse tree produced by s_cypherParser#s_AtTExpression.
-    def exitS_AtTExpression(self, ctx:s_cypherParser.S_AtTExpressionContext):
+    # Exit a parse tree produced by s_cypherParser#s_PoundTExpression.
+    def exitS_PoundTExpression(self, ctx:s_cypherParser.S_PoundTExpressionContext):
         pass
 
 

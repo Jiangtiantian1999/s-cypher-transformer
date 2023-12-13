@@ -124,7 +124,7 @@ oC_MultiplyDivideModuloExpression
 oC_PowerOfExpression
                  :  oC_UnaryAddOrSubtractExpression ( SP? s_PowerOfOperator SP? oC_UnaryAddOrSubtractExpression )* ;
 
-oC_ListOperatorExpression : ( oC_PropertyOrLabelsExpression | s_AtTExpression ) ( s_SingleIndexExpression | s_DoubleIndexExpression )* ;
+oC_ListOperatorExpression : ( oC_PropertyOrLabelsExpression | s_PoundTExpression ) ( s_SingleIndexExpression | s_DoubleIndexExpression )* ;
 
 s_SingleIndexExpression : SP? '[' SP? s_LeftExpression SP? ']' ;
 
@@ -136,7 +136,7 @@ s_RightExpression : oC_Expression ;
 
 oC_PropertyOrLabelsExpression : oC_Atom ( SP? oC_PropertyLookup )* ( SP? ( oC_NodeLabels | s_PoundTElement ) )? ;
 
-s_AtTExpression : oC_Atom ( SP? oC_PropertyLookup )* ( s_PropertyLookupName ( SP? ( PoundValue | s_PoundTElement ) )? )? SP? s_PropertyLookupTime ;
+s_PoundTExpression : oC_Atom ( SP? oC_PropertyLookup )* ( s_PropertyLookupName ( SP? ( PoundValue | s_PoundTElement ) )? )? SP? s_PropertyLookupTime ;
 
 s_PropertyLookupName : SP? '.' SP? ( oC_PropertyKeyName ) ;
 

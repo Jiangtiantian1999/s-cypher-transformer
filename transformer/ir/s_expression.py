@@ -82,17 +82,17 @@ class AtTElement:
 
 
 class PropertiesLabelsExpression:
-    def __init__(self, atom: Atom, property_chains: List[str] = None, labelsOrAtT: List[str] | AtTElement = None):
+    def __init__(self, atom: Atom, property_chains: List[str] = None, labelsOrPoundT: List[str] | AtTElement = None):
         self.atom = atom
         if property_chains is None:
             property_chains = []
         self.property_chains = property_chains
-        if labelsOrAtT is None:
-            labelsOrAtT = []
-        self.labelsOrAtT = labelsOrAtT
+        if labelsOrPoundT is None:
+            labelsOrPoundT = []
+        self.labelsOrPoundT = labelsOrPoundT
 
 
-class AtTExpression:
+class PoundTExpression:
     def __init__(self, atom: Atom, property_chains: List[str] = None, property_name: str = None,
                  time_window: bool | AtTElement = None, time_property_chains: List[str] = None):
         self.atom = atom

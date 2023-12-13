@@ -145,25 +145,25 @@ class ExpressionConverter:
                 properties_labels_expression_string = properties_labels_expression_string + '.' + property_name
 
         if len(properties_labels_expression.property_chains) > 0:
-            if properties_labels_expression.labelsOrAtT.__class__ == AtTElement:
-                time_window_string = self.convert_at_t_element(properties_labels_expression.labelsOrAtT)
+            if properties_labels_expression.labelsOrPoundT.__class__ == AtTElement:
+                time_window_string = self.convert_at_t_element(properties_labels_expression.labelsOrPoundT)
             else:
                 time_window_string = "NULL"
             properties_labels_expression_string = "scypher.getPropertyValue(" + properties_labels_expression_string + ", \"" + \
                                                   properties_labels_expression.property_chains[
                                                       -1] + "\", " + time_window_string + ')'
         else:
-            if properties_labels_expression.labelsOrAtT.__class__ == AtTElement:
+            if properties_labels_expression.labelsOrPoundT.__class__ == AtTElement:
                 raise SyntaxError(
                     "When querying the property value at the specified time, the property name must be specified")
 
-        if properties_labels_expression.labelsOrAtT.__class__ == list:
+        if properties_labels_expression.labelsOrPoundT.__class__ == list:
             # 判断某节点/边是否有某（些）标签
-            for label in properties_labels_expression.labelsOrAtT:
+            for label in properties_labels_expression.labelsOrPoundT:
                 properties_labels_expression_string = properties_labels_expression_string + ':' + label
         return properties_labels_expression_string
 
-    def convert_at_t_expression(self, at_t_expression: AtTExpression) -> str:
+    def convert_at_t_expression(self, at_t_expression: PoundTExpression) -> str:
         at_t_expression_string = self.convert_atom(at_t_expression.atom)
         for property_name in at_t_expression.property_chains:
             at_t_expression_string = at_t_expression_string + '.' + property_name

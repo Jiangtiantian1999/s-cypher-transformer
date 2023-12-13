@@ -1050,7 +1050,7 @@ class s_cypherParser ( Parser ):
     RULE_s_LeftExpression = 52
     RULE_s_RightExpression = 53
     RULE_oC_PropertyOrLabelsExpression = 54
-    RULE_s_AtTExpression = 55
+    RULE_s_PoundTExpression = 55
     RULE_s_PropertyLookupName = 56
     RULE_s_PropertyLookupTime = 57
     RULE_s_TimePropertyItem = 58
@@ -1163,7 +1163,7 @@ class s_cypherParser ( Parser ):
                    "oC_PowerOfExpression", "oC_ListOperatorExpression", 
                    "s_SingleIndexExpression", "s_DoubleIndexExpression", 
                    "s_LeftExpression", "s_RightExpression", "oC_PropertyOrLabelsExpression", 
-                   "s_AtTExpression", "s_PropertyLookupName", "s_PropertyLookupTime", 
+                   "s_PoundTExpression", "s_PropertyLookupName", "s_PropertyLookupTime", 
                    "s_TimePropertyItem", "s_TimePredicateExpression", "s_AtTElement", 
                    "s_PoundTElement", "s_TElement", "s_TimePointLiteral", 
                    "oC_FunctionInvocation", "s_FunctionInvocationExpression", 
@@ -5665,8 +5665,8 @@ class s_cypherParser ( Parser ):
             return self.getTypedRuleContext(s_cypherParser.OC_PropertyOrLabelsExpressionContext,0)
 
 
-        def s_AtTExpression(self):
-            return self.getTypedRuleContext(s_cypherParser.S_AtTExpressionContext,0)
+        def s_PoundTExpression(self):
+            return self.getTypedRuleContext(s_cypherParser.S_PoundTExpressionContext,0)
 
 
         def s_SingleIndexExpression(self, i:int=None):
@@ -5713,7 +5713,7 @@ class s_cypherParser ( Parser ):
 
             elif la_ == 2:
                 self.state = 999
-                self.s_AtTExpression()
+                self.s_PoundTExpression()
                 pass
 
 
@@ -6134,7 +6134,7 @@ class s_cypherParser ( Parser ):
         return localctx
 
 
-    class S_AtTExpressionContext(ParserRuleContext):
+    class S_PoundTExpressionContext(ParserRuleContext):
         __slots__ = 'parser'
 
         def __init__(self, parser, parent:ParserRuleContext=None, invokingState:int=-1):
@@ -6174,23 +6174,23 @@ class s_cypherParser ( Parser ):
 
 
         def getRuleIndex(self):
-            return s_cypherParser.RULE_s_AtTExpression
+            return s_cypherParser.RULE_s_PoundTExpression
 
         def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterS_AtTExpression" ):
-                listener.enterS_AtTExpression(self)
+            if hasattr( listener, "enterS_PoundTExpression" ):
+                listener.enterS_PoundTExpression(self)
 
         def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitS_AtTExpression" ):
-                listener.exitS_AtTExpression(self)
+            if hasattr( listener, "exitS_PoundTExpression" ):
+                listener.exitS_PoundTExpression(self)
 
 
 
 
-    def s_AtTExpression(self):
+    def s_PoundTExpression(self):
 
-        localctx = s_cypherParser.S_AtTExpressionContext(self, self._ctx, self.state)
-        self.enterRule(localctx, 110, self.RULE_s_AtTExpression)
+        localctx = s_cypherParser.S_PoundTExpressionContext(self, self._ctx, self.state)
+        self.enterRule(localctx, 110, self.RULE_s_PoundTExpression)
         self._la = 0 # Token type
         try:
             self.enterOuterAlt(localctx, 1)
