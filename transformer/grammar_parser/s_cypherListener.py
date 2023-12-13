@@ -557,6 +557,24 @@ class s_cypherListener(ParseTreeListener):
         pass
 
 
+    # Enter a parse tree produced by s_cypherParser#s_PoundTElement.
+    def enterS_PoundTElement(self, ctx:s_cypherParser.S_PoundTElementContext):
+        pass
+
+    # Exit a parse tree produced by s_cypherParser#s_PoundTElement.
+    def exitS_PoundTElement(self, ctx:s_cypherParser.S_PoundTElementContext):
+        pass
+
+
+    # Enter a parse tree produced by s_cypherParser#s_TElement.
+    def enterS_TElement(self, ctx:s_cypherParser.S_TElementContext):
+        pass
+
+    # Exit a parse tree produced by s_cypherParser#s_TElement.
+    def exitS_TElement(self, ctx:s_cypherParser.S_TElementContext):
+        pass
+
+
     # Enter a parse tree produced by s_cypherParser#s_TimePointLiteral.
     def enterS_TimePointLiteral(self, ctx:s_cypherParser.S_TimePointLiteralContext):
         pass

@@ -98,7 +98,7 @@ s_PropertiesPattern : '{' ( SP? s_PropertyNode SP? ':' SP? s_ValueNode ( SP? ','
 
 s_PropertyNode : oC_PropertyKeyName ( SP? s_AtTElement )? ;
 
-s_ValueNode : oC_Expression SP? ( '(' SP? s_AtTElement SP? ')' )? ;
+s_ValueNode : oC_Expression ( SP? s_AtTElement )? ;
 
 oC_RelationshipDetail : '[' SP? ( oC_Variable SP? )? ( oC_RelationshipTypes SP? )? oC_RangeLiteral? ( s_AtTElement SP? )? ( oC_Properties SP? )? ']' ;
 
@@ -134,20 +134,23 @@ s_LeftExpression : oC_Expression ;
 
 s_RightExpression : oC_Expression ;
 
-oC_PropertyOrLabelsExpression : oC_Atom ( SP? oC_PropertyLookup )* ( SP? ( oC_NodeLabels | s_AtTElement ) )? ;
+oC_PropertyOrLabelsExpression : oC_Atom ( SP? oC_PropertyLookup )* ( SP? ( oC_NodeLabels | s_PoundTElement ) )? ;
 
-s_AtTExpression : oC_Atom ( SP? oC_PropertyLookup )* ( s_PropertyLookupName ( SP? ( PoundValue | s_AtTElement ) )? )? SP? s_PropertyLookupTime ;
+s_AtTExpression : oC_Atom ( SP? oC_PropertyLookup )* ( s_PropertyLookupName ( SP? ( PoundValue | s_PoundTElement ) )? )? SP? s_PropertyLookupTime ;
 
 s_PropertyLookupName : SP? '.' SP? ( oC_PropertyKeyName ) ;
 
 s_PropertyLookupTime : AtT ( SP? s_TimePropertyItem )* ;
 
-s_TimePropertyItem
-              :  '.' SP? ( oC_PropertyKeyName ) ;
+s_TimePropertyItem : '.' SP? ( oC_PropertyKeyName ) ;
 
 s_TimePredicateExpression : SP ( DURING | OVERLAPS ) SP oC_AddOrSubtractExpression ;
 
-s_AtTElement : AtT SP? '(' ( SP? s_TimePointLiteral SP? ',' )? SP? ( NOW | s_TimePointLiteral ) SP? ')';
+s_AtTElement : AtT SP? s_TElement;
+
+s_PoundTElement : PoundT SP? s_TElement;
+
+s_TElement : '(' ( SP? s_TimePointLiteral SP? ',' )? SP? ( NOW | s_TimePointLiteral ) SP? ')' ;
 
 s_TimePointLiteral : StringLiteral
                    | oC_MapLiteral
@@ -184,6 +187,8 @@ oC_SymbolicName : UnescapedSymbolicName
                 ;
 
 AtT : '@T' | '@t' ;
+
+PoundT : '#T' | '#t' ;
 
 PoundValue : '#' ( 'V' | 'v' ) ( 'A' | 'a' ) ( 'L' | 'l' ) ( 'U' | 'u' ) ( 'E' | 'e' ) ;
 
