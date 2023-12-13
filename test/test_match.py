@@ -22,7 +22,7 @@ class TestMatch(TestCase):
     def test_match_object_node(self):
         s_cypher = """
         MATCH (n:Person@T("1938", NOW))
-        RETURN n.name@T(NOW) as person_name
+        RETURN n.name#T(NOW) as person_name
         """
         cypher_query = STransformer.transform(s_cypher)
         records, summary, keys = self.graphdb_connector.driver.execute_query(cypher_query)
@@ -32,7 +32,7 @@ class TestMatch(TestCase):
     def test_match_property_node(self):
         s_cypher = """
         MATCH (n:Person {name@T("1950"): "Mary Smith"})
-        RETURN n.name@T(NOW) as person_name
+        RETURN n.name#T(NOW) as person_name
         """
         cypher_query = STransformer.transform(s_cypher)
         records, summary, keys = self.graphdb_connector.driver.execute_query(cypher_query)
@@ -40,7 +40,7 @@ class TestMatch(TestCase):
 
         s_cypher = """
         MATCH (n:Person {name@T("1960", NOW): "Mary Smith"})
-        RETURN n.name@T(NOW) as person_name
+        RETURN n.name#T(NOW) as person_name
         """
         cypher_query = STransformer.transform(s_cypher)
         records, summary, keys = self.graphdb_connector.driver.execute_query(cypher_query)
@@ -49,16 +49,16 @@ class TestMatch(TestCase):
     # 匹配值节点
     def test_match_value_node(self):
         s_cypher = """
-        MATCH (n:Person {name:"Mary Smith" ( @T("1950") )})
-        RETURN n.name@T(NOW) as person_name
+        MATCH (n:Person {name:"Mary Smith"@T("1950")})
+        RETURN n.name#T(NOW) as person_name
         """
         cypher_query = STransformer.transform(s_cypher)
         records, summary, keys = self.graphdb_connector.driver.execute_query(cypher_query)
         assert records == [{"person_name": "Mary Smith Taylor"}]
 
         s_cypher = """
-        MATCH (n:Person {name: "Mary Smith" ( @T("1960", NOW) )})
-        RETURN n.name@T(NOW) as person_name
+        MATCH (n:Person {name: "Mary Smith"@T("1960", NOW) })
+        RETURN n.name#T(NOW) as person_name
         """
         cypher_query = STransformer.transform(s_cypher)
         records, summary, keys = self.graphdb_connector.driver.execute_query(cypher_query)
@@ -87,7 +87,7 @@ class TestMatch(TestCase):
     def test_match_path(self):
         s_cypher = """
         MATCH path = (a:Person{name:"Mary Smith Taylor"})-[e:FRIEND*1..2]->(b:Person)
-        RETURN [node in nodes(path) | node.name@T(NOW)] as path
+        RETURN [node in nodes(path) | node.name#T(NOW)] as path
         ORDER BY path
         """
         cypher_query = STransformer.transform(s_cypher)
@@ -100,7 +100,7 @@ class TestMatch(TestCase):
 
         s_cypher = """
         MATCH path = (a:Person{name:"Mary Smith Taylor"})-[e:FRIEND*1..2@T("2000")]->(b:Person)
-        RETURN [node in nodes(path) | node.name@T("2000")] as path
+        RETURN [node in nodes(path) | node.name#T("2000")] as path
         ORDER BY path
         """
         cypher_query = STransformer.transform(s_cypher)

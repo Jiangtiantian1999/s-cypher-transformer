@@ -46,7 +46,7 @@ class TestReturn(TestCase):
         # 返回指定有效时间下的节点属性
         s_cypher = """
         MATCH (n1:Person)-[e:LIVE@T("1990")]->(n2:City {name: "Antwerp"})
-        RETURN n1.name@T(NOW) as person_name
+        RETURN n1.name#T(NOW) as person_name
         """
         cypher_query = STransformer.transform(s_cypher)
         records, summery, keys = self.graphdb_connector.driver.execute_query(cypher_query)
@@ -93,7 +93,7 @@ class TestReturn(TestCase):
         # 返回指定有效时间下的值节点有效时间
         s_cypher = """
         MATCH (n:Person {name: "Mary Smith Taylor"})
-        RETURN n.name@T(NOW)@T as effective_time
+        RETURN n.name#T(NOW)@T as effective_time
         """
         cypher_query = STransformer.transform(s_cypher)
         records, summery, keys = self.graphdb_connector.driver.execute_query(cypher_query)
@@ -134,7 +134,7 @@ class TestReturn(TestCase):
 
         s_cypher = """
         MATCH (p:Person)
-        RETURN p.name@T(NOW) as name, p@T.from.year as birth_year
+        RETURN p.name#T(NOW) as name, p@T.from.year as birth_year
         ORDER BY birth_year, name
         LIMIT 3
         """
@@ -150,7 +150,7 @@ class TestReturn(TestCase):
         MATCH (a:Person)-[:FRIEND]->(b:Person)
         WITH *
         ORDER BY a.name, b.name
-        RETURN a.name as person, collect(b.name@T(NOW)) as friends
+        RETURN a.name as person, collect(b.name#T(NOW)) as friends
         """
         cypher_query = STransformer.transform(s_cypher)
         records, summery, keys = self.graphdb_connector.driver.execute_query(cypher_query)
@@ -218,7 +218,7 @@ class TestReturn(TestCase):
         # 时间点之间不能相减
         s_cypher = """
         MATCH (p:Person{name: "Mary Smith Taylor"})-[:FRIEND]->(b:Person)
-        RETURN p.name@T(NOW) as person1, b.name@T(NOW) as person2, p@T.from - b@T.from AS AgeDiff
+        RETURN p.name#T(NOW) as person1, b.name#T(NOW) as person2, p@T.from - b@T.from AS AgeDiff
         ORDER BY person2
         """
         cypher_query = STransformer.transform(s_cypher)

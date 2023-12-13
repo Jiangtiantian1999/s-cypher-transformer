@@ -22,7 +22,7 @@ class TestWhere(TestCase):
     def test_where_logic_operation(self):
         s_cypher = """
         MATCH (n:Person)-[r:LIVE@T("2000", "2010")]->(m:City)
-        WHERE n.name@T(NOW) = "Mary Smith Taylor" XOR (m.name = "Paris" and n.name = "Cathy Van") OR NOT(n.name@T(NOW) = "Mary Smith Taylor" or n.name = "Cathy Van")
+        WHERE n.name#T(NOW) = "Mary Smith Taylor" XOR (m.name = "Paris" and n.name = "Cathy Van") OR NOT(n.name#T(NOW) = "Mary Smith Taylor" or n.name = "Cathy Van")
         RETURN n.name as person, m.name as city
         ORDER BY person, city
         """
@@ -47,7 +47,7 @@ class TestWhere(TestCase):
         s_cypher = """
         MATCH (n:Person)-[r:LIVE]->(m:City {name: "Antwerp"})
         WHERE r@T.from <= timePoint('1990')
-        RETURN n.name@T(NOW) as person
+        RETURN n.name#T(NOW) as person
         """
         cypher_query = STransformer.transform(s_cypher)
         records, summary, keys = self.graphdb_connector.driver.execute_query(cypher_query)
@@ -56,7 +56,7 @@ class TestWhere(TestCase):
         s_cypher = """
         MATCH (a:Person)-[r:FRIEND]->(b:Person)
         WHERE r@T.from > timePoint('2002')
-        RETURN a.name@T(NOW) as person1, b.name@T(NOW) as person2
+        RETURN a.name#T(NOW) as person1, b.name#T(NOW) as person2
         ORDER BY person1, person2
         """
         cypher_query = STransformer.transform(s_cypher)
@@ -67,7 +67,7 @@ class TestWhere(TestCase):
         s_cypher = """
         MATCH (a:Person)-[r:FRIEND]->(b:Person)
         WHERE r@T.from >= timePoint('2002')
-        RETURN a.name@T(NOW) as person1, b.name@T(NOW) as person2
+        RETURN a.name#T(NOW) as person1, b.name#T(NOW) as person2
         ORDER BY person1, person2
         """
         cypher_query = STransformer.transform(s_cypher)
@@ -131,7 +131,7 @@ class TestWhere(TestCase):
         # ENDS WITH
         s_cypher = """
         MATCH (n:Person)
-        WHERE n.name@T(NOW) ENDS WITH 'er'
+        WHERE n.name#T(NOW) ENDS WITH 'er'
         RETURN n.name as name
         ORDER BY name
         """
