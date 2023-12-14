@@ -24,10 +24,13 @@ class SCypherWalker(s_cypherListener):
 
         # time
         self.at_time_clause = None
-        self.at_t_element = None
+        self.at_t_element = Stack()
         self.pound_t_element = None
         self.s_t_element = None
         self.time_point_literals = []
+        self.set_value_item_effective_time = None
+        self.set_property_item_one_effective_time = None
+        self.set_property_item_two_effective_time = None
 
         # pattern
         self.patterns = []
@@ -458,8 +461,7 @@ class SCypherWalker(s_cypherListener):
         # 对象节点时间
         time_window = None
         if ctx.s_AtTElement() is not None:
-            time_window = self.at_t_element
-            self.at_t_element = None
+            time_window = self.at_t_element.pop()
         if ctx.s_Properties() is not None:
             properties = self.properties
             self.properties = None  # 退出清空
@@ -502,8 +504,7 @@ class SCypherWalker(s_cypherListener):
         time_window = None
         # 获取属性节点的时间
         if ctx.s_AtTElement() is not None:
-            time_window = self.at_t_element  # 属性节点时间
-            self.at_t_element = None
+            time_window = self.at_t_element.pop()  # 属性节点时间
         self.property_node_list.append(PropertyNode(property_content, None, time_window))
 
     def exitS_ValueNode(self, ctx: s_cypherParser.S_ValueNodeContext):
@@ -517,14 +518,13 @@ class SCypherWalker(s_cypherListener):
         # 获取值节点的时间
         time_window = None  # 值节点时间
         if ctx.s_AtTElement() is not None:
-            time_window = self.at_t_element
-            self.at_t_element = None
+            time_window = self.at_t_element.pop()
         # 构造值节点
         self.value_node_list.append(ValueNode(value_content, None, time_window))
 
     # 获取时间
     def exitS_AtTElement(self, ctx: s_cypherParser.S_AtTElementContext):
-        self.at_t_element = self.s_t_element
+        self.at_t_element.push(self.s_t_element)
         self.s_t_element = None
 
     def exitS_PoundTElement(self, ctx: s_cypherParser.S_PoundTElementContext):
@@ -539,7 +539,7 @@ class SCypherWalker(s_cypherListener):
             self.time_point_literals = []  # 退出清空
         elif len(self.time_point_literals) == 1 and ctx.NOW() is not None:
             self.s_t_element = AtTElement(self.time_point_literals[0],
-                                           TimePointLiteral('"NOW"'))
+                                          TimePointLiteral('"NOW"'))
             self.time_point_literals = []  # 退出清空
         elif len(self.time_point_literals) == 1 and ctx.NOW() is None:
             self.s_t_element = AtTElement(self.time_point_literals[0], None)
@@ -576,8 +576,10 @@ class SCypherWalker(s_cypherListener):
         variable = None
         if ctx.oC_Variable() is not None:
             variable = ctx.oC_Variable().getText()
-        interval = self.at_t_element
-        self.at_t_element = None
+        if ctx.s_AtTElement() is not None:
+            interval = self.at_t_element.pop()
+        else:
+            interval = None
         if ctx.oC_RangeLiteral() is not None:
             length_tuple = self.rel_length_range
         else:
@@ -822,8 +824,7 @@ class SCypherWalker(s_cypherListener):
             self.property_look_up_name = None
         time_window = None
         if ctx.s_AtTElement() is not None:
-            time_window = self.at_t_element
-            self.at_t_element = None  # 退出时清空
+            time_window = self.at_t_element.pop()
         elif ctx.PoundValue() is not None:
             time_window = True
         self.delete_items.append(DeleteItem(expression, property_name, time_window))
@@ -851,8 +852,7 @@ class SCypherWalker(s_cypherListener):
         if (ctx.s_AtTElement() is not None and ctx.oC_Variable() is not None
                 and (item is None for item in [ctx.s_SetPropertyItemOne(), ctx.s_SetPropertyItemTwo()])):
             variable = ctx.oC_Variable().getText()
-            effective_time = self.at_t_element
-            self.at_t_element = None
+            effective_time = self.at_t_element.pop()
             object_setting = NodeEffectiveTimeSetting(variable, effective_time)
             # 整合SetItem
             self.set_items.append(EffectiveTimeSetting(object_setting, None, None))
@@ -862,12 +862,14 @@ class SCypherWalker(s_cypherListener):
             object_variable = ctx.oC_Variable().getText()
             object_effective_time = None
             if ctx.s_AtTElement() is not None:
-                object_effective_time = self.at_t_element
-                self.at_t_element = None
+                object_effective_time = self.at_t_element.pop()
             object_setting = NodeEffectiveTimeSetting(object_variable, object_effective_time)
             # 属性节点
             property_variable = ctx.s_SetPropertyItemOne().oC_PropertyKeyName().getText()
-            property_effective_time = self.getAtTElement(ctx.s_SetPropertyItemOne().s_AtTElement().getText())
+            property_effective_time = None
+            if ctx.s_SetPropertyItemOne().s_AtTElement() is not None:
+                property_effective_time = self.set_property_item_one_effective_time
+                self.set_property_item_one_effective_time = None
             property_setting = NodeEffectiveTimeSetting(property_variable, property_effective_time)
             # 整合SetItem
             self.set_items.append(EffectiveTimeSetting(object_setting, property_setting, None))
@@ -877,19 +879,20 @@ class SCypherWalker(s_cypherListener):
             object_variable = ctx.oC_Variable().getText()
             object_effective_time = None
             if ctx.s_AtTElement() is not None:
-                object_effective_time = self.at_t_element
-                self.at_t_element = None
+                object_effective_time = self.at_t_element.pop()
             object_setting = NodeEffectiveTimeSetting(object_variable, object_effective_time)
             # 属性节点
             property_variable = ctx.s_SetPropertyItemTwo().oC_PropertyKeyName().getText()
             property_effective_time = None
             if ctx.s_SetPropertyItemTwo().s_AtTElement() is not None:
-                property_effective_time = self.getAtTElement(ctx.s_SetPropertyItemTwo().s_AtTElement().getText())
+                property_effective_time = self.set_property_item_two_effective_time
+                self.set_property_item_two_effective_time = None
             property_setting = NodeEffectiveTimeSetting(property_variable, property_effective_time)
             # 值节点
             value_effective_time = None
-            if ctx.s_SetPropertyItemTwo().s_AtTElement() is not None:
-                value_effective_time = self.getAtTElement(ctx.s_SetValueItem().s_AtTElement().getText())
+            if ctx.s_SetValueItem().s_AtTElement() is not None:
+                value_effective_time = self.set_value_item_effective_time
+                self.set_value_item_effective_time = None
             value_setting = value_effective_time
             # 整合SetItem
             self.set_items.append(EffectiveTimeSetting(object_setting, property_setting, value_setting))
@@ -909,8 +912,7 @@ class SCypherWalker(s_cypherListener):
             if ctx.oC_PropertyExpression() is not None:
                 expression_left = self.set_property_expression.pop()
                 if ctx.s_AtTElement() is not None:
-                    expression_left.time_window = self.at_t_element
-                    self.at_t_element = None
+                    expression_left.time_window = self.at_t_element.pop()
             else:
                 expression_left = ctx.oC_Variable().getText()
             if self.expression.is_empty() is False:
@@ -923,6 +925,20 @@ class SCypherWalker(s_cypherListener):
             self.set_items.append(ExpressionSetting(expression_left, expression_right, is_added))
         else:
             raise ParseError("Error SetItem format.")
+
+    def exitS_SetPropertyItemOne(self, ctx: s_cypherParser.S_SetPropertyItemOneContext):
+        if ctx.s_AtTElement() is not None:
+            self.set_property_item_one_effective_time = self.at_t_element.pop()
+        else:
+            self.set_property_item_one_effective_time = None
+
+    def exitS_SetPropertyItemTwo(self, ctx: s_cypherParser.S_SetPropertyItemTwoContext):
+        self.set_property_item_two_effective_time = None
+        if ctx.s_AtTElement() is not None:
+            self.set_property_item_two_effective_time = self.at_t_element.pop()
+
+    def exitS_SetValueItem(self, ctx: s_cypherParser.S_SetValueItemContext):
+        self.set_value_item_effective_time = self.at_t_element.pop()
 
     def exitOC_PropertyExpression(self, ctx: s_cypherParser.OC_PropertyExpressionContext):
         if self.is_set:
