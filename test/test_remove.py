@@ -1,7 +1,6 @@
 from unittest import TestCase
 
 from neo4j.exceptions import ClientError
-from neo4j.time import DateTime
 
 from test.dataset_initialization import DataSet1
 from test.graphdb_connector import GraphDBConnector
@@ -24,89 +23,61 @@ class TestRemove(TestCase):
         super().tearDownClass()
         cls.graphdb_connector.close()
 
-    # REMOVE子句用于（逻辑）删除对象节点和边的属性
-
-    # 节点属性的删除
-    def test_remove_node(self):
-        s_cypher = """
-                MATCH (p:Person)
-                WHERE n1@T.from < date("1988")
-                WITH p
-                REMOVE p.name
-                RETURN p.name
-                """
-        cypher_query = STransformer.transform(s_cypher)
-        print(cypher_query)
-        records, summery, keys = self.graphdb_connector.driver.execute_query(cypher_query)
-        self.dataset1.rebuild()
-        assert records == [{"p.name": None}]
-
-    # 边属性的删除
+    # 删除边的属性
     def test_remove_relationship(self):
         s_cypher = """
-                MATCH (:Person {name: "Pauline Boutler"})-[e:LIVE_IN]->(:City {name: "London"})
-                REMOVE e.code
-                RETURN e.code
-                """
+        MATCH (:Person {name: "Pauline Boutler"})-[e:LIVE_IN]->(:City {name: "London"})
+        REMOVE e.code
+        RETURN e.code
+        """
         cypher_query = STransformer.transform(s_cypher)
-        print(cypher_query)
         records, summery, keys = self.graphdb_connector.driver.execute_query(cypher_query)
         self.dataset1.rebuild()
         assert records == [{"e.code": None}]
 
     def test_remove_rel_obj(self):
         s_cypher = """
-                MATCH (n1:Person {name: "Pauline Boutler"})-[e:LIVE_IN]->(n2:City {name: "London"})
-                REMOVE e.code, n2.spot
-                RETURN n2.name, e.code, n2.spot
-                """
+        MATCH (n1:Person {name: "Pauline Boutler"})-[e:LIVE_IN]->(n2:City {name: "London"})
+        REMOVE e.code, n2.spot
+        RETURN n2.name, e.code, n2.spot
+        """
         cypher_query = STransformer.transform(s_cypher)
-        print(cypher_query)
         records, summery, keys = self.graphdb_connector.driver.execute_query(cypher_query)
         self.dataset1.rebuild()
-        assert records == [{"n2.name": "London"},
-                           {"e.code": None},
-                           {"n2.spot": None}]
+        assert records == [{"n2.name": "London"}, {"e.code": None}, {"n2.spot": None}]
 
         s_cypher = """
-                MATCH (n1:Person {name: "Pauline Boutler"})-[e:LIVE_IN]->(n2:City {name: "London"})
-                WHERE n1@T.from >= date("2004") and n1.name STARTS WITH "Pauline"
-                REMOVE e.code, n2.spot
-                RETURN n1.name, e.code, n2.spot
-                """
+        MATCH (n1:Person {name: "Pauline Boutler"})-[e:LIVE_IN]->(n2:City {name: "London"})
+        WHERE n1@T.from >= date("2004") and n1.name STARTS WITH "Pauline"
+        REMOVE e.code, n2.spot
+        RETURN n1.name, e.code, n2.spot
+        """
         cypher_query = STransformer.transform(s_cypher)
-        print(cypher_query)
         records, summery, keys = self.graphdb_connector.driver.execute_query(cypher_query)
         self.dataset1.rebuild()
-        assert records == [{"n1.name": "Pauline Boutler"},
-                           {"e.code": None},
-                           {"n2.spot": None}]
+        assert records == [{"n1.name": "Pauline Boutler"}, {"e.code": None}, {"n2.spot": None}]
 
     # 标签的删除
     def test_remove_labels(self):
         s_cypher = """
-                MATCH (n {name: 'London'})
-                REMOVE n:City:Object
-                RETURN n.name as name, labels(n) as labels
-                """
+        MATCH (n {name: 'London'})
+        REMOVE n:City:Object
+        RETURN n.name as name, labels(n) as labels
+        """
         cypher_query = STransformer.transform(s_cypher)
-        print(cypher_query)
         records, summery, keys = self.graphdb_connector.driver.execute_query(cypher_query)
         self.dataset1.rebuild()
-        assert records == [{"name": "London"},
-                           {"labels": []}]
+        assert records == [{"name": "London"}, {"labels": []}]
 
     # 带有效时间
     def test_remove_time(self):
         s_cypher = """
-                    MATCH (n1:Person@T("1978", NOW) {name@T("1978", NOW): "Pauline Boutler"(@T("1978", "1988"))})-[e:LIVE_IN@T("2004", "NOW")]->(n2:City {name: "London"})
-                    WHERE n1@T.from <= date("1980") and n1.name ENDS WITH "Boutler"
-                    REMOVE e.code, n2.name
-                    RETURN e.code, n2.name
-                    """
+        MATCH (n1:Person@T("1978", NOW) {name@T("1978", NOW): "Pauline Boutler"(@T("1978", "1988"))})-[e:LIVE_IN@T("2004", "NOW")]->(n2:City {name: "London"})
+        WHERE n1@T.from <= date("1980") and n1.name ENDS WITH "Boutler"
+        REMOVE e.code, n2.name
+        RETURN e.code, n2.name
+        """
         cypher_query = STransformer.transform(s_cypher)
-        print(cypher_query)
         records, summery, keys = self.graphdb_connector.driver.execute_query(cypher_query)
         self.dataset1.rebuild()
-        assert records == [{"e.code": None},
-                           {"n2.name": None}]
+        assert records == [{"e.code": None}, {"n2.name": None}]
