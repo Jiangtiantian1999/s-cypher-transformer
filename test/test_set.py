@@ -22,6 +22,7 @@ class TestSet(TestCase):
 
     @classmethod
     def tearDownClass(cls) -> None:
+        cls.dataset1.rebuild()
         super().tearDownClass()
         cls.graphdb_connector.close()
 
@@ -36,12 +37,12 @@ class TestSet(TestCase):
         """
         cypher_query = STransformer.transform(s_cypher)
         records, summery, keys = self.graphdb_connector.driver.execute_query(cypher_query)
+        self.dataset1.rebuild()
         assert records == [{"names": ["Mary Smith", "Mary Smith Brown"],
                             "effective_time": [{"from": DateTime(1937, 1, 1, tzinfo=timezone.utc),
                                                 "to": DateTime(1959, 12, 31, 23, 59, 59, 999999999, timezone.utc)},
                                                {"from": DateTime(1960, 1, 1, tzinfo=timezone.utc),
                                                 "to": DateTime(9999, 12, 31, 23, 59, 59, 999999999, timezone.utc)}]}]
-        self.dataset1.rebuild()
 
         s_cypher = """
         MATCH (n:Person{name: "Mary Smith Taylor"})
@@ -50,49 +51,49 @@ class TestSet(TestCase):
         """
         cypher_query = STransformer.transform(s_cypher)
         records, summery, keys = self.graphdb_connector.driver.execute_query(cypher_query)
+        self.dataset1.rebuild()
         assert records == [{"names": ["Mary Smith Brown", "Mary Smith Brown"],
                             "effective_time": [{"from": DateTime(1937, 1, 1, tzinfo=timezone.utc),
                                                 "to": DateTime(1959, 12, 31, 23, 59, 59, 999999999, timezone.utc)},
                                                {"from": DateTime(1960, 1, 1, tzinfo=timezone.utc),
                                                 "to": DateTime(9999, 12, 31, 23, 59, 59, 999999999, timezone.utc)}]}]
-        self.dataset1.rebuild()
 
         # 若不存在满足条件的值节点，则根据指定的时间点/时间区间创建值节点
         # 指定时间点
         s_cypher = """
-        CREATE (n:Person{name: "Nick"(@T("1998","2010"))})
+        CREATE (n:Person{name: "Nick"@T("1998","2010")})
         AT TIME timePoint('1998')
-        SET n.name@T("2000") = "Nick Brown"
+        SET n.name@T("2023") = "Nick Brown"
         RETURN n.name as names, n.name#Value@T as effective_time
         """
         cypher_query = STransformer.transform(s_cypher)
         records, summery, keys = self.graphdb_connector.driver.execute_query(cypher_query)
+        self.dataset1.rebuild()
         assert records == [{"names": ["Nick", "Nick Brown"],
                             "effective_time": [{"from": DateTime(1998, 1, 1, tzinfo=timezone.utc),
                                                 "to": DateTime(2010, 1, 1, tzinfo=timezone.utc)},
-                                               {"from": DateTime(2000, 1, 1, tzinfo=timezone.utc),
+                                               {"from": DateTime(2023, 1, 1, tzinfo=timezone.utc),
                                                 "to": DateTime(9999, 12, 31, 23, 59, 59, 999999999, timezone.utc)}]}]
-        self.dataset1.rebuild()
 
         # 指定时间区间
         s_cypher = """
-        CREATE (n:Person{name: "Nick"(@T("1998","2010"))})
+        CREATE (n:Person{name: "Nick"@T("1998","2010")})
         AT TIME timePoint('1998')
-        SET n.name@T("2000", "2010") = "Nick Brown"
+        SET n.name@T("2015", "2023") = "Nick Brown"
         RETURN n.name as names, n.name#Value@T as effective_time
         """
         cypher_query = STransformer.transform(s_cypher)
         records, summery, keys = self.graphdb_connector.driver.execute_query(cypher_query)
+        self.dataset1.rebuild()
         assert records == [{"names": ["Nick", "Nick Brown"],
                             "effective_time": [{"from": DateTime(1998, 1, 1, tzinfo=timezone.utc),
                                                 "to": DateTime(2010, 1, 1, tzinfo=timezone.utc)},
-                                               {"from": DateTime(2000, 1, 1, tzinfo=timezone.utc),
-                                                "to": DateTime(2010, 1, 1, tzinfo=timezone.utc)}]}]
-        self.dataset1.rebuild()
+                                               {"from": DateTime(2015, 1, 1, tzinfo=timezone.utc),
+                                                "to": DateTime(2023, 1, 1, tzinfo=timezone.utc)}]}]
 
         # 值节点的内容不能为null
         s_cypher = """
-        CREATE (n:Person{name: "Nick")})
+        CREATE (n:Person{name: "Nick"})
         AT TIME timePoint('2023')
         SET n.name@T("2000") = null
         RETURN n.name as names, n.name#Value@T as effective_time
@@ -104,7 +105,7 @@ class TestSet(TestCase):
 
         # 若不存在满足条件的值节点，则根据指定的时间点/时间区间创建值节点，若对象节点或属性节点的有效时间不包含待创建值节点的有效时间，则报错
         s_cypher = """
-        CREATE (n:Person{name: "Nick")})
+        CREATE (n:Person{name: "Nick"})
         AT TIME timePoint('2023')
         SET n.name@T("2000") = "Nick Brown"
         RETURN n.name as names, n.name#Value@T as effective_time
@@ -126,6 +127,7 @@ class TestSet(TestCase):
         """
         cypher_query = STransformer.transform(s_cypher)
         records, summary, keys = self.graphdb_connector.driver.execute_query(cypher_query)
+        self.dataset1.rebuild()
         assert records == [{
             "object_interval": {"from": DateTime(1978, 1, 1, tzinfo=timezone.utc),
                                 "to": DateTime(9999, 12, 31, 23, 59, 59, 999999999, tzinfo=timezone.utc)},
@@ -133,7 +135,6 @@ class TestSet(TestCase):
                                   "to": DateTime(9999, 12, 31, 23, 59, 59, 999999999, tzinfo=timezone.utc)},
             "value_interval": {"from": DateTime(2023, 1, 1, tzinfo=timezone.utc),
                                "to": DateTime(9999, 12, 31, 23, 59, 59, 999999999, tzinfo=timezone.utc)}}]
-        self.dataset1.rebuild()
 
         # 实体存在该属性时，逻辑删除原有值节点（若有），若属性值不为null，创建值节点，值节点的有效时间为[operation_time, NOW]
         s_cypher = """
@@ -144,6 +145,7 @@ class TestSet(TestCase):
         """
         cypher_query = STransformer.transform(s_cypher)
         records, summary, keys = self.graphdb_connector.driver.execute_query(cypher_query)
+        self.dataset1.rebuild()
         assert records == [{
             "object_interval": {"from": DateTime(1978, 1, 1, tzinfo=timezone.utc),
                                 "to": DateTime(9999, 12, 31, 23, 59, 59, 999999999, tzinfo=timezone.utc)},
@@ -154,31 +156,30 @@ class TestSet(TestCase):
                                 "to": DateTime(2022, 12, 31, 23, 59, 59, 999999999, tzinfo=timezone.utc)},
                                {"from": DateTime(2023, 1, 1, tzinfo=timezone.utc),
                                 "to": DateTime(9999, 12, 31, 23, 59, 59, 999999999, tzinfo=timezone.utc)}]}]
-        self.dataset1.rebuild()
 
         # 实体存在该属性时，逻辑删除原有值节点（若有），若属性值为null，不创建值节点
         s_cypher = """
         MATCH (n {name: "Pauline Boutler"})
         SET n.name = null
         AT TIME timePoint("2023")
-        RETURN n@T as object_interval, n.name@T as property_interval, n.name as property_value, n.name#Value@T as value_interval
+        RETURN n@T as object_interval, n.name@T as property_interval, n.name#T("2022") as property_value, n.name#Value@T as value_interval
         """
         cypher_query = STransformer.transform(s_cypher)
         records, summary, keys = self.graphdb_connector.driver.execute_query(cypher_query)
+        self.dataset1.rebuild()
         assert records == [{
             "object_interval": {"from": DateTime(1978, 1, 1, tzinfo=timezone.utc),
                                 "to": DateTime(9999, 12, 31, 23, 59, 59, 999999999, tzinfo=timezone.utc)},
             "property_interval": {"from": DateTime(1978, 1, 1, tzinfo=timezone.utc),
                                   "to": DateTime(9999, 12, 31, 23, 59, 59, 999999999, tzinfo=timezone.utc)},
-            "property_value": ["Pauline Boutler"],
-            "value_interval": [{"from": DateTime(1978, 1, 1, tzinfo=timezone.utc),
-                                "to": DateTime(2022, 12, 31, 23, 59, 59, 999999999, tzinfo=timezone.utc)}]}]
-        self.dataset1.rebuild()
+            "property_value": "Pauline Boutler",
+            "value_interval": {"from": DateTime(1978, 1, 1, tzinfo=timezone.utc),
+                               "to": DateTime(2022, 12, 31, 23, 59, 59, 999999999, tzinfo=timezone.utc)}}]
 
         # 只能为结束时间为NOW的实体设置属性，若实体存在该属性，该属性节点的结束时间也需为NOW
         s_cypher = """
         CREATE (n:Person@T("1999","2015") {name@T("1999","2015"): "Nick"@T("1999","2015")})
-        SET n = {name: "Nick Brown"}
+        SET n.name = "Nick Brown"
         AT TIME timePoint("2000")
         """
         cypher_query = STransformer.transform(s_cypher)
@@ -189,7 +190,7 @@ class TestSet(TestCase):
         # 若已存在该属性下的值节点，需逻辑删除原有值节点，操作时间需要晚于结束时间为NOW的值节点的开始时间，且操作时间不能与历史值节点的有效时间重合
         s_cypher = """
         CREATE (n:Person@T("2000", NOW) {name@T("2000", NOW): "Nick"@T("2000", NOW)})
-        SET n = {name: "Nick Brown"}
+        SET n.name = "Nick Brown"
         AT TIME timePoint("2000")
         """
         cypher_query = STransformer.transform(s_cypher)
@@ -199,7 +200,7 @@ class TestSet(TestCase):
 
         s_cypher = """
         CREATE (n:Person@T("2000", NOW) {name@T("2000", NOW): "Nick"@T("2000", "2015")})
-        SET n = {name: "Nick Brown"}
+        SET n.name = "Nick Brown"
         AT TIME timePoint("2003")
         """
         cypher_query = STransformer.transform(s_cypher)
@@ -220,6 +221,7 @@ class TestSet(TestCase):
         """
         cypher_query = STransformer.transform(s_cypher)
         records, summary, keys = self.graphdb_connector.driver.execute_query(cypher_query)
+        self.dataset1.rebuild()
         assert records == [{
             "object_interval": {"from": DateTime(1978, 1, 1, tzinfo=timezone.utc),
                                 "to": DateTime(9999, 12, 31, 23, 59, 59, 999999999, tzinfo=timezone.utc)},
@@ -229,17 +231,17 @@ class TestSet(TestCase):
                                       "to": DateTime(9999, 12, 31, 23, 59, 59, 999999999, tzinfo=timezone.utc)},
             "name_value_interval": {"from": DateTime(1978, 1, 1, tzinfo=timezone.utc),
                                     "to": DateTime(2022, 12, 31, 23, 59, 59, 999999999, tzinfo=timezone.utc)}}]
-        self.dataset1.rebuild()
 
         # 使用+=赋值时不需逻辑删除实体原有的其他属性下的值节点
         s_cypher = """
         MATCH (n {name: "Pauline Boutler"})
-        SET n = {gender: "Male"}
+        SET n += {gender: "Male"}
         AT TIME timePoint("2023")
         RETURN n@T as object_interval, n.gender@T as gender_property_interval, n.gender#Value@T as gender_value_interval, n.name#Value@T as name_value_interval
         """
         cypher_query = STransformer.transform(s_cypher)
         records, summary, keys = self.graphdb_connector.driver.execute_query(cypher_query)
+        self.dataset1.rebuild()
         assert records == [{
             "object_interval": {"from": DateTime(1978, 1, 1, tzinfo=timezone.utc),
                                 "to": DateTime(9999, 12, 31, 23, 59, 59, 999999999, tzinfo=timezone.utc)},
@@ -249,7 +251,6 @@ class TestSet(TestCase):
                                       "to": DateTime(9999, 12, 31, 23, 59, 59, 999999999, tzinfo=timezone.utc)},
             "name_value_interval": {"from": DateTime(1978, 1, 1, tzinfo=timezone.utc),
                                     "to": DateTime(9999, 12, 31, 23, 59, 59, 999999999, tzinfo=timezone.utc)}}]
-        self.dataset1.rebuild()
 
         # 实体存在该属性，且属性值不为null时，仅创建值节点，值节点的有效时间为[operation_time, NOW]
         s_cypher = """
@@ -260,6 +261,7 @@ class TestSet(TestCase):
         """
         cypher_query = STransformer.transform(s_cypher)
         records, summary, keys = self.graphdb_connector.driver.execute_query(cypher_query)
+        self.dataset1.rebuild()
         assert records == [{
             "object_interval": {"from": DateTime(1978, 1, 1, tzinfo=timezone.utc),
                                 "to": DateTime(9999, 12, 31, 23, 59, 59, 999999999, tzinfo=timezone.utc)},
@@ -270,7 +272,6 @@ class TestSet(TestCase):
                                 "to": DateTime(2022, 12, 31, 23, 59, 59, 999999999, tzinfo=timezone.utc)},
                                {"from": DateTime(2023, 1, 1, tzinfo=timezone.utc),
                                 "to": DateTime(9999, 12, 31, 23, 59, 59, 999999999, tzinfo=timezone.utc)}]}]
-        self.dataset1.rebuild()
 
         # 实体存在该属性时，逻辑删除原有值节点（若有），若属性值为null，不创建值节点
         s_cypher = """
@@ -281,15 +282,15 @@ class TestSet(TestCase):
         """
         cypher_query = STransformer.transform(s_cypher)
         records, summary, keys = self.graphdb_connector.driver.execute_query(cypher_query)
+        self.dataset1.rebuild()
         assert records == [{
             "object_interval": {"from": DateTime(1978, 1, 1, tzinfo=timezone.utc),
                                 "to": DateTime(9999, 12, 31, 23, 59, 59, 999999999, tzinfo=timezone.utc)},
             "property_interval": {"from": DateTime(1978, 1, 1, tzinfo=timezone.utc),
                                   "to": DateTime(9999, 12, 31, 23, 59, 59, 999999999, tzinfo=timezone.utc)},
-            "property_value": ["Pauline Boutler"],
-            "value_interval": [{"from": DateTime(1978, 1, 1, tzinfo=timezone.utc),
-                                "to": DateTime(2022, 12, 31, 23, 59, 59, 999999999, tzinfo=timezone.utc)}]}]
-        self.dataset1.rebuild()
+            "property_value": "Pauline Boutler",
+            "value_interval": {"from": DateTime(1978, 1, 1, tzinfo=timezone.utc),
+                               "to": DateTime(2022, 12, 31, 23, 59, 59, 999999999, tzinfo=timezone.utc)}}]
 
         # 只能为结束时间为NOW的实体设置属性，若实体存在该属性，该属性节点的结束时间也需为NOW
         s_cypher = """
@@ -417,10 +418,10 @@ class TestSet(TestCase):
         """
         cypher_query = STransformer.transform(s_cypher)
         records, summary, keys = self.graphdb_connector.driver.execute_query(cypher_query)
-        assert records == [{
-            "effective_time": {"intervalFrom": DateTime(1960, 1, 1, tzinfo=timezone.utc),
-                               "intervalTo": DateTime(9999, 12, 31, 23, 59, 59, 999999999, tzinfo=timezone.utc)}}]
         self.dataset1.rebuild()
+        assert records == [{
+            "effective_time": {"from": DateTime(1960, 1, 1, tzinfo=timezone.utc),
+                               "to": DateTime(9999, 12, 31, 23, 59, 59, 999999999, tzinfo=timezone.utc)}}]
 
         # 对象节点的有效时间必须覆盖其属性节点的有效时间
         s_cypher = """
@@ -436,7 +437,7 @@ class TestSet(TestCase):
         # 对象节点的有效时间必须覆盖其关系的有效时间
         s_cypher = """
         MATCH (n {name: "Pauline Boutler"})
-        SET n@T("1980","1990”).name@T("1980", "1990")#Value@T("1980", "1990")
+        SET n@T("1980","1990").name@T("1980", "1990")#Value@T("1980", "1990")
         RETURN n@T as effective_time
         """
         cypher_query = STransformer.transform(s_cypher)
@@ -445,7 +446,7 @@ class TestSet(TestCase):
             self.dataset1.rebuild()
 
     # 设置属性节点的有效时间
-    def test_set_6(self):
+    def test_set_property_effective_time(self):
         s_cypher = """
         MATCH (n {name: "Pauline Boutler"})
         SET n@T("1960", NOW).name@T("1960", NOW)
@@ -453,10 +454,10 @@ class TestSet(TestCase):
         """
         cypher_query = STransformer.transform(s_cypher)
         records, summary, keys = self.graphdb_connector.driver.execute_query(cypher_query)
-        assert records == [{
-            "effective_time": {"intervalFrom": DateTime(1960, 1, 1, tzinfo=timezone.utc),
-                               "intervalTo": DateTime(9999, 12, 31, 23, 59, 59, 999999999, tzinfo=timezone.utc)}}]
         self.dataset1.rebuild()
+        assert records == [{
+            "effective_time": {"from": DateTime(1960, 1, 1, tzinfo=timezone.utc),
+                               "to": DateTime(9999, 12, 31, 23, 59, 59, 999999999, tzinfo=timezone.utc)}}]
 
         # 属性节点的有效时间必须落在其对象节点的有效时间内
         s_cypher = """
@@ -481,21 +482,22 @@ class TestSet(TestCase):
             self.dataset1.rebuild()
 
     # 设置值节点的有效时间
-    def test_set_7(self):
+    def test_set_value_effective_time(self):
         # 修改在操作时间有效的值节点的有效时间
         s_cypher = """
         MATCH (n {name: "Mary Smith Taylor"})
         SET n.name#Value@T("1937", "1947-12-31T23:59:59.999999999")
+        AT TIME timePoint("1937")
         RETURN n.name#Value@T as effective_time
         """
         cypher_query = STransformer.transform(s_cypher)
         records, summary, keys = self.graphdb_connector.driver.execute_query(cypher_query)
-        assert records == [{
-            "effective_time": [{"intervalFrom": DateTime(1937, 1, 1, tzinfo=timezone.utc),
-                                "intervalTo": DateTime(1947, 12, 31, 23, 59, 59, 999999999, tzinfo=timezone.utc)},
-                               {"intervalFrom": DateTime(1960, 1, 1, tzinfo=timezone.utc),
-                                "intervalTo": DateTime(9999, 12, 31, 23, 59, 59, 999999999, tzinfo=timezone.utc)}]}]
         self.dataset1.rebuild()
+        assert records == [{
+            "effective_time": [{"from": DateTime(1937, 1, 1, tzinfo=timezone.utc),
+                                "to": DateTime(1947, 12, 31, 23, 59, 59, 999999999, tzinfo=timezone.utc)},
+                               {"from": DateTime(1960, 1, 1, tzinfo=timezone.utc),
+                                "to": DateTime(9999, 12, 31, 23, 59, 59, 999999999, tzinfo=timezone.utc)}]}]
 
         # 值节点的有效时间必须落在其属性节点的有效时间内
         s_cypher = """
@@ -511,7 +513,8 @@ class TestSet(TestCase):
         # 值节点的有效时间不能与同属性节点下的其他属性节点的有效时间重合
         s_cypher = """
         MATCH (n {name: "Mary Smith Taylor"})
-        SET n.name#Value@T("1937", "1960")
+        SET n.name#Value@T("1937", "1947-12-31T23:59:59.999999999")
+        AT TIME timePoint(NOW)
         RETURN n.name#Value@T as effective_time
         """
         cypher_query = STransformer.transform(s_cypher)
@@ -528,10 +531,9 @@ class TestSet(TestCase):
         """
         cypher_query = STransformer.transform(s_cypher)
         records, summary, keys = self.graphdb_connector.driver.execute_query(cypher_query)
-        assert records == [{
-            "effective_time": {"intervalFrom": DateTime(2010, 1, 1, tzinfo=timezone.utc),
-                               "intervalTo": DateTime(2020, 1, 1, tzinfo=timezone.utc)}}]
         self.dataset1.rebuild()
+        assert records == [{"effective_time": {"from": DateTime(2010, 1, 1, tzinfo=timezone.utc),
+                                               "to": DateTime(2020, 1, 1, tzinfo=timezone.utc)}}]
 
         # 关系的有效时间必须同时落在其出点和入点的有效时间内
         s_cypher = """
@@ -553,8 +555,8 @@ class TestSet(TestCase):
         """
         cypher_query = STransformer.transform(s_cypher)
         records, summary, keys = self.graphdb_connector.driver.execute_query(cypher_query)
-        assert records == [{"labels": ["Object", "Person", "Student"]}]
         self.dataset1.rebuild()
+        assert records == [{"labels": ["Object", "Person", "Student"]}]
 
         # 不能设置关系的标签
         s_cypher = """
