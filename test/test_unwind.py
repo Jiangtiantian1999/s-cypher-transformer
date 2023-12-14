@@ -96,15 +96,15 @@ class TestUnwind(TestCase):
         cypher_query = STransformer.transform(s_cypher)
         records, summery, keys = self.graphdb_connector.driver.execute_query(cypher_query)
         assert records == [
-            {"aDuration": DateTime(year=2015, month=7, day=21, hour=21, minute=40, second=32, nanosecond=142000000,
-                                   tzinfo=pytz.FixedOffset(60))},
-            {"aDuration": DateTime(year=2015, month=7, day=21, hour=21, minute=40, second=32, nanosecond=142000000,
-                                   tzinfo=timezone.utc)},
-            {"aDuration": DateTime(year=2015, month=1, day=1, hour=21, minute=40, second=32,
-                                   tzinfo=pytz.FixedOffset(-60))},
-            {"aDuration": DateTime(year=2015, month=7, day=21, hour=21, minute=40, tzinfo=pytz.FixedOffset(-90))},
-            {"aDuration": DateTime(year=2015, month=7, day=20, hour=21, minute=40, tzinfo=pytz.FixedOffset(-120))},
-            {"aDuration": DateTime(year=2015, month=7, day=21, hour=21, tzinfo=pytz.FixedOffset(+1080))}]
+            {"theDate": DateTime(year=2015, month=7, day=21, hour=21, minute=40, second=32, nanosecond=142000000,
+                                 tzinfo=pytz.FixedOffset(60))},
+            {"theDate": DateTime(year=2015, month=7, day=21, hour=21, minute=40, second=32, nanosecond=142000000,
+                                 tzinfo=timezone.utc)},
+            {"theDate": DateTime(year=2015, month=1, day=1, hour=21, minute=40, second=32,
+                                 tzinfo=pytz.FixedOffset(-60))},
+            {"theDate": DateTime(year=2015, month=7, day=21, hour=21, minute=40, tzinfo=pytz.FixedOffset(-90))},
+            {"theDate": DateTime(year=2015, month=7, day=20, hour=21, minute=40, tzinfo=pytz.FixedOffset(-120))},
+            {"theDate": DateTime(year=2015, month=7, day=21, hour=21, tzinfo=pytz.FixedOffset(+1080))}]
 
         s_cypher = """
         UNWIND [
@@ -122,18 +122,20 @@ class TestUnwind(TestCase):
         cypher_query = STransformer.transform(s_cypher)
         records, summery, keys = self.graphdb_connector.driver.execute_query(cypher_query)
         assert records == [
-            {"aDuration": DateTime(year=1984, month=10, day=11, hour=12, minute=31, second=14, nanosecond=123456789)},
-            {"aDuration": DateTime(year=1984, month=10, day=11, hour=12, minute=31, second=14, nanosecond=645000000,
-                                   tzinfo=pytz.FixedOffset(60))},
-            {"aDuration": DateTime(year=1984, month=10, day=11, hour=12, minute=31, second=14, nanosecond=645876123,
-                                   tzinfo=pytz.timezone("Europe/Stockholm"))},
-            {"aDuration": DateTime(year=1984, month=10, day=11, hour=12, minute=31, second=14,
-                                   tzinfo=pytz.FixedOffset(60))},
-            {"aDuration": DateTime(year=1984, month=10, day=11, hour=12, minute=31, second=14, tzinfo=timezone.utc)},
-            {"aDuration": DateTime(year=1984, month=10, day=11, hour=12, minute=31,
-                                   tzinfo=pytz.timezone("Europe/Stockholm"))},
-            {"aDuration": DateTime(year=1984, month=10, day=11, tzinfo=pytz.FixedOffset(60))},
-            {"aDuration": DateTime(year=1984, month=10, day=11, tzinfo=pytz.timezone("Europe/Stockholm"))}]
+            {"theDate": DateTime(year=1984, month=10, day=11, hour=12, minute=31, second=14, nanosecond=123456789,
+                                 tzinfo=timezone.utc)},
+            {"theDate": DateTime(year=1984, month=10, day=11, hour=12, minute=31, second=14, nanosecond=645000000,
+                                 tzinfo=pytz.FixedOffset(60))},
+            {"theDate": DateTime(year=1984, month=10, day=11, hour=12, minute=31, second=14, nanosecond=645876123,
+                                 tzinfo=pytz.FixedOffset(60)).astimezone(pytz.timezone("Europe/Stockholm"))},
+            {"theDate": DateTime(year=1984, month=10, day=11, hour=12, minute=31, second=14,
+                                 tzinfo=pytz.FixedOffset(60))},
+            {"theDate": DateTime(year=1984, month=10, day=11, hour=12, minute=31, second=14, tzinfo=timezone.utc)},
+            {"theDate": DateTime(year=1984, month=10, day=11, hour=12, minute=31,
+                                 tzinfo=pytz.FixedOffset(60)).astimezone(pytz.timezone("Europe/Stockholm"))},
+            {"theDate": DateTime(year=1984, month=10, day=11, hour=12, tzinfo=pytz.FixedOffset(60))},
+            {"theDate": DateTime(year=1984, month=10, day=11, tzinfo=pytz.FixedOffset(60)).astimezone(
+                pytz.timezone("Europe/Stockholm"))}]
 
         s_cypher = """
         UNWIND [
@@ -150,16 +152,18 @@ class TestUnwind(TestCase):
         cypher_query = STransformer.transform(s_cypher)
         records, summery, keys = self.graphdb_connector.driver.execute_query(cypher_query)
         assert records == [
-            {"aDuration": DateTime(year=1984, month=3, day=7, hour=12, minute=31, second=14, nanosecond=645000000)},
-            {"aDuration": DateTime(year=1984, month=3, day=7, hour=12, minute=31, second=14, nanosecond=645876000,
-                                   tzinfo=pytz.FixedOffset(60))},
-            {"aDuration": DateTime(year=1984, month=3, day=7, hour=12, minute=31, second=14, nanosecond=645876123,
-                                   tzinfo=pytz.timezone("Europe/Stockholm"))},
-            {"aDuration": DateTime(year=1984, month=3, day=7, hour=12, minute=31, second=14,
-                                   tzinfo=pytz.timezone("Europe/Stockholm"))},
-            {"aDuration": DateTime(year=1984, month=3, day=7, hour=12, minute=31, second=14, tzinfo=timezone.utc)},
-            {"aDuration": DateTime(year=1984, month=3, day=7, hour=12, tzinfo=pytz.FixedOffset(60))},
-            {"aDuration": DateTime(year=1984, month=3, day=7, tzinfo=pytz.timezone("Europe/Stockholm"))}]
+            {"theDate": DateTime(year=1984, month=3, day=7, hour=12, minute=31, second=14, nanosecond=645000000,
+                                 tzinfo=timezone.utc)},
+            {"theDate": DateTime(year=1984, month=3, day=7, hour=12, minute=31, second=14, nanosecond=645876000,
+                                 tzinfo=pytz.FixedOffset(60))},
+            {"theDate": DateTime(year=1984, month=3, day=7, hour=12, minute=31, second=14, nanosecond=645876123,
+                                 tzinfo=pytz.FixedOffset(60)).astimezone(pytz.timezone("Europe/Stockholm"))},
+            {"theDate": DateTime(year=1984, month=3, day=7, hour=12, minute=31, second=14,
+                                 tzinfo=pytz.FixedOffset(60)).astimezone(pytz.timezone("Europe/Stockholm"))},
+            {"theDate": DateTime(year=1984, month=3, day=7, hour=12, minute=31, second=14, tzinfo=timezone.utc)},
+            {"theDate": DateTime(year=1984, month=3, day=7, hour=12, tzinfo=pytz.FixedOffset(60))},
+            {"theDate": DateTime(year=1984, month=3, day=7, tzinfo=pytz.FixedOffset(60)).astimezone(
+                pytz.timezone("Europe/Stockholm"))}]
 
         s_cypher = """
         UNWIND [
@@ -173,12 +177,13 @@ class TestUnwind(TestCase):
         cypher_query = STransformer.transform(s_cypher)
         records, summery, keys = self.graphdb_connector.driver.execute_query(cypher_query)
         assert records == [
-            {"aDuration": DateTime(year=1984, month=8, day=14, hour=12, minute=31, second=14, nanosecond=645876000,
-                                   tzinfo=timezone.utc)},
-            {"aDuration": DateTime(year=1984, month=8, day=14, hour=12, minute=31, second=14, nanosecond=645876123,
-                                   tzinfo=pytz.FixedOffset(60))},
-            {"aDuration": DateTime(year=1984, month=8, day=14, hour=12, tzinfo=pytz.timezone("Europe/Stockholm"))},
-            {"aDuration": DateTime(year=1984, month=8, day=14, tzinfo=timezone.utc)}]
+            {"theDate": DateTime(year=1984, month=8, day=14, hour=12, minute=31, second=14, nanosecond=645876000,
+                                 tzinfo=timezone.utc)},
+            {"theDate": DateTime(year=1984, month=8, day=14, hour=12, minute=31, second=14,
+                                 tzinfo=pytz.FixedOffset(60))},
+            {"theDate": DateTime(year=1984, month=8, day=14, hour=12, tzinfo=pytz.FixedOffset(120)).astimezone(
+                pytz.timezone("Europe/Stockholm"))},
+            {"theDate": DateTime(year=1984, month=8, day=14, tzinfo=timezone.utc)}]
 
         s_cypher = """
         UNWIND [
@@ -192,9 +197,10 @@ class TestUnwind(TestCase):
         cypher_query = STransformer.transform(s_cypher)
         records, summery, keys = self.graphdb_connector.driver.execute_query(cypher_query)
         assert records == [
-            {"aDuration": DateTime(year=1984, month=7, day=20, hour=12, minute=31, second=14, nanosecond=645000000,
-                                   tzinfo=timezone.utc)},
-            {"aDuration": DateTime(year=1984, month=7, day=20, hour=12, minute=31, second=14,
-                                   tzinfo=pytz.FixedOffset(60))},
-            {"aDuration": DateTime(year=1984, month=7, day=20, hour=12, tzinfo=pytz.timezone("Europe/Stockholm"))},
-            {"aDuration": DateTime(year=1984, month=7, day=20, tzinfo=timezone.utc)}]
+            {"theDate": DateTime(year=1984, month=7, day=20, hour=12, minute=31, second=14, nanosecond=645000000,
+                                 tzinfo=timezone.utc)},
+            {"theDate": DateTime(year=1984, month=7, day=20, hour=12, minute=31, second=14,
+                                 tzinfo=pytz.FixedOffset(60))},
+            {"theDate": DateTime(year=1984, month=7, day=20, tzinfo=pytz.FixedOffset(120)).astimezone(
+                pytz.timezone("Europe/Stockholm"))},
+            {"theDate": DateTime(year=1984, month=7, day=20, tzinfo=timezone.utc)}]
