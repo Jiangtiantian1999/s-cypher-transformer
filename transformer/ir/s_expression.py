@@ -120,7 +120,7 @@ class IndexExpression:
 
 # 合并了oC_UnaryAddOrSubtractExpression和oC_ListOperatorExpression
 class ListIndexExpression:
-    def __init__(self, principal_expression: PropertiesLabelsExpression | AtTExpression, is_positive=True,
+    def __init__(self, principal_expression: PropertiesLabelsExpression | PoundTExpression, is_positive=True,
                  index_expressions: List[IndexExpression] = None):
         self.principal_expression = principal_expression
         # 是否为正
