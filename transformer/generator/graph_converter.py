@@ -189,32 +189,30 @@ class GraphConverter:
             node_pattern = node_pattern + "{content: " + self.expression_converter.convert_expression(node.content)
         # 添加节点有效时间
         if node.time_window:
+            node_effective_time = {"from": "scypher.timePoint(" + self.expression_converter.convert_time_point_literal(
+                node.time_window.interval_from) + ')'}
             if node.time_window.interval_to:
-                node_interval = {
-                    "from": "scypher.timePoint(" + self.expression_converter.convert_time_point_literal(
-                        node.time_window.interval_from) + ')',
-                    "to": "scypher.timePoint(" + self.expression_converter.convert_time_point_literal(
-                        node.time_window.interval_to) + ')'
-                }
+                node_effective_time["to"] = "scypher.timePoint(" + self.expression_converter.convert_time_point_literal(
+                    node.time_window.interval_to) + ')'
             else:
-                raise SyntaxError("Must appoint a interval when set the effective time of the node")
+                node_effective_time["to"] = "scypher.timePoint(\"NOW\")"
         elif operate_time:
-            node_interval = {
+            node_effective_time = {
                 "from": self.expression_converter.convert_expression(operate_time.time_point),
                 "to": "scypher.timePoint(\"NOW\")"
             }
         else:
-            node_interval = {"from": "scypher.operateTime()", "to": "scypher.timePoint(\"NOW\")"}
+            node_effective_time = {"from": "scypher.operateTime()", "to": "scypher.timePoint(\"NOW\")"}
         if node.__class__ == ObjectNode:
-            node_pattern = node_pattern + "{intervalFrom: " + node_interval["from"] + ", intervalTo: " + node_interval[
-                "to"] + "}"
+            node_pattern = node_pattern + "{intervalFrom: " + node_effective_time["from"] + ", intervalTo: " + \
+                           node_effective_time["to"] + "}"
         elif node.__class__ in [PropertyNode, ValueNode]:
             # 调用函数检查属性节点和值节点的有效时间是否满足约束
             if parent_node:
                 node_pattern = node_pattern + ", intervalFrom: scypher.getIntervalFromOfSubordinateNode(" + \
-                               parent_node.variable + ", " + node_interval["from"] + "), "
+                               parent_node.variable + ", " + node_effective_time["from"] + "), "
                 node_pattern = node_pattern + "intervalTo: scypher.getIntervalToOfSubordinateNode(" + \
-                               parent_node.variable + ", " + node_interval["to"] + ")}"
+                               parent_node.variable + ", " + node_effective_time["to"] + ")}"
             else:
                 raise TranslateError("The value nodes and property nodes must have their parent node")
 
