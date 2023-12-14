@@ -105,7 +105,7 @@ class ExpressionConverter:
         if list_index_expression.principal_expression.__class__ == PropertiesLabelsExpression:
             list_index_expression_string = self.convert_properties_labels_expression(
                 list_index_expression.principal_expression)
-        elif list_index_expression.principal_expression.__class__ == AtTExpression:
+        elif list_index_expression.principal_expression.__class__ == PoundTExpression:
             list_index_expression_string = self.convert_at_t_expression(list_index_expression.principal_expression)
 
         for index_expression in list_index_expression.index_expressions:
