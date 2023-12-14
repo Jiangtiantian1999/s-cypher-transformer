@@ -535,17 +535,17 @@ class SCypherWalker(s_cypherListener):
         # interval_from: TimePointLiteral,
         # interval_to: TimePointLiteral = None
         if len(self.time_point_literals) == 2:
-            self.at_t_element = AtTElement(self.time_point_literals[0], self.time_point_literals[1])
+            self.s_t_element = AtTElement(self.time_point_literals[0], self.time_point_literals[1])
             self.time_point_literals = []  # 退出清空
         elif len(self.time_point_literals) == 1 and ctx.NOW() is not None:
-            self.at_t_element = AtTElement(self.time_point_literals[0],
+            self.s_t_element = AtTElement(self.time_point_literals[0],
                                            TimePointLiteral('"NOW"'))
             self.time_point_literals = []  # 退出清空
         elif len(self.time_point_literals) == 1 and ctx.NOW() is None:
-            self.at_t_element = AtTElement(self.time_point_literals[0], None)
+            self.s_t_element = AtTElement(self.time_point_literals[0], None)
             self.time_point_literals = []  # 退出清空
         elif len(self.time_point_literals) == 0 and ctx.NOW() is not None:
-            self.at_t_element = AtTElement(TimePointLiteral('"NOW"'), None)
+            self.s_t_element = AtTElement(TimePointLiteral('"NOW"'), None)
             self.time_point_literals = []  # 退出清空
         else:
             raise ParseError("Invalid time format!")
