@@ -848,16 +848,8 @@ class SCypherWalker(s_cypherListener):
         # effective_time: AtTElement = None
 
         # ===item: EffectiveTimeSetting
-        # 只有对象节点
-        if (ctx.s_AtTElement() is not None and ctx.oC_Variable() is not None
-                and (item is None for item in [ctx.s_SetPropertyItemOne(), ctx.s_SetPropertyItemTwo()])):
-            variable = ctx.oC_Variable().getText()
-            effective_time = self.at_t_element.pop()
-            object_setting = NodeEffectiveTimeSetting(variable, effective_time)
-            # 整合SetItem
-            self.set_items.append(EffectiveTimeSetting(object_setting, None, None))
         # 对象节点+属性节点
-        elif all(item is not None for item in [ctx.oC_Variable(), ctx.s_SetPropertyItemOne()]):
+        if all(item is not None for item in [ctx.oC_Variable(), ctx.s_SetPropertyItemOne()]):
             # 对象节点
             object_variable = ctx.oC_Variable().getText()
             object_effective_time = None
@@ -896,6 +888,14 @@ class SCypherWalker(s_cypherListener):
             value_setting = value_effective_time
             # 整合SetItem
             self.set_items.append(EffectiveTimeSetting(object_setting, property_setting, value_setting))
+        # 只有对象节点
+        elif (ctx.s_AtTElement() is not None and ctx.oC_Variable() is not None
+                and (item is None for item in [ctx.s_SetPropertyItemOne(), ctx.s_SetPropertyItemTwo()])):
+            variable = ctx.oC_Variable().getText()
+            effective_time = self.at_t_element.pop()
+            object_setting = NodeEffectiveTimeSetting(variable, effective_time)
+            # 整合SetItem
+            self.set_items.append(EffectiveTimeSetting(object_setting, None, None))
         # ===item: LabelSetting
         elif all(item is not None for item in [ctx.oC_Variable(), ctx.oC_NodeLabels()]):
             # variable: str,
