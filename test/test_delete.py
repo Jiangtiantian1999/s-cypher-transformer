@@ -1,6 +1,5 @@
 from unittest import TestCase
 from datetime import timezone
-from neo4j.exceptions import ClientError
 from neo4j.time import DateTime
 
 from test.dataset_initialization import DataSet1
