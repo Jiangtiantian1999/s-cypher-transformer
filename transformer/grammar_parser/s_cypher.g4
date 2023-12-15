@@ -36,7 +36,8 @@ s_SetPropertyItemTwo : oC_PropertyKeyName ( SP? s_AtTElement )? ;
 
 s_SetValueItem : PoundValue SP? s_AtTElement ;
 
-s_StaleItem : oC_Expression ( s_PropertyLookupName SP? PoundValue )? ;
+s_StaleItem : oC_Expression SP? s_PropertyLookupName ( SP? PoundValue )?
+            | oC_Expression;
 
 s_Delete : ( DETACH SP )? DELETE SP? s_DeleteItem ( SP? ',' SP? s_DeleteItem )* ( SP? ( s_AtTime | s_Between ) )? ;
 
