@@ -40,7 +40,9 @@ s_StaleItem : oC_Expression ( s_PropertyLookupName SP? PoundValue )? ;
 
 s_Delete : ( DETACH SP )? DELETE SP? s_DeleteItem ( SP? ',' SP? s_DeleteItem )* ( SP? ( s_AtTime | s_Between ) )? ;
 
-s_DeleteItem : oC_Expression ( s_PropertyLookupName ( SP? ( PoundValue | s_AtTElement ) )? )? ;
+s_DeleteItem : oC_Expression s_PropertyLookupName ( SP? ( PoundValue | s_AtTElement ) )?
+             | oC_Expression ( SP? ( PoundValue | s_AtTElement ) )?
+             ;
 
 oC_RemoveItem : ( oC_Variable oC_NodeLabels )
               | oC_PropertyExpression
