@@ -320,15 +320,16 @@ class ClauseConverter:
             delete_time_window = "NULL"
 
         delete_object_string = ""
-        delete_item_variable = self.variables_manager.get_random_variable()
         for delete_item in delete_clause.delete_items:
             # 物理删除对象节点/路径/关系/对象节点的属性，调用getItemsToDelete，第一个参数为对象节点/路径/关系，第二个参数为属性名，第三个参数为删除的值节点的范围/[是否仅删除值节点]
             # 以列表形式返回所有待物理删除的属性节点和值节点
             delete_expression_string = self.expression_converter.convert_expression(delete_item.expression)
             delete_list_string = "scypher.getItemsToDelete(" + delete_expression_string + ", "
             if delete_item.property_name:
+                # 删除属性节点（及值节点）
                 delete_list_string = delete_list_string + '\"' + delete_item.property_name + "\", "
             else:
+                # 删除对象节点
                 delete_list_string = delete_list_string + "NULL, "
                 delete_object_string = delete_object_string + delete_expression_string + ", "
             if delete_item.time_window:
@@ -339,10 +340,12 @@ class ClauseConverter:
                 elif delete_clause.time_window:
                     delete_list_string = delete_list_string + delete_time_window + ')'
                 else:
+                    # 物理删除所有值节点
                     delete_list_string = delete_list_string + str(delete_item.time_window) + ')'
             else:
                 # 物理删除属性节点和值节点
                 delete_list_string = delete_list_string + "NULL)"
+            delete_item_variable = self.variables_manager.get_random_variable()
             delete_clause_string = delete_clause_string + "FOREACH (" + delete_item_variable + " IN " + delete_list_string + " | DETACH DELETE " + delete_item_variable + ')\n'
         if delete_object_string != "":
             if delete_clause.is_detach:

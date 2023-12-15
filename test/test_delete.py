@@ -94,24 +94,24 @@ class TestDelete(TestCase):
         self.dataset1.rebuild()
         assert records == [{"name": None}]
 
-        # 物理删除属性节点时，DETACH无影响
+        # 物理删除属性节点和值节点时，DETACH不起作用
         s_cypher = """
         MATCH (n {name: "Pauline Boutler"})
         DETACH DELETE n.name
-        RETURN n.name as name
+        RETURN n@T.from as start_time, n.name as name
         """
         cypher_query = STransformer.transform(s_cypher)
         records, summery, keys = self.graphdb_connector.driver.execute_query(cypher_query)
         self.dataset1.rebuild()
-        assert records == [{"name": None}]
+        assert records == [{"start_time": DateTime(1978, 1, 1, tzinfo=timezone.utc), "name": None}]
 
     # 物理删除值节点
     def test_delete_value_node(self):
         # 物理删除某个属性节点下的所有值节点
         s_cypher = """
-        MATCH (n {name: "Pauline Boutler"})
+        MATCH (n {name: "Mary Smith Taylor"})
         DELETE n.name#Value
-        RETURN n.name as name
+        RETURN n.name as name                              
         """
         cypher_query = STransformer.transform(s_cypher)
         records, summery, keys = self.graphdb_connector.driver.execute_query(cypher_query)
@@ -119,32 +119,66 @@ class TestDelete(TestCase):
         assert records == [{"name": None}]
 
         # 物理删除某个属性节点下的指定时间区间下的所有值节点
+        # 在DELETE子句中指定删除值节点的范围（此时间区间优先于AT TIME和BETWEEN指定的时间窗口）
+        s_cypher = """
+        MATCH (n {name: "Mary Smith Taylor"})
+        DELETE n.name@T("1959", "1960")
+        RETURN n.name as name
+        """
+        cypher_query = STransformer.transform(s_cypher)
+        records, summery, keys = self.graphdb_connector.driver.execute_query(cypher_query)
+        self.dataset1.rebuild()
+        assert records == [{"name": None}]
+
+        # 使用BETWEEN指定删除值节点的范围
+        s_cypher = """
+        MATCH (n {name: "Mary Smith Taylor"})
+        DELETE n.name#Value
+        BETWEEN interval("1960", "2022")
+        RETURN n.name as name
+        """
+        cypher_query = STransformer.transform(s_cypher)
+        records, summery, keys = self.graphdb_connector.driver.execute_query(cypher_query)
+        self.dataset1.rebuild()
+        assert records == [{"name": "Mary Smith"}]
 
         # 物理删除某个属性节点下的指定时间点下的值节点
+        # 在DELETE子句中指定删除值节点的范围（此时间点优先于AT TIME和BETWEEN指定的时间窗口）
+        s_cypher = """
+        MATCH (n {name: "Mary Smith Taylor"})
+        DELETE n.name@T("1959")
+        RETURN n.name as name
+        """
+        cypher_query = STransformer.transform(s_cypher)
+        records, summery, keys = self.graphdb_connector.driver.execute_query(cypher_query)
+        self.dataset1.rebuild()
+        assert records == [{"name": "Mary Smith Taylor"}]
+
+        # 使用AT TIME指定删除值节点的范围
+        s_cypher = """
+        MATCH (n {name: "Mary Smith Taylor"})
+        DELETE n.name#Value
+        AT TIME timePoint("1959")
+        RETURN n.name as name
+        """
+        cypher_query = STransformer.transform(s_cypher)
+        records, summery, keys = self.graphdb_connector.driver.execute_query(cypher_query)
+        self.dataset1.rebuild()
+        assert records == [{"name": "Mary Smith Taylor"}]
 
     # 物理删除关系
     def test_delete_relationship(self):
-        # 物理删除关系
         s_cypher = """
-        MATCH (a:Person {name: "Pauline Boutler"})-[e:LIVE_IN]->(b:City {name: "London"})
+        MATCH (a:Person {name: "Pauline Boutler"})-[e:LIVE]->(b:City)
         DELETE e
-        RETURN e
+        """
+        cypher_query = STransformer.transform(s_cypher)
+        self.graphdb_connector.driver.execute_query(cypher_query)
+        s_cypher = """
+        MATCH (n:Person)-[e:LIVE]->(m:City)
+        RETURN count(e) as count
         """
         cypher_query = STransformer.transform(s_cypher)
         records, summery, keys = self.graphdb_connector.driver.execute_query(cypher_query)
         self.dataset1.rebuild()
-        assert len(records) == 0
-
-        # 物理删除某时间区间下的关系
-        s_cypher = """
-        MATCH (n1:Person)-[e:LIVE@T("2000", "2004")]->(n2:City {name: "Brussels"})
-        DELETE e
-        BETWEEN interval(datetime("2000"), datetime("2002"))
-        RETURN e@T.from as effective_time
-        """
-        cypher_query = STransformer.transform(s_cypher)
-        records, summery, keys = self.graphdb_connector.driver.execute_query(cypher_query)
-        self.dataset1.rebuild()
-        assert len(records) == 0
-
-        # 物理删除某时间点下的关系
+        assert records == [{"count": 7}]
