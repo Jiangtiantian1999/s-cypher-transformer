@@ -39,7 +39,7 @@ class DataSet1:
         CREATE (p4)-[:FRIEND@T("1995", NOW)]->(p2), (p4)-[:FRIEND@T("2015", "2018")]->(p5)
         CREATE (p6)-[:FRIEND@T("1993", NOW)]->(p4), (p6)-[:FRIEND@T("2010", "2018")]->(p1)
         CREATE (p1)-[:LIVE@T("1978", "2003")]->(c2), (p1)-[:LIVE@T("2004", NOW)]->(c1)
-        CREATE (p2)-[:LIVE@T("1980", '2000')]->(c2), (p6)-[:LIVE@T("2001", NOW)]->(c3)
+        CREATE (p2)-[:LIVE@T("1980", '2000')]->(c2), (p2)-[:LIVE@T("2001", NOW)]->(c3)
         CREATE (p3)-[:LIVE@T("1967", NOW)]->(c5)
         CREATE (p4)-[:LIVE@T("1961", NOW)]->(c5)
         CREATE (p5)-[:LIVE@T("1995", NOW)]->(c4)
@@ -48,13 +48,7 @@ class DataSet1:
         CREATE (p2)-[:LIKE@T("1998", NOW)]->(b2)
         CREATE (p3)-[:LIKE@T("2001", NOW)]->(b1), (p3)-[:LIKE@T("1995", "2000")]->(b2)
         CREATE (p6)-[:LIKE@T("1982", NOW)]->(b1)
-        """
-        cypher_query = STransformer.transform(s_cypher_query)
-        self.driver.execute_query(cypher_query)
-
-        s_cypher_query = """
-        MATCH (p:Person{name:"Mary Smith"})
-        SET p.name = "Mary Smith Taylor"
+        SET p6.name = "Mary Smith Taylor"
         AT TIME timePoint("1960")
         """
         cypher_query = STransformer.transform(s_cypher_query)
