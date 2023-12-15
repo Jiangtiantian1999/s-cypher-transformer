@@ -375,7 +375,7 @@ class ClauseConverter:
 
         stale_list_string = stale_list_string.rstrip("+ ")
         stale_item_variable = self.variables_manager.get_random_variable()
-        stale_clause_string = stale_clause_string + " (" + stale_item_variable + " IN " + stale_list_string + " | SET " + stale_item_variable + ".intervalTo = " + stale_operate_time
+        stale_clause_string = stale_clause_string + " (" + stale_item_variable + " IN " + stale_list_string + " | SET " + stale_item_variable + ".intervalTo = " + stale_operate_time + " - scypher.timePoint.unit()"
 
         return stale_clause_string.rstrip(", ")
 
