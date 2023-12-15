@@ -16,13 +16,11 @@ class TemporalPathCall:
 
 
 class Pattern:
-
     def __init__(self, pattern: SPath | TemporalPathCall):
         self.pattern = pattern
 
 
 class ProjectionItem:
-
     def __init__(self, expression: Expression, variable: str = None):
         # 表达式
         self.expression = expression
@@ -31,7 +29,6 @@ class ProjectionItem:
 
 
 class YieldItem:
-
     def __init__(self, procedure_result: str, variable: str = None):
         # 返回结果
         self.procedure_result = procedure_result
@@ -78,7 +75,6 @@ class NodeEffectiveTimeSetting:
 
 
 class EffectiveTimeSetting:
-
     def __init__(self, object_setting: NodeEffectiveTimeSetting, property_setting: NodeEffectiveTimeSetting = None,
                  value_setting: AtTElement = None):
         if property_setting is None and value_setting is not None:
