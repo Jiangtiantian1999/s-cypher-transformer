@@ -541,12 +541,18 @@ class ClauseConverter:
                 # 移除节点/关系的标签
                 remove_clause_string = remove_clause_string + remove_item.variable
                 for label in remove_item.labels:
+                    if label in ["Object", "Property", "Value"]:
+                        raise SyntaxError("Can't remove the label `Object`, `Property` or `Value`")
                     remove_clause_string = remove_clause_string + ':' + label
             else:
                 # 移除关系的属性
                 relationship_variable = self.expression_converter.convert_atom(remove_item.atom)
+                if len(remove_item.property_chains) > 0 and remove_item.property_chains[-1] in ["intervalFrom",
+                                                                                                "intervalTo"]:
+                    raise SyntaxError("Can't remove the property `intervalFrom` or `intervalTo`")
                 for property_name in remove_item.property_chains:
                     relationship_variable = relationship_variable + '.' + property_name
+                remove_clause_string = remove_clause_string + relationship_variable
             remove_clause_string = remove_clause_string + ", "
         return remove_clause_string.rstrip(", ")
 
