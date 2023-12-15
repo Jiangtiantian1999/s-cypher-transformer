@@ -327,7 +327,7 @@ class ClauseConverter:
             delete_expression_string = self.expression_converter.convert_expression(delete_item.expression)
             delete_list_string = "scypher.getItemsToDelete(" + delete_expression_string + ", "
             if delete_item.property_name:
-                delete_list_string = delete_list_string + delete_item.property_name + ", "
+                delete_list_string = delete_list_string + '\"' + delete_item.property_name + "\", "
             else:
                 delete_list_string = delete_list_string + "NULL, "
                 delete_object_string = delete_object_string + delete_expression_string + ", "
@@ -395,7 +395,7 @@ class ClauseConverter:
                                    set_item.object_setting.effective_time)}
                 set_clause_string = set_clause_string + convert_dict_to_str(object_info) + ", "
                 if set_item.property_setting:
-                    property_info = {"propertyName": "\"" + set_item.property_setting.variable + "\"",
+                    property_info = {"propertyName": "\"" + set_item.property_setting.variable + '\"',
                                      "effectiveTime": self.expression_converter.convert_at_t_element(
                                          set_item.property_setting.effective_time)}
                     set_clause_string = set_clause_string + convert_dict_to_str(property_info) + ", "
