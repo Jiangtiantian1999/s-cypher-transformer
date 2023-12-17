@@ -29,12 +29,13 @@ class TestTimeWindow(TestCase):
     def test_at_time(self):
         s_cypher = """
             MATCH (n:Person)
-            AT TIME date("2015202T21+18:00")
+            AT TIME datetime("2015202T21+18:00")
             WHERE n.name STARTS WITH "Mary"
             RETURN n.name as person_name
             """
         cypher_query = STransformer.transform(s_cypher)
         records, summary, keys = self.graphdb_connector.driver.execute_query(cypher_query)
+        print(cypher_query)
         assert records == [{"person_name": "Mary Smith Taylor"}]
 
         s_cypher = """
@@ -44,6 +45,7 @@ class TestTimeWindow(TestCase):
             RETURN n.name as person_name
             """
         cypher_query = STransformer.transform(s_cypher)
+        print(cypher_query)
         records, summary, keys = self.graphdb_connector.driver.execute_query(cypher_query)
         assert records == [{"person_name": "Mary Smith"}]
 
@@ -57,7 +59,7 @@ class TestTimeWindow(TestCase):
         cypher_query = STransformer.transform(s_cypher)
         print(cypher_query)
         records, summary, keys = self.graphdb_connector.driver.execute_query(cypher_query)
-        assert records == [{"person_name": ["Mary Smith", "Mary Smith Taylor"]}]
+        assert records == [{"person_name": "Mary Smith Taylor"}]
 
         s_cypher = """
             MATCH (n:Person)
@@ -67,7 +69,7 @@ class TestTimeWindow(TestCase):
         cypher_query = STransformer.transform(s_cypher)
         print(cypher_query)
         records, summary, keys = self.graphdb_connector.driver.execute_query(cypher_query)
-        assert records == [{"person_name": ["Mary Smith", "Mary Smith Taylor"]}]
+        assert records == [{"person_name": "Mary Smith Taylor"}]
 
         s_cypher = """
                MATCH (n:Person {name: "Cathy Van"})
@@ -81,6 +83,8 @@ class TestTimeWindow(TestCase):
 
     # 测试SNAPSHOT
     def test_snapshot(self):
+        self.test_recover()
+
         # 全局声明时间,限制当前操作时间点
         s_cypher = """
                 SNAPSHOT datetime('2023')
@@ -100,10 +104,12 @@ class TestTimeWindow(TestCase):
         records, summary, keys = self.graphdb_connector.driver.execute_query(cypher_query)
         assert records == [{"person_name": "Mary Smith Taylor"}]
 
-        self.dataset1.rebuild()
+        self.test_recover()
 
     # 测试SCOPE
     def test_scope(self):
+        self.test_recover()
+
         # 全局声明时间，限制后续所有查询的时间区间
         s_cypher = """
                 SCOPE interval("1960", "1990")
@@ -114,17 +120,99 @@ class TestTimeWindow(TestCase):
         assert len(records) == 0
 
         s_cypher = """
+                        MATCH (n1:Person)-[:LIVE]->(n2:City {name: "Antwerp"})
+                        RETURN n1.name as person_name
+                        """
+        cypher_query = STransformer.transform(s_cypher)
+        records, summary, keys = self.graphdb_connector.driver.execute_query(cypher_query)
+        assert records == [{"person_name": "Mary Smith Taylor"}]
+
+        s_cypher = """
                 MATCH (n1:Person)-[:LIVE@T("1995",NOW)]->(n2:City {name: "Antwerp"})
                 RETURN n1.name as person_name
                 """
+        cypher_query = STransformer.transform(s_cypher)
+        records, summary, keys = self.graphdb_connector.driver.execute_query(cypher_query)
+        assert len(records) == 0
+
+    # 测试同时声明的优先级 AT TIME = BETWEEN > SCOPE > SNAPSHOT
+    # 优先级：AT_TIME t > SNAPSHOT t
+    def test_priority_1(self):
+        self.test_recover()
+
+        s_cypher = """
+                SNAPSHOT datetime('2023')
+                """
+        cypher_query = STransformer.transform(s_cypher)
+        records, summary, keys = self.graphdb_connector.driver.execute_query(cypher_query)
+        assert len(records) == 0
+
+        s_cypher = """
+                    MATCH (n:Person)
+                    AT TIME date("1950")
+                    WHERE n.name STARTS WITH "Mary"
+                    RETURN n.name as person_name
+                    """
+        cypher_query = STransformer.transform(s_cypher)
+        records, summary, keys = self.graphdb_connector.driver.execute_query(cypher_query)
+        assert records == [{"person_name": "Mary Smith"}]
+
+    # 优先级：SNAPSHOT t > AT_TIME now()
+    def test_priority_2(self):
+        self.test_recover()
+
+        s_cypher = """
+                SNAPSHOT datetime('1950')
+                """
+        cypher_query = STransformer.transform(s_cypher)
+        records, summary, keys = self.graphdb_connector.driver.execute_query(cypher_query)
+        assert len(records) == 0
+
+        s_cypher = """
+                MATCH (n:Person)
+                AT TIME now()
+                WHERE n.name STARTS WITH "Mary"
+                RETURN n.name as person_name
+                """
+        cypher_query = STransformer.transform(s_cypher)
+        records, summary, keys = self.graphdb_connector.driver.execute_query(cypher_query)
+        assert records == [{"person_name": "Mary Smith"}]
+
+    # 优先级：BETWEEN > SCOPE
+    def test_priority_3(self):
+        self.test_recover()
+
+        s_cypher = """
+                    SCOPE interval('1937','1959')
+                    """
+        cypher_query = STransformer.transform(s_cypher)
+        records, summary, keys = self.graphdb_connector.driver.execute_query(cypher_query)
+        assert len(records) == 0
+
+        s_cypher = """
+                    MATCH (n:Person)
+                    BETWEEN interval("1960", NOW)
+                    WHERE n.name STARTS WITH 'Mary'
+                    RETURN n.name as person_name
+                    """
+        cypher_query = STransformer.transform(s_cypher)
+        print(cypher_query)
+        records, summary, keys = self.graphdb_connector.driver.execute_query(cypher_query)
+        assert records == [{"person_name": "Mary Smith Taylor"}]
+
+    def test_recover(self):
+        s_cypher = """
+            SCOPE NULL
+            """
         cypher_query = STransformer.transform(s_cypher)
         print(cypher_query)
         records, summary, keys = self.graphdb_connector.driver.execute_query(cypher_query)
         assert len(records) == 0
 
-        self.dataset1.rebuild()
-
-    # 测试同时声明的优先级
-    def test_priority(self):
-        # TODO
-        pass
+        s_cypher = """
+                SNAPSHOT NULL
+                """
+        cypher_query = STransformer.transform(s_cypher)
+        print(cypher_query)
+        records, summary, keys = self.graphdb_connector.driver.execute_query(cypher_query)
+        assert len(records) == 0

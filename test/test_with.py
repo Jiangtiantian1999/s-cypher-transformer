@@ -3,6 +3,7 @@ from unittest import TestCase
 
 from neo4j.exceptions import ClientError
 from neo4j.time import DateTime, Date, Time, Duration
+import pytz
 
 from test.graphdb_connector import GraphDBConnector
 from transformer.s_transformer import STransformer
@@ -111,15 +112,24 @@ class TestWith(TestCase):
         assert records == [{"name": "Daniel Yang Justin"}]
 
         s_cypher = """
-                MATCH (n:Person{name: 'Daniel Yang'})
-                WITH n.name@T.from - duration("1980", "2023") as effective_time
-                RETURN effective_time;
+                MATCH (n:Person{name: "Pauline Boutler"})-[e:FRIEND@T("2002")]->(n2:Person)
+                WITH (size(n.name) - size(n2.name)) as name
+                RETURN name;
                 """
         cypher_query = STransformer.transform(s_cypher)
         print(cypher_query)
         records, summary, keys = self.graphdb_connector.driver.execute_query(cypher_query)
-        # TODO 继续添加
-        # assert len(records) == 0
+        assert records == [{"name": 6}]
+
+        s_cypher = """
+                MATCH (n1:Person{name: "Pauline Boutler"})-[e:FRIEND@T("2002")]->(n2:Person)
+                WITH n2, size(n2.name) * 2 AS double_name_size
+                RETURN n2.name as name, double_name_size
+                """
+        cypher_query = STransformer.transform(s_cypher)
+        print(cypher_query)
+        records, summary, keys = self.graphdb_connector.driver.execute_query(cypher_query)
+        assert records == [{"name": "Cathy Van", "double_name_size": 18}]
 
     # 使用函数
     def test_with_function(self):
@@ -133,10 +143,10 @@ class TestWith(TestCase):
         assert records == [{"effective_time": Duration(months=60, days=0, seconds=0, nanoseconds=0)}]
         # TODO 继续添加
 
-    # TODO 进行排序和限制
+    # 进行排序和限制
     def test_with_order_limit(self):
         s_cypher = """
-                MATCH (n1:Person)-[:LIVE@T("2000")]->(n2:City {name: "Brussels"})
+                MATCH (n1:Person)-[:LIVE@T("1985")]->(n2:City {name: "Brussels"})
                 WITH n1
                 ORDER BY n1.name DESC
                 LIMIT 3
@@ -144,17 +154,46 @@ class TestWith(TestCase):
                 """
         cypher_query = STransformer.transform(s_cypher)
         records, summary, keys = self.graphdb_connector.driver.execute_query(cypher_query)
-        assert records == [{"names": ['Pauline Boutler', 'Cathy Van']}]
-        # TODO 继续添加
+        assert records == [{"names": ['Pauline Boutler', 'Mary Smith', 'Cathy Van']}]
 
-    # TODO 多步骤查询中的连接
-    def test_with_multi_steps(self):
-        pass
-
-    # TODO 修改或转换结果
-    def test_with_modify_convert(self):
-        pass
-
-    # TODO 过滤
+    # 过滤
     def test_with_filter(self):
-        pass
+        s_cypher = """
+                UNWIND [
+                datetime('2005-07-21T21:50:32.142+0100'),
+                datetime('2015-W30-2T214032.142Z'),
+                datetime('2010T224032-0100'),
+                datetime('20170721T21:40-01:30'),
+                datetime('2015-W33T2140-02'),
+                datetime('2008202T21+18:00'),
+                datetime('1997-09-21T21:40:32.142[Europe/London]'),
+                datetime('1989-07-21T21:40:32.142-04[America/New_York]')
+                ] AS theDate
+                WITH theDate
+                LIMIT 3
+                WHERE theDate >= datetime('2008202T21+18:00')
+                RETURN theDate
+                """
+        cypher_query = STransformer.transform(s_cypher)
+        print(cypher_query)
+        records, summary, keys = self.graphdb_connector.driver.execute_query(cypher_query)
+        assert records == [{"theDate": [DateTime(2015, 7, 21, 21, 40, 32, 142000000, tzinfo=timezone.utc),
+                                        DateTime(2010, 1, 1, 22, 40, 32, 0, tzinfo=pytz.FixedOffset(-60)),
+                                        DateTime(2017, 7, 21, 21, 40, 0, 0, tzinfo=pytz.FixedOffset(-90)),
+                                        DateTime(2015, 8, 10, 21, 40, 0, 0, tzinfo=pytz.FixedOffset(-120))]}]
+
+    # 多步骤查询中的连接
+    def test_with_multi_steps(self):
+        s_cypher = """
+                MATCH (p:Person)-[:FRIEND]->(n2:Person)
+                WITH p, collect(n2) AS friends
+                WHERE size(friends) >= 2
+                WITH p, friends
+                ORDER BY size(friends) DESC
+                RETURN p.name as person_name, size(friends) as friend_num
+                """
+        cypher_query = STransformer.transform(s_cypher)
+        print(cypher_query)
+        records, summary, keys = self.graphdb_connector.driver.execute_query(cypher_query)
+        assert records == [{"person_name": 'Mary Smith', "friend_num": 2}]
+
