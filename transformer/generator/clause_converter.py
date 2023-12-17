@@ -320,15 +320,16 @@ class ClauseConverter:
             delete_time_window = "NULL"
 
         delete_object_string = ""
-        delete_item_variable = self.variables_manager.get_random_variable()
         for delete_item in delete_clause.delete_items:
             # 物理删除对象节点/路径/关系/对象节点的属性，调用getItemsToDelete，第一个参数为对象节点/路径/关系，第二个参数为属性名，第三个参数为删除的值节点的范围/[是否仅删除值节点]
             # 以列表形式返回所有待物理删除的属性节点和值节点
             delete_expression_string = self.expression_converter.convert_expression(delete_item.expression)
             delete_list_string = "scypher.getItemsToDelete(" + delete_expression_string + ", "
             if delete_item.property_name:
-                delete_list_string = delete_list_string + delete_item.property_name + ", "
+                # 删除属性节点（及值节点）
+                delete_list_string = delete_list_string + '\"' + delete_item.property_name + "\", "
             else:
+                # 删除对象节点
                 delete_list_string = delete_list_string + "NULL, "
                 delete_object_string = delete_object_string + delete_expression_string + ", "
             if delete_item.time_window:
@@ -339,10 +340,12 @@ class ClauseConverter:
                 elif delete_clause.time_window:
                     delete_list_string = delete_list_string + delete_time_window + ')'
                 else:
+                    # 物理删除所有值节点
                     delete_list_string = delete_list_string + str(delete_item.time_window) + ')'
             else:
                 # 物理删除属性节点和值节点
                 delete_list_string = delete_list_string + "NULL)"
+            delete_item_variable = self.variables_manager.get_random_variable()
             delete_clause_string = delete_clause_string + "FOREACH (" + delete_item_variable + " IN " + delete_list_string + " | DETACH DELETE " + delete_item_variable + ')\n'
         if delete_object_string != "":
             if delete_clause.is_detach:
@@ -365,15 +368,14 @@ class ClauseConverter:
             stale_list_string = stale_list_string + "scypher.getItemsToStale(" + self.expression_converter.convert_expression(
                 stale_item.expression)
             if stale_item.property_name:
-                stale_list_string = stale_list_string + ", " + stale_item.property_name
+                stale_list_string = stale_list_string + ", \"" + stale_item.property_name + '\"'
             else:
                 stale_list_string = stale_list_string + ", NULL"
             stale_list_string = stale_list_string + ", " + str(stale_item.is_value) + ", " + stale_operate_time + ") + "
-
         stale_list_string = stale_list_string.rstrip("+ ")
-        stale_item_variable = self.variables_manager.get_random_variable()
-        stale_clause_string = stale_clause_string + " (" + stale_item_variable + " IN " + stale_list_string + " | SET " + stale_item_variable + ".intervalTo = " + stale_operate_time
 
+        stale_item_variable = self.variables_manager.get_random_variable()
+        stale_clause_string = stale_clause_string + '(' + stale_item_variable + " IN " + stale_list_string + " | SET " + stale_item_variable + ".intervalTo = " + stale_operate_time + " - scypher.timePoint.unit())"
         return stale_clause_string.rstrip(", ")
 
     def convert_set_clause(self, set_clause: SetClause) -> str:
@@ -395,7 +397,7 @@ class ClauseConverter:
                                    set_item.object_setting.effective_time)}
                 set_clause_string = set_clause_string + convert_dict_to_str(object_info) + ", "
                 if set_item.property_setting:
-                    property_info = {"propertyName": "\"" + set_item.property_setting.variable + "\"",
+                    property_info = {"propertyName": "\"" + set_item.property_setting.variable + '\"',
                                      "effectiveTime": self.expression_converter.convert_at_t_element(
                                          set_item.property_setting.effective_time)}
                     set_clause_string = set_clause_string + convert_dict_to_str(property_info) + ", "
@@ -538,12 +540,18 @@ class ClauseConverter:
                 # 移除节点/关系的标签
                 remove_clause_string = remove_clause_string + remove_item.variable
                 for label in remove_item.labels:
+                    if label in ["Object", "Property", "Value"]:
+                        raise SyntaxError("Can't remove the label `Object`, `Property` or `Value`")
                     remove_clause_string = remove_clause_string + ':' + label
             else:
                 # 移除关系的属性
                 relationship_variable = self.expression_converter.convert_atom(remove_item.atom)
+                if len(remove_item.property_chains) > 0 and remove_item.property_chains[-1] in ["intervalFrom",
+                                                                                                "intervalTo"]:
+                    raise SyntaxError("Can't remove the property `intervalFrom` or `intervalTo`")
                 for property_name in remove_item.property_chains:
                     relationship_variable = relationship_variable + '.' + property_name
+                remove_clause_string = remove_clause_string + relationship_variable
             remove_clause_string = remove_clause_string + ", "
         return remove_clause_string.rstrip(", ")
 

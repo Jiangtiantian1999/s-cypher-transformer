@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from transformer.exceptions.s_exception import TranslateError
 from transformer.ir.s_clause_component import *
 from transformer.ir.s_expression import Expression
 
@@ -45,7 +44,6 @@ class BetweenClause:
 
 
 class MatchClause:
-
     def __init__(self, patterns: List[Pattern], is_optional: bool = False, where_expression: Expression = None,
                  time_window: AtTimeClause | BetweenClause = None):
         if len(patterns) == 0:
@@ -75,7 +73,6 @@ class YieldClause:
 
 
 class CallClause:
-
     def __init__(self, procedure_name: str, input_items: List[Expression] = None, yield_clause: YieldClause = None):
         self.procedure_name = procedure_name
         if input_items is None:
