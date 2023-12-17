@@ -116,9 +116,6 @@ class ClauseConverter:
             with_clause_string = with_clause_string + ", "
         with_clause_string = with_clause_string.rstrip(", ")
 
-        if with_clause.where_expression:
-            with_clause_string = with_clause_string + "\nWHERE " + self.expression_converter.convert_expression(
-                with_clause.where_expression)
         if with_clause.order_by_clause:
             with_clause_string = with_clause_string + '\n' + self.convert_order_by_clause(with_clause.order_by_clause)
         if with_clause.skip_expression:
@@ -127,6 +124,9 @@ class ClauseConverter:
         if with_clause.limit_expression:
             limit_expression_string = self.expression_converter.convert_expression(with_clause.limit_expression)
             with_clause_string = with_clause_string + "\nLIMIT " + limit_expression_string
+        if with_clause.where_expression:
+            with_clause_string = with_clause_string + "\nWHERE " + self.expression_converter.convert_expression(
+                with_clause.where_expression)
 
         self.variables_manager.update_with_clause_variables(with_clause)
         return with_clause_string
