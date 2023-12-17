@@ -1,7 +1,7 @@
 from datetime import timezone
 from unittest import TestCase
 
-from neo4j.time import DateTime, Date, Time, Duration
+from neo4j.time import DateTime, Date, Duration
 import pytz
 
 from test.graphdb_connector import GraphDBConnector
