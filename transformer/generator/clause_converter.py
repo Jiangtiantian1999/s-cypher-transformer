@@ -368,15 +368,14 @@ class ClauseConverter:
             stale_list_string = stale_list_string + "scypher.getItemsToStale(" + self.expression_converter.convert_expression(
                 stale_item.expression)
             if stale_item.property_name:
-                stale_list_string = stale_list_string + ", " + stale_item.property_name
+                stale_list_string = stale_list_string + ", \"" + stale_item.property_name + '\"'
             else:
                 stale_list_string = stale_list_string + ", NULL"
             stale_list_string = stale_list_string + ", " + str(stale_item.is_value) + ", " + stale_operate_time + ") + "
-
         stale_list_string = stale_list_string.rstrip("+ ")
-        stale_item_variable = self.variables_manager.get_random_variable()
-        stale_clause_string = stale_clause_string + " (" + stale_item_variable + " IN " + stale_list_string + " | SET " + stale_item_variable + ".intervalTo = " + stale_operate_time + " - scypher.timePoint.unit()"
 
+        stale_item_variable = self.variables_manager.get_random_variable()
+        stale_clause_string = stale_clause_string + '(' + stale_item_variable + " IN " + stale_list_string + " | SET " + stale_item_variable + ".intervalTo = " + stale_operate_time + " - scypher.timePoint.unit())"
         return stale_clause_string.rstrip(", ")
 
     def convert_set_clause(self, set_clause: SetClause) -> str:
