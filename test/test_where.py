@@ -21,7 +21,7 @@ class TestWhere(TestCase):
     # 测试逻辑操作
     def test_where_logic_operation(self):
         s_cypher = """
-        MATCH (n:Person)-[r:LIVE@T("2000", "2010")]->(m:City)
+        MATCH (n:Person)-[r:LIVE@T("2001", "2005")]->(m:City)
         WHERE n.name#T(NOW) = "Mary Smith Taylor" XOR (m.name = "Paris" and n.name = "Cathy Van") OR NOT(n.name#T(NOW) = "Mary Smith Taylor" or n.name = "Cathy Van")
         RETURN n.name as person, m.name as city
         ORDER BY person, city
@@ -29,7 +29,10 @@ class TestWhere(TestCase):
         cypher_query = STransformer.transform(s_cypher)
         records, summary, keys = self.graphdb_connector.driver.execute_query(cypher_query)
         assert records == [{"person": ["Mary Smith", "Mary Smith Taylor"], "city": "Antwerp"},
+                           {"person": "Cathy Van", "city": "Paris"},
                            {"person": "Daniel Yang", "city": "Antwerp"},
+                           {"person": "Pauline Boutler", "city": "Brussels"},
+                           {"person": "Pauline Boutler", "city": "London"},
                            {"person": "Peter Burton", "city": "New York"},
                            {"person": "Sandra Carter", "city": "New York"}]
 

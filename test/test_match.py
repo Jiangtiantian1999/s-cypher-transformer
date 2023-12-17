@@ -21,12 +21,15 @@ class TestMatch(TestCase):
     # 匹配对象节点
     def test_match_object_node(self):
         s_cypher = """
-        MATCH (n:Person@T("1938", NOW))
+        MATCH (n:Person@T("1938", "1960"))
         RETURN n.name#T(NOW) as person_name
+        ORDER BY person_name
+        LIMIT 3
         """
         cypher_query = STransformer.transform(s_cypher)
         records, summary, keys = self.graphdb_connector.driver.execute_query(cypher_query)
-        assert records == [{"person_name": "Mary Smith Taylor"}]
+        assert records == [{"person_name": "Cathy Van"}, {"person_name": "Mary Smith Taylor"},
+                           {"person_name": "Peter Burton"}]
 
     # 匹配属性节点
     def test_match_property_node(self):
@@ -76,7 +79,7 @@ class TestMatch(TestCase):
         assert records == [{"person_name": "Cathy Van"}, {"person_name": "Pauline Boutler"}]
 
         s_cypher = """
-        MATCH (n1:Person)-[:LIVE@T("2000","2003")]->(n2:City {name: "Brussels"})
+        MATCH (n1:Person)-[:LIVE@T("2001","2003")]->(n2:City {name: "Brussels"})
         RETURN n1.name as person_name
         """
         cypher_query = STransformer.transform(s_cypher)

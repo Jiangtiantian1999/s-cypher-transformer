@@ -166,23 +166,21 @@ class ClauseConverter:
         for pattern in match_clause.patterns:
             pattern = pattern.pattern
             if pattern.__class__ == SPath:
-                path_pattern, property_patterns, path_time_window_info = self.graph_converter.match_path(pattern,
-                                                                                                         match_clause.time_window)
+                path_pattern, property_patterns, path_time_window_info = self.graph_converter.match_path(pattern)
                 match_clause_string = match_clause_string + path_pattern + ", "
                 for property_pattern in property_patterns:
                     match_clause_string = match_clause_string + property_pattern + ", "
                 # 添加路径的时态条件限制
-                if path_time_window_info:
-                    pattern_time_window_info.extend(path_time_window_info)
+                pattern_time_window_info.extend(path_time_window_info)
             elif pattern.__class__ == TemporalPathCall:
                 if pattern.path.relationships[0].direction == SRelationship.LEFT:
                     start_node, end_node = pattern.path.nodes[1], pattern.path.nodes[0]
                 else:
                     start_node, end_node = pattern.path.nodes[0], pattern.path.nodes[1]
                 start_node_pattern, start_node_property_patterns, start_node_time_window_info = self.graph_converter.match_object_node(
-                    start_node, match_clause.time_window)
+                    start_node)
                 end_node_pattern, end_node_property_patterns, end_node_time_window_info = self.graph_converter.match_object_node(
-                    end_node, match_clause.time_window)
+                    end_node)
                 call_string = call_string + "\nMATCH " + start_node_pattern + ", " + end_node_pattern
                 # 添加节点属性模式的匹配
                 for property_pattern in start_node_property_patterns + end_node_property_patterns:

@@ -9,25 +9,20 @@ class GraphConverter:
         self.variables_manager = variables_manager
         self.expression_converter = expression_converter
 
-    def match_path(self, path: SPath, time_window: AtTimeClause | BetweenClause = None) -> (str, List[str], list):
+    def match_path(self, path: SPath) -> (str, List[str], list):
         # 路径模式，属性节点和值节点的模式，路径有效时间限制
-        path_pattern, property_patterns, path_time_window_info = self.match_object_node(path.nodes[0], time_window)
+        path_pattern, property_patterns, path_time_window_info = self.match_object_node(path.nodes[0])
         for index, relationship in enumerate(path.relationships):
             # 生成关系模式
-            relationship_pattern, relationship_time_window_info = self.match_relationship(relationship, time_window)
+            relationship_pattern, relationship_time_window_info = self.match_relationship(relationship)
             path_pattern = path_pattern + relationship_pattern
             if relationship_time_window_info:
-                if path_time_window_info is None:
-                    path_time_window_info = []
                 path_time_window_info.append(relationship_time_window_info)
             # 生成节点模式
-            node_pattern, node_property_patterns, node_time_window_info = self.match_object_node(path.nodes[index + 1],
-                                                                                                 time_window)
+            node_pattern, node_property_patterns, node_time_window_info = self.match_object_node(path.nodes[index + 1])
             path_pattern = path_pattern + node_pattern
             property_patterns.extend(node_property_patterns)
             if node_time_window_info:
-                if path_time_window_info is None:
-                    path_time_window_info = []
                 path_time_window_info.extend(node_time_window_info)
 
         if path.variable:
@@ -35,32 +30,26 @@ class GraphConverter:
 
         return path_pattern, property_patterns, path_time_window_info
 
-    def match_object_node(self, object_node: ObjectNode, time_window: AtTimeClause | BetweenClause = None) -> (
+    def match_object_node(self, object_node: ObjectNode) -> (
             str, List[List[str]], list):
         # 对象节点模式, 对象节点的有效时间限制
-        object_pattern, object_time_window_info = self.match_node(object_node, time_window)
-        node_time_window_info = []
-        if object_time_window_info:
-            node_time_window_info.append(object_time_window_info)
+        object_pattern, object_time_window_info = self.match_node(object_node)
+        node_time_window_info = [object_time_window_info]
 
         # 对象节点属性模式
         property_patterns = []
         for property_node, value_node in object_node.properties.items():
-            property_pattern, property_time_window_info = self.match_node(property_node, time_window)
-            value_pattern, value_time_window_info = self.match_node(value_node, time_window)
+            property_pattern, property_time_window_info = self.match_node(property_node)
+            value_pattern, value_time_window_info = self.match_node(value_node)
             property_patterns.append(
                 '(' + object_node.variable + ")-[:OBJECT_PROPERTY]->" + property_pattern + "-[:PROPERTY_VALUE]->" + value_pattern)
             # 属性节点的有效时间限制
-            if property_time_window_info:
-                node_time_window_info.append(property_time_window_info)
+            node_time_window_info.append(property_time_window_info)
             # 值节点的有效时间限制
-            if value_time_window_info:
-                node_time_window_info.append(value_time_window_info)
-        if len(node_time_window_info) == 0:
-            node_time_window_info = None
+            node_time_window_info.append(value_time_window_info)
         return object_pattern, property_patterns, node_time_window_info
 
-    def match_node(self, node: SNode, time_window: AtTimeClause | BetweenClause = None) -> (str, List[str]):
+    def match_node(self, node: SNode) -> (str, List[str]):
         if node.variable is None:
             node.variable = self.variables_manager.get_random_variable()
         node_pattern = node.variable
@@ -74,19 +63,13 @@ class GraphConverter:
         node_pattern = '(' + node_pattern + ')'
 
         # 节点的有效时间限制
-        node_time_window_info = None
-        if node.__class__ == ObjectNode:
-            if node.time_window:
-                node_time_window_info = [node.variable,
-                                         self.expression_converter.convert_at_t_element(node.time_window)]
-            elif time_window:
-                node_time_window_info = [node.variable, None]
-        elif node.time_window:
+        if node.time_window:
             node_time_window_info = [node.variable, self.expression_converter.convert_at_t_element(node.time_window)]
-
+        else:
+            node_time_window_info = [node.variable, None]
         return node_pattern, node_time_window_info
 
-    def match_relationship(self, relationship: SRelationship, time_window: AtTimeClause | BetweenClause = None) -> (
+    def match_relationship(self, relationship: SRelationship) -> (
             str, List[str]):
         if relationship.variable is None:
             relationship.variable = self.variables_manager.get_random_variable()
@@ -127,11 +110,10 @@ class GraphConverter:
             relationship_pattern = relationship_pattern + '>'
 
         # 关系的有效时间限制
-        relationship_time_window_info = None
-        if relationship.time_window is not None:
+        if relationship.time_window:
             relationship_time_window_info = [
                 relationship.variable, self.expression_converter.convert_at_t_element(relationship.time_window)]
-        elif time_window is not None:
+        else:
             relationship_time_window_info = [relationship.variable, None]
 
         return relationship_pattern, relationship_time_window_info
