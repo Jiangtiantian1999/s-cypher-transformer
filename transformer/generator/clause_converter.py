@@ -173,29 +173,20 @@ class ClauseConverter:
                 # 添加路径的时态条件限制
                 pattern_time_window_info.extend(path_time_window_info)
             elif pattern.__class__ == TemporalPathCall:
-                if pattern.path.relationships[0].direction == SRelationship.LEFT:
-                    start_node, end_node = pattern.path.nodes[1], pattern.path.nodes[0]
-                else:
-                    start_node, end_node = pattern.path.nodes[0], pattern.path.nodes[1]
+                start_node, end_node = pattern.path.nodes[0], pattern.path.nodes[1]
                 start_node_pattern, start_node_property_patterns, start_node_time_window_info = self.graph_converter.match_object_node(
                     start_node)
                 end_node_pattern, end_node_property_patterns, end_node_time_window_info = self.graph_converter.match_object_node(
                     end_node)
-                call_string = call_string + "\nMATCH " + start_node_pattern + ", " + end_node_pattern
+                match_clause_string = match_clause_string + start_node_pattern + ", " + end_node_pattern + ", "
                 # 添加节点属性模式的匹配
                 for property_pattern in start_node_property_patterns + end_node_property_patterns:
-                    call_string = call_string + ", " + property_pattern
+                    match_clause_string = match_clause_string + property_pattern + ", "
                 # 限制节点的有效时间
-                temporal_path_time_window_info = []
-                if start_node_time_window_info:
-                    temporal_path_time_window_info.extend(start_node_time_window_info)
-                if end_node_time_window_info:
-                    temporal_path_time_window_info.extend(end_node_time_window_info)
-                if len(temporal_path_time_window_info) > 0 or match_clause.time_window:
-                    where_expression_string = self.convert_where_clause(None, temporal_path_time_window_info,
-                                                                        match_clause.time_window)
-                    call_string = call_string + '\n' + where_expression_string
-                relationship_info = {}
+                pattern_time_window_info.extend(start_node_time_window_info)
+                pattern_time_window_info.extend(end_node_time_window_info)
+                # 限制路径的方向
+                relationship_info = {"direction": pattern.path.relationships[0].direction}
                 # 限制路径的标签
                 if len(pattern.path.relationships[0].labels) != 0:
                     relationship_info["labels"] = ""
@@ -209,8 +200,7 @@ class ClauseConverter:
                     relationship_info["maxLength"] = pattern.path.relationships[0].length[1]
                 # 限制路径的有效时间
                 if pattern.path.relationships[0].time_window:
-                    relationship_info[
-                        "effectiveTime"] = self.expression_converter.convert_at_t_element(
+                    relationship_info["effectiveTime"] = self.expression_converter.convert_at_t_element(
                         pattern.path.relationships[0].time_window)
                 elif match_clause.time_window:
                     if match_clause.time_window.__class__ == AtTimeClause:
@@ -225,18 +215,11 @@ class ClauseConverter:
                     for property_name, property_value in pattern.path.relationships[0].properties.items():
                         relationship_info["properties"][property_name] = self.expression_converter.convert_expression(
                             property_value)
-
                 call_string = call_string + "\nCALL scypher." + pattern.function_name + '(' + start_node.variable + ", " + end_node.variable + ", " + convert_dict_to_str(
                     relationship_info) + ")\nYIELD path as " + pattern.variable
 
-        if match_clause_string in ["MATCH ", "OPTIONAL MATCH "]:
-            return call_string
-        match_clause_string = match_clause_string.rstrip(", ")
-
-        if match_clause.where_expression or len(pattern_time_window_info) > 0 or match_clause.time_window:
-            where_expression_string = self.convert_where_clause(match_clause.where_expression, pattern_time_window_info,
-                                                                match_clause.time_window)
-            match_clause_string = match_clause_string + '\n' + where_expression_string
+        match_clause_string = match_clause_string.rstrip(", ") + '\n' + self.convert_where_clause(
+            match_clause.where_expression, pattern_time_window_info, match_clause.time_window)
 
         return match_clause_string + call_string
 
