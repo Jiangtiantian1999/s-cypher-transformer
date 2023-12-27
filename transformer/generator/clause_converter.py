@@ -185,14 +185,14 @@ class ClauseConverter:
                 # 限制节点的有效时间
                 pattern_time_window_info.extend(start_node_time_window_info)
                 pattern_time_window_info.extend(end_node_time_window_info)
-                relationship_info = {}
                 # 限制路径的方向
                 if pattern.path.relationships[0].direction == SRelationship.LEFT:
-                    relationship_info["direction"] = -1
+                    direction = -1
                 elif pattern.path.relationships[0].direction == SRelationship.RIGHT:
-                    relationship_info["direction"] = 1
+                    direction = 1
                 else:
-                    relationship_info["direction"] = 0
+                    direction = 0
+                relationship_info = {}
                 # 限制路径的标签
                 if len(pattern.path.relationships[0].labels) != 0:
                     relationship_info["labels"] = ""
@@ -221,8 +221,8 @@ class ClauseConverter:
                     for property_name, property_value in pattern.path.relationships[0].properties.items():
                         relationship_info["properties"][property_name] = self.expression_converter.convert_expression(
                             property_value)
-                call_string = call_string + "\nCALL scypher." + pattern.function_name + '(' + start_node.variable + ", " + end_node.variable + ", " + convert_dict_to_str(
-                    relationship_info) + ")\nYIELD path as " + pattern.variable
+                call_string = call_string + "\nCALL scypher." + pattern.function_name + '(' + start_node.variable + ", " + end_node.variable + ", " + str(
+                    direction) + ", " + convert_dict_to_str(relationship_info) + ")\nYIELD path as " + pattern.variable
 
         match_clause_string = match_clause_string.rstrip(", ") + '\n' + self.convert_where_clause(
             match_clause.where_expression, pattern_time_window_info, match_clause.time_window)
