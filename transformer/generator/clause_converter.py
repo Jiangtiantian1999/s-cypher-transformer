@@ -173,7 +173,10 @@ class ClauseConverter:
                 # 添加路径的时态条件限制
                 pattern_time_window_info.extend(path_time_window_info)
             elif pattern.__class__ == TemporalPathCall:
-                start_node, end_node = pattern.path.nodes[0], pattern.path.nodes[1]
+                if (pattern.path.relationships[0].direction == SRelationship.LEFT):
+                    start_node, end_node = pattern.path.nodes[1], pattern.path.nodes[0]
+                else:
+                    start_node, end_node = pattern.path.nodes[0], pattern.path.nodes[1]
                 start_node_pattern, start_node_property_patterns, start_node_time_window_info = self.graph_converter.match_object_node(
                     start_node)
                 end_node_pattern, end_node_property_patterns, end_node_time_window_info = self.graph_converter.match_object_node(
@@ -185,13 +188,6 @@ class ClauseConverter:
                 # 限制节点的有效时间
                 pattern_time_window_info.extend(start_node_time_window_info)
                 pattern_time_window_info.extend(end_node_time_window_info)
-                # 限制路径的方向
-                if pattern.path.relationships[0].direction == SRelationship.LEFT:
-                    direction = -1
-                elif pattern.path.relationships[0].direction == SRelationship.RIGHT:
-                    direction = 1
-                else:
-                    direction = 0
                 relationship_info = {}
                 # 限制路径的标签
                 if len(pattern.path.relationships[0].labels) != 0:
@@ -222,7 +218,8 @@ class ClauseConverter:
                         relationship_info["properties"][property_name] = self.expression_converter.convert_expression(
                             property_value)
                 call_string = call_string + "\nCALL scypher." + pattern.function_name + '(' + start_node.variable + ", " + end_node.variable + ", " + str(
-                    direction) + ", " + convert_dict_to_str(relationship_info) + ")\nYIELD path as " + pattern.variable
+                    pattern.path.relationships[0].direction == SRelationship.UNDIRECTED) + ", " + convert_dict_to_str(
+                    relationship_info) + ")\nYIELD path as " + pattern.variable
 
         match_clause_string = match_clause_string.rstrip(", ") + '\n' + self.convert_where_clause(
             match_clause.where_expression, pattern_time_window_info, match_clause.time_window)
