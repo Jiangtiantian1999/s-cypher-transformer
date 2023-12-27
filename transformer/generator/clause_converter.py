@@ -185,8 +185,14 @@ class ClauseConverter:
                 # 限制节点的有效时间
                 pattern_time_window_info.extend(start_node_time_window_info)
                 pattern_time_window_info.extend(end_node_time_window_info)
+                relationship_info = {}
                 # 限制路径的方向
-                relationship_info = {"direction": pattern.path.relationships[0].direction}
+                if pattern.path.relationships[0].direction == SRelationship.LEFT:
+                    relationship_info["direction"] = -1
+                elif pattern.path.relationships[0].direction == SRelationship.RIGHT:
+                    relationship_info["direction"] = 1
+                else:
+                    relationship_info["direction"] = 0
                 # 限制路径的标签
                 if len(pattern.path.relationships[0].labels) != 0:
                     relationship_info["labels"] = ""
