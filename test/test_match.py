@@ -111,162 +111,136 @@ class TestMatch(TestCase):
         assert records == [{"path": ["Mary Smith Taylor", "Peter Burton"]},
                            {"path": ["Mary Smith Taylor", "Peter Burton", "Cathy Van"]}]
 
-    '''
     # 匹配连续有效路径
     def test_match_cpath(self):
         s_cypher = """
         MATCH path = cPath((n1:Person)-[:FRIEND*2]->(n2:Person))
-        RETURN path
+        RETURN [node in nodes(path) | node.name#T(NOW)] as path
+        ORDER BY path
         """
         cypher_query = STransformer.transform(s_cypher)
-        tx = self.graphdb_connector.driver.session().begin_transaction()
-        results = tx.run(cypher_query).data()
+        records, summery, keys = self.graphdb_connector.driver.execute_query(cypher_query)
+        assert records == [{"path": ["Mary Smith Taylor", "Pauline Boutler", "Cathy Van"]},
+                           {"path": ["Mary Smith Taylor", "Peter Burton", "Cathy Van"]},
+                           {"path": ["Mary Smith Taylor", "Peter Burton", "Daniel Yang"]}]
 
         s_cypher = """
-        MATCH path = cPath((n1:Person)-[:LIVE*2]->(n2:City))
-        RETURN path;
+        MATCH path = cPath((n1:Station)-[*2..3]->(n2:Station))
+        RETURN [relationship in relationships(path) | type(relationship)] as path
+        ORDER BY path
         """
         cypher_query = STransformer.transform(s_cypher)
-        tx = self.graphdb_connector.driver.session().begin_transaction()
-        results = tx.run(cypher_query).data()
-
-        s_cypher = """
-        MATCH path = cPath((n1:Person)-[:LIKE*2]->(n2:Brand))
-        RETURN path;
-        """
-        cypher_query = STransformer.transform(s_cypher)
-        tx = self.graphdb_connector.driver.session().begin_transaction()
-        results = tx.run(cypher_query).data()
+        records, summery, keys = self.graphdb_connector.driver.execute_query(cypher_query)
+        assert records == [{"path": ["G7349", "G116"]}]
 
     # 匹配成对连续有效路径
     def test_match_pair_cpath(self):
         s_cypher = """
-        MATCH path = pairCPath((n1:Person)-[:FRIEND*1..2]->(n2:Person))
-        RETURN path;
+        MATCH path = pairCPath((n1:Person)-[:FRIEND*2]->(n2:Person))
+        RETURN [node in nodes(path) | node.name#T(NOW)] as path
+        ORDER BY path
         """
         cypher_query = STransformer.transform(s_cypher)
-        tx = self.graphdb_connector.driver.session().begin_transaction()
-        results = tx.run(cypher_query).data()
+        records, summery, keys = self.graphdb_connector.driver.execute_query(cypher_query)
+        assert records == [{"path": ["Mary Smith Taylor", "Pauline Boutler", "Cathy Van"]},
+                           {"path": ["Mary Smith Taylor", "Peter Burton", "Cathy Van"]},
+                           {"path": ["Mary Smith Taylor", "Peter Burton", "Daniel Yang"]}]
 
         s_cypher = """
-        MATCH path = pairCPath((n1:Person)-[:FRIEND*2..3]->(n2:Person))
-        RETURN path
+        MATCH path = pairCPath((n1:Station)-[*2..3]->(n2:Station))
+        RETURN [relationship in relationships(path) | type(relationship)] as path
+        ORDER BY path
         """
         cypher_query = STransformer.transform(s_cypher)
-        tx = self.graphdb_connector.driver.session().begin_transaction()
-        results = tx.run(cypher_query).data()
-
-        s_cypher = """
-        MATCH path = pairCPath((n1:Person)-[:LIVE*1..2]->(n2:City))
-        RETURN path
-        """
-        cypher_query = STransformer.transform(s_cypher)
-        tx = self.graphdb_connector.driver.session().begin_transaction()
-        results = tx.run(cypher_query).data()
-
-        s_cypher = """
-        MATCH path = pairCPath((n1:Person)-[:LIVE*2..3]->(n2:City))
-        RETURN path
-        """
-        cypher_query = STransformer.transform(s_cypher)
-        tx = self.graphdb_connector.driver.session().begin_transaction()
-        results = tx.run(cypher_query).data()
-
-        s_cypher = """
-        MATCH path = pairCPath((n1:Person)-[:LIKE*1..2]->(n2:Brand))
-        RETURN path
-        """
-        cypher_query = STransformer.transform(s_cypher)
-        tx = self.graphdb_connector.driver.session().begin_transaction()
-        results = tx.run(cypher_query).data()
-
-        s_cypher = """
-        MATCH path = pairCPath((n1:Person)-[:LIKE*2..3]->(n2:Brand))
-        RETURN path;
-        """
-        cypher_query = STransformer.transform(s_cypher)
-        tx = self.graphdb_connector.driver.session().begin_transaction()
-        results = tx.run(cypher_query).data()
+        records, summery, keys = self.graphdb_connector.driver.execute_query(cypher_query)
+        assert records == [{"path": ["G7349", "G116"]}]
 
     # 匹配最早顺序有效路径
     def test_match_earliest_spath(self):
         s_cypher = """
-        MATCH path = earliestSPath((n1:Station {name: "HangZhou East"})-[:route*]->(n2:Station {name: "XvZhou North"}))
-        RETURN path
+        MATCH path = earliestSPath((n1:Station {name: "Hangzhoudong Railway Station"})-[*]->(n2:Station {name: "Xuzhoudong Railway Station"}))
+        RETURN [relationship in relationships(path) | type(relationship)] as path
+        ORDER BY path
         """
         cypher_query = STransformer.transform(s_cypher)
-        tx = self.graphdb_connector.driver.session().begin_transaction()
-        results = tx.run(cypher_query).data()
+        records, summery, keys = self.graphdb_connector.driver.execute_query(cypher_query)
+        assert records == [{"path": ["G7372", "G116"]}]
 
         s_cypher = """
-        MATCH path = earliestSPath((n1:Station {name: "HangZhou East"})-[:route*]->(n2:Station {name: "Ning Bo"}))
-        RETURN path
+        MATCH path = earliestSPath((n1:Station {name: "Hangzhoudong Railway Station"})-[*]->(n2:Station {name: "Lianyungang Railway Station"}))
+        RETURN [relationship in relationships(path) | type(relationship)] as path
+        ORDER BY path
         """
         cypher_query = STransformer.transform(s_cypher)
-        tx = self.graphdb_connector.driver.session().begin_transaction()
-        results = tx.run(cypher_query).data()
+        records, summery, keys = self.graphdb_connector.driver.execute_query(cypher_query)
+        assert records == [{"path": ["G7349", "G1204", "G178", "G289"]}, {"path": ["G7372", "G116", "G289"]},
+                           {"path": ["G7372", "G1204", "G178", "G289"]}]
 
     # 匹配最迟顺序有效路径
     def test_match_latest_spath(self):
         s_cypher = """
-        MATCH path = latestSPath((n1:Station {name: "HangZhou East"})-[:route*]->(n2:Station {name: "XvZhou North"}))
-        RETURN path
+        MATCH path = latestSPath((n1:Station {name: "Hangzhoudong Railway Station"})-[*]->(n2:Station {name: "Xuzhoudong Railway Station"}))
+        RETURN [relationship in relationships(path) | type(relationship)] as path
+        ORDER BY path
         """
         cypher_query = STransformer.transform(s_cypher)
-        tx = self.graphdb_connector.driver.session().begin_transaction()
-        results = tx.run(cypher_query).data()
+        records, summery, keys = self.graphdb_connector.driver.execute_query(cypher_query)
+        assert records == [{"path": ["G7349", "G1204", "G178"]}]
 
         s_cypher = """
-        MATCH path = latestSPath((n1:Station {name: "HangZhou East"})-[:route*]->(n2:Station {name: "Ning Bo"}))
-        RETURN path
+        MATCH path = latestSPath((n1:Station {name: "Hangzhoudong Railway Station"})-[*]->(n2:Station {name: "Lianyungang Railway Station"}))
+        RETURN [relationship in relationships(path) | type(relationship)] as path
+        ORDER BY path
         """
         cypher_query = STransformer.transform(s_cypher)
-        tx = self.graphdb_connector.driver.session().begin_transaction()
-        results = tx.run(cypher_query).data()
+        records, summery, keys = self.graphdb_connector.driver.execute_query(cypher_query)
+        assert records == [{"path": ["G7349", "G1204", "G178", "G289"]}, {"path": ["G7349", "G7540"]}]
 
     # 查询最快顺序有效路径
     def test_match_fastest_spath(self):
         s_cypher = """
-        MATCH path = fastestSPath((n1:Station {name: "HangZhou East"})-[:route*]->(n2:Station {name: "XiAn North"}))
-        RETURN path
+        MATCH path = fastestSPath((n1:Station {name: "Hangzhoudong Railway Station"})-[*]->(n2:Station {name: "Xuzhoudong Railway Station"}))
+        RETURN [relationship in relationships(path) | type(relationship)] as path
+        ORDER BY path
         """
         cypher_query = STransformer.transform(s_cypher)
-        tx = self.graphdb_connector.driver.session().begin_transaction()
-        results = tx.run(cypher_query).data()
+        records, summery, keys = self.graphdb_connector.driver.execute_query(cypher_query)
+        assert records == [{"path": ["G7349", "G1204", "G178"]}]
 
         s_cypher = """
-        MATCH path = fastestSPath((n1:Station {name: "HangZhou East"})-[:route*2..3]->(n2:Station {name: "Ning Bo"}))
-        RETURN path
+        MATCH path = fastestSPath((n1:Station {name: "Hangzhoudong Railway Station"})-[*]->(n2:Station {name: "Lianyungang Railway Station"}))
+        RETURN [relationship in relationships(path) | type(relationship)] as path
+        ORDER BY path
         """
         cypher_query = STransformer.transform(s_cypher)
-        tx = self.graphdb_connector.driver.session().begin_transaction()
-        results = tx.run(cypher_query).data()
+        records, summery, keys = self.graphdb_connector.driver.execute_query(cypher_query)
+        assert records == [{"path": ["G7349", "G1204", "G178", "G289"]}]
 
     # 查询最短顺序有效路径
     def test_match_shortest_spath(self):
         s_cypher = """
-        MATCH path = shortestSPath((n1:Station {name: "HangZhou East"})-[:route*]->(n2:Station {name: "XiAn North"}))
-        RETURN path
+        MATCH path = shortestSPath((n1:Station {name: "Hangzhoudong Railway Station"})-[*]->(n2:Station {name: "Xuzhoudong Railway Station"}))
+        RETURN [relationship in relationships(path) | type(relationship)] as path
+        ORDER BY path
         """
         cypher_query = STransformer.transform(s_cypher)
-        tx = self.graphdb_connector.driver.session().begin_transaction()
-        results = tx.run(cypher_query).data()
+        records, summery, keys = self.graphdb_connector.driver.execute_query(cypher_query)
+        assert records == [{"path": ["G7372", "G116"]}]
 
         s_cypher = """
-        MATCH path = shortestSPath((n1:Station {name: "HangZhou East"})-[:route*]->(n2:Station {name: "Ning Bo"}))
-        RETURN path
+        MATCH path = shortestSPath((n1:Station {name: "Hangzhoudong Railway Station"})-[*3..]->(n2:Station {name: "Xuzhoudong Railway Station"}))
+        RETURN [relationship in relationships(path) | type(relationship)] as path
+        ORDER BY path
         """
         cypher_query = STransformer.transform(s_cypher)
-        tx = self.graphdb_connector.driver.session().begin_transaction()
-        results = tx.run(cypher_query).data()
+        records, summery, keys = self.graphdb_connector.driver.execute_query(cypher_query)
+        assert records == [{"path": ["G7349", "G1204", "G178"]}, {"path": ["G7372", "G1204", "G178"]}]
 
         s_cypher = """
-        MATCH path = shortestSPath((n1:Station {name: "HangZhou East"})-[:route*2]->(n2:Station {name: "Ning Bo"}))
-        RETURN path
+        MATCH path = shortestSPath((n1:Station {name: "Hangzhoudong Railway Station"})-[*]->(n2:Station {name: "Lianyungang Railway Station"}))
+        RETURN [relationship in relationships(path) | type(relationship)] as path
+        ORDER BY path
         """
         cypher_query = STransformer.transform(s_cypher)
-        tx = self.graphdb_connector.driver.session().begin_transaction()
-        cypher_query = STransformer.transform(s_cypher)
-        tx = self.graphdb_connector.driver.session().begin_transaction()
-        results = tx.run(cypher_query).data()
-    '''
+        records, summery, keys = self.graphdb_connector.driver.execute_query(cypher_query)
+        assert records == [{"path": ["G7349", "G7540"]}, {"path": ["G7372", "G7540"]}]
