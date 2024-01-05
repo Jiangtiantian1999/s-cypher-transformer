@@ -32,8 +32,9 @@ class GraphDBConnector:
                                                  ConfigReader.config["graph_database"]["database_password"]))
 
     def local_connect(self):
-        self.driver = GraphDatabase.driver("bolt://" + ConfigReader.config["graph_database"]["database_ip"] + ":"
-                                           + ConfigReader.config["graph_database"]["database_port"],
+        self.server = None
+        self.driver = GraphDatabase.driver("bolt://" + str(ConfigReader.config["graph_database"]["database_ip"]) + ":"
+                                           + str(ConfigReader.config["graph_database"]["database_port"]),
                                            auth=(ConfigReader.config["graph_database"]["database_user"],
                                                  ConfigReader.config["graph_database"]["database_password"]))
 
