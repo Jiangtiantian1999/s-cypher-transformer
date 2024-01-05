@@ -2,12 +2,22 @@ scypher:
   function_name: [ "now", "timePoint", "interval", "interval.intersection", "interval.range", "interval.difference", "during", "overlaps", "cPath", "pairCPath", "earliestSPath", "latestSPath", "fastestSPath", "shortestSPath" ]
   procedure_name: [ ]
 
+#graph_database:
+#  out_net_ip: "118.25.15.14"
+#  out_net_port: 1111
+#  host_user: "jtt"
+#  host_password: "123456"
+#  database_ip: "0.0.0.0"
+#  database_port: 7687
+#  database_user: "neo4j"
+#  database_password: "s-cypher"
+
 graph_database:
-  out_net_ip: "118.25.15.14"
-  out_net_port: 1111
-  host_user: "jtt"
-  host_password: "123456"
-  database_ip: "0.0.0.0"
+  out_net_ip: "115.236.33.124"
+  out_net_port: 8710
+  host_user: "dev"
+  host_private_key: "../transformer/conf/id_rsa"
+  database_ip: "10.233.65.174"
   database_port: 7687
   database_user: "neo4j"
-  database_password: "s-cypher"
+  database_password: "admin@4Hfks"

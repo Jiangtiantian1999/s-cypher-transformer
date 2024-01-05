@@ -102,7 +102,7 @@ class DataSet2:
 
 def test():
     graphdb_connector = GraphDBConnector()
-    graphdb_connector.out_net_connect()
+    graphdb_connector.local_connect()
     # dataset1 = DataSet1(graphdb_connector.driver)
     # dataset1.rebuild()
     dataset2 = DataSet2(graphdb_connector.driver)

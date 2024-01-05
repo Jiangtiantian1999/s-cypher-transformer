@@ -16,7 +16,7 @@ class TestMerge(TestCase):
     def setUpClass(cls) -> None:
         super().setUpClass()
         cls.graphdb_connector = GraphDBConnector()
-        cls.graphdb_connector.out_net_connect()
+        cls.graphdb_connector.local_connect()
         cls.dataset1 = DataSet1(cls.graphdb_connector.driver)
 
     @classmethod

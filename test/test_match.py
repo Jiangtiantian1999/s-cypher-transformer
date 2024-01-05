@@ -1,6 +1,11 @@
+import os
+import sys
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(BASE_DIR)
+
 from unittest import TestCase
 
-from test.graphdb_connector import GraphDBConnector
+from graphdb_connector import GraphDBConnector
 from transformer.s_transformer import STransformer
 
 
@@ -11,7 +16,7 @@ class TestMatch(TestCase):
     def setUpClass(cls) -> None:
         super().setUpClass()
         cls.graphdb_connector = GraphDBConnector()
-        cls.graphdb_connector.out_net_connect()
+        cls.graphdb_connector.local_connect()
 
     @classmethod
     def tearDownClass(cls) -> None:
